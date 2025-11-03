@@ -8,18 +8,22 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [isError, setIsError] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     setMessage('');
+    setIsError(false);
 
     const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
       setMessage(error.message);
+      setIsError(true);
     } else {
       setMessage('Connexion réussie !');
+      setIsError(false);
     }
     setLoading(false);
   };
@@ -69,7 +73,7 @@ const Login = () => {
         >
           {loading ? 'Chargement...' : 'Se connecter'}
         </button>
-        {message && <p style={{ textAlign: 'center', marginTop: '15px', color: error ? 'red' : 'green' }}>{message}</p>}
+        {message && <p style={{ textAlign: 'center', marginTop: '15px', color: isError ? 'red' : 'green' }}>{message}</p>}
       </form>
     </div>
   );
