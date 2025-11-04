@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 
+import Demandes from './Demandes';
+
 // Composant de la page de connexion
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -105,7 +107,7 @@ const Dashboard = () => {
       >
         Déconnexion
       </button>
-      {/* Ici viendront les autres composants de gestion */}
+      <Demandes />
     </div>
   );
 };
