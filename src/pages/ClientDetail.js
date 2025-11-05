@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 
-const DemandeDetail = ({ demandeId, onClose }) => {
+const DemandeDetail = ({ clientId, onClose }) => {
     const [demande, setDemande] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
     useEffect(() => {
         const fetchDemande = async () => {
-            if (!demandeId) return;
+            if (!clientId) return;
             try {
                 setLoading(true);
                 let { data, error: demandeError } = await supabase
@@ -16,7 +16,7 @@ const DemandeDetail = ({ demandeId, onClose }) => {
                     .select(`*,
                         clients ( id, first_name, last_name, email, phone, company_name, siret, address )
                     `)
-                    .eq('id', demandeId)
+                    .eq('id', clientId)
                     .single();
 
                 if (demandeError) throw demandeError;
@@ -28,14 +28,14 @@ const DemandeDetail = ({ demandeId, onClose }) => {
             }
         };
         fetchDemande();
-    }, [demandeId]);
+    }, [clientId]);
 
     const updateStatus = async (newStatus) => {
         try {
             const { error } = await supabase
                 .from('demandes')
                 .update({ status: newStatus })
-                .eq('id', demandeId);
+                .eq('client_id', clientId)
 
             if (error) throw error;
             onClose(); // Fermer le modal et rafraîchir la liste
@@ -51,7 +51,7 @@ const DemandeDetail = ({ demandeId, onClose }) => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ demandId, documentType }),
+                body: JSON.stringify({ clientId, documentType }),
             });
 
             if (!response.ok) {
@@ -63,7 +63,7 @@ const DemandeDetail = ({ demandeId, onClose }) => {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${documentType}_${demandeId}.pdf`; // Nom de fichier temporaire
+            a.download = `${documentType}_${clientId}.pdf`; // Nom de fichier temporaire
             document.body.appendChild(a);
             a.click();
             a.remove();
