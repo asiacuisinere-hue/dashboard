@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from './supabaseClient';
+import { supabase } from './api/supabaseClient';
 import DemandeDetail from './DemandeDetail';
 
 const Demandes = () => {
