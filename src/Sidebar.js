@@ -22,7 +22,8 @@ const Sidebar = () => {
         <div style={{ width: '250px', height: '100vh', background: '#fff', borderRight: '1px solid #eee', paddingTop: '20px' }}>
             <h2 style={{ textAlign: 'center', marginBottom: '30px' }}>Asiacuisine.re</h2>
             <nav>
-                <NavLink to="/" style={({ isActive }) => isActive ? activeLinkStyle : linkStyle}>Tableau de bord</NavLink>
+                <NavLink to="/" style={({ isActive }) => isActive ? activeLinkStyle : linkStyle}>Nouvelles Demandes</NavLink>
+                <NavLink to="/demandes-en-cours" style={({ isActive }) => isActive ? activeLinkStyle : linkStyle}>Demandes en Cours</NavLink>
                 <NavLink to="/particuliers" style={({ isActive }) => isActive ? activeLinkStyle : linkStyle}>Particuliers</NavLink>
                 <NavLink to="/entreprises" style={({ isActive }) => isActive ? activeLinkStyle : linkStyle}>Entreprises</NavLink>
                 <NavLink to="/devis" style={({ isActive }) => isActive ? activeLinkStyle : linkStyle}>Devis</NavLink>
