@@ -1,95 +1,112 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase } from './supabaseClient';
 
-const ClientDetail = ({ clientId, onClose }) => {
-    const [client, setClient] = useState(null);
-    const [demandes, setDemandes] = useState([]);
+const DemandeDetail = ({ demandeId, onClose }) => {
+    const [demande, setDemande] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        const fetchClientDetails = async () => {
-            if (!clientId) return;
+        const fetchDemande = async () => {
+            if (!demandeId) return;
             try {
                 setLoading(true);
-                // Récupérer les détails du client
-                let { data: clientData, error: clientError } = await supabase
-                    .from('clients')
-                    .select('*')
-                    .eq('id', clientId)
+                let { data, error: demandeError } = await supabase
+                    .from('demandes')
+                    .select(`*,
+                        clients ( id, first_name, last_name, email, phone, company_name, siret, address )
+                    `)
+                    .eq('id', demandeId)
                     .single();
 
-                if (clientError) throw clientError;
-                setClient(clientData);
-
-                // Récupérer les demandes associées à ce client
-                let { data: demandesData, error: demandesError } = await supabase
-                    .from('demandes')
-                    .select('*')
-                    .eq('client_id', clientId)
-                    .order('created_at', { ascending: false });
-                
-                if (demandesError) throw demandesError;
-                setDemandes(demandesData);
-
+                if (demandeError) throw demandeError;
+                setDemande(data);
             } catch (error) {
                 setError(error.message);
             } finally {
                 setLoading(false);
             }
         };
-        fetchClientDetails();
-    }, [clientId]);
+        fetchDemande();
+    }, [demandeId]);
 
-    if (loading) return <p>Chargement des détails du client...</p>;
+    const updateStatus = async (newStatus) => {
+        try {
+            const { error } = await supabase
+                .from('demandes')
+                .update({ status: newStatus })
+                .eq('id', demandeId);
+
+            if (error) throw error;
+            onClose(); // Fermer le modal et rafraîchir la liste
+        } catch (error) {
+            alert(`Erreur lors de la mise à jour du statut : ${error.message}`);
+        }
+    };
+
+    const generateDocument = async (documentType) => {
+        try {
+            const response = await fetch('/generate-document', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ demandId, documentType }),
+            });
+
+            if (!response.ok) {
+                const errorResult = await response.json();
+                throw new Error(errorResult.error || 'Erreur lors de la génération du document.');
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${documentType}_${demandeId}.pdf`; // Nom de fichier temporaire
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+
+            alert(`${documentType} généré et téléchargé avec succès !`);
+
+        } catch (error) {
+            console.error(`Erreur lors de la génération du ${documentType}:`, error);
+            alert(`Erreur lors de la génération du ${documentType}: ${error.message}`);
+        }
+    };
+
+    if (loading) return <p>Chargement...</p>;
     if (error) return <p style={{ color: 'red' }}>Erreur: {error}</p>;
-    if (!client) return null;
+    if (!demande) return null;
 
     return (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
             <div style={{ background: 'white', padding: '30px', borderRadius: '8px', width: '80%', maxWidth: '900px', maxHeight: '90vh', overflowY: 'auto', position: 'relative' }}>
                 <button onClick={onClose} style={{ position: 'absolute', top: '15px', right: '15px', background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>&times;</button>
-                <h2>Détails du Client : {client.last_name} {client.first_name}</h2>
-                <p><strong>Email:</strong> {client.email}</p>
-                <p><strong>Téléphone:</strong> {client.phone}</p>
-                <p><strong>Type:</strong> {client.type}</p>
-                {client.type === 'Entreprise' && (
-                    <>
-                        <p><strong>Nom de l'entreprise:</strong> {client.company_name}</p>
-                        <p><strong>SIRET:</strong> {client.siret}</p>
-                    </>
-                )}
-                <p><strong>Adresse:</strong> {client.address || 'N/A'}</p>
-                <p><strong>Notes:</strong> {client.notes || 'Aucune'}</p>
-
-                <h3 style={{ marginTop: '30px', borderTop: '1px solid #eee', paddingTop: '20px' }}>Historique des Demandes</h3>
-                {demandes.length > 0 ? (
-                    <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '15px' }}>
-                        <thead>
-                            <tr style={{ borderBottom: '2px solid #333' }}>
-                                <th style={{ padding: '10px', textAlign: 'left' }}>Date Demande</th>
-                                <th style={{ padding: '10px', textAlign: 'left' }}>Type</th>
-                                <th style={{ padding: '10px', textAlign: 'left' }}>Statut</th>
-                                <th style={{ padding: '10px', textAlign: 'left' }}>Détails</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {demandes.map((demande) => (
-                                <tr key={demande.id} style={{ borderBottom: '1px solid #eee' }}>
-                                    <td style={{ padding: '10px' }}>{new Date(demande.created_at).toLocaleDateString('fr-FR')}</td>
-                                    <td style={{ padding: '10px' }}>{demande.type}</td>
-                                    <td style={{ padding: '10px' }}>{demande.status}</td>
-                                    <td style={{ padding: '10px' }}><pre>{JSON.stringify(demande.details_json, null, 2)}</pre></td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                ) : (
-                    <p>Aucune demande pour ce client.</p>
-                )}
+                <h2>Détails de la Demande</h2>
+                <p><strong>Client:</strong> {demande.clients.last_name || demande.clients.email} {demande.clients.first_name}</p>
+                {demande.clients.company_name && <p><strong>Entreprise:</strong> {demande.clients.company_name}</p>}
+                <p><strong>Email:</strong> {demande.clients.email}</p>
+                <p><strong>Téléphone:</strong> {demande.clients.phone}</p>
+                <p><strong>Type de demande:</strong> {demande.type}</p>
+                <p><strong>Date de la demande:</strong> {new Date(demande.request_date).toLocaleDateString('fr-FR')}</p>
+                <p><strong>Statut actuel:</strong> {demande.status}</p>
+                <p><strong>Détails:</strong> <pre>{JSON.stringify(demande.details_json, null, 2)}</pre></p>
+                
+                <div style={{ marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
+                    <h4>Actions :</h4>
+                    <button onClick={() => updateStatus('Confirmée')} style={{ marginRight: '10px', backgroundColor: '#28a745', color: 'white' }}>Confirmer</button>
+                    <button onClick={() => updateStatus('En préparation')} style={{ marginRight: '10px', backgroundColor: '#007bff', color: 'white' }}>En préparation</button>
+                    <button onClick={() => updateStatus('Terminée')} style={{ marginRight: '10px', backgroundColor: '#6c757d', color: 'white' }}>Terminer</button>
+                    <button onClick={() => updateStatus('Annulée')} style={{ marginRight: '10px', backgroundColor: '#dc3545', color: 'white' }}>Annuler</button>
+                    <button onClick={() => generateDocument('Devis')} style={{ marginRight: '10px', backgroundColor: '#17a2b8', color: 'white' }}>Créer Devis</button>
+                    <button onClick={() => generateDocument('Facture')} style={{ backgroundColor: '#ffc107', color: 'white' }}>Créer Facture</button>
+                </div>
             </div>
         </div>
     );
 };
 
-export default ClientDetail;
+export default DemandeDetail;
