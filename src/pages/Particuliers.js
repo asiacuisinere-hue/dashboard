@@ -1,38 +1,46 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import ClientDetail from '../ClientDetail';
 
 const Particuliers = () => {
     const [clients, setClients] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedClient, setSelectedClient] = useState(null);
+
+    const fetchClients = async () => {
+        try {
+            setLoading(true);
+            let { data, error } = await supabase
+                .from('clients')
+                .select('*')
+                .eq('type', 'Particulier')
+                .order('last_name', { ascending: true });
+
+            if (error) throw error;
+            setClients(data);
+        } catch (error) {
+            setError(error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchClients = async () => {
-            try {
-                setLoading(true);
-                let { data, error } = await supabase
-                    .from('clients')
-                    .select('*')
-                    .eq('type', 'Particulier')
-                    .order('last_name', { ascending: true });
-
-                if (error) throw error;
-                setClients(data);
-            } catch (error) {
-                setError(error.message);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchClients();
     }, []);
 
     const filteredClients = clients.filter(client =>
         (client.last_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (client.first_name || '').toLowerCase().includes(searchTerm.toLowerCase())
+        (client.first_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (client.email || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    const handleCloseDetail = () => {
+        setSelectedClient(null);
+        fetchClients(); // Rafraîchir la liste après la fermeture
+    };
 
     if (loading) return <p>Chargement des clients...</p>;
     if (error) return <p style={{ color: 'red' }}>Erreur: {error}</p>;
@@ -53,7 +61,7 @@ const Particuliers = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
                 {filteredClients.length > 0 ? (
                     filteredClients.map((client) => (
-                        <div key={client.id} style={{ background: 'white', padding: '15px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.08)', cursor: 'pointer' }}>
+                        <div key={client.id} onClick={() => setSelectedClient(client.id)} style={{ background: 'white', padding: '15px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.08)', cursor: 'pointer' }}>
                             <p><strong>Nom:</strong> {client.last_name} {client.first_name}</p>
                             <p><strong>Email:</strong> {client.email}</p>
                             <p><strong>Téléphone:</strong> {client.phone}</p>
@@ -63,6 +71,8 @@ const Particuliers = () => {
                     <p>Aucun client trouvé.</p>
                 )}
             </div>
+
+            {selectedClient && <ClientDetail clientId={selectedClient} onClose={handleCloseDetail} />}
         </div>
     );
 };
