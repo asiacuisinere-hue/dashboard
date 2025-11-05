@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../api/supabaseClient';
+import { supabase } from '../supabaseClient';
 
 const ClientDetail = ({ clientId, onClose }) => {
     const [client, setClient] = useState(null);
