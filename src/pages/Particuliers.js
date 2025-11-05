@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../api/supabaseClient';
-import ClientDetail from '../ClientDetail';
+import ClientDetail from './ClientDetail';
 
 const Particuliers = () => {
     const [clients, setClients] = useState([]);
