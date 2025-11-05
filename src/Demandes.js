@@ -9,6 +9,7 @@ const Demandes = () => {
     useEffect(() => {
         const fetchDemandes = async () => {
             try {
+                console.log('Fetching demandes from Supabase...');
                 setLoading(true);
                 let { data, error } = await supabase
                     .from('demandes')
@@ -25,8 +26,10 @@ const Demandes = () => {
 
                 if (error) throw error;
 
+                console.log('Data received from Supabase:', data);
                 setDemandes(data);
             } catch (error) {
+                console.error('Error fetching demandes:', error.message);
                 setError(error.message);
             } finally {
                 setLoading(false);
