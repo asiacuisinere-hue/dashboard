@@ -19,7 +19,11 @@ const DemandeDetail = ({ clientId, onClose }) => {
                     .eq('id', clientId)
                     .single();
 
-                if (demandeError) throw demandeError;
+                if (demandeError) {
+                    console.error('Supabase error:', demandeError);
+                    console.error('Error details:', JSON.stringify(demandeError, null, 2));
+                    throw demandeError;
+                }
                 setDemande(data);
             } catch (error) {
                 setError(error.message);
