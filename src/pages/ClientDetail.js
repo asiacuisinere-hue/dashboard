@@ -17,12 +17,8 @@ const DemandeDetail = ({ clientId, onClose }) => {
                     .eq('client_id', clientId)
                     .order('created_at', { ascending: false });
 
-                if (demandeError) {
-                    console.error('Supabase error:', demandeError);
-                    console.error('Error details:', JSON.stringify(demandeError, null, 2));
-                    throw demandeError;
-                }
-                setDemande(data);
+                if (demandesError) throw demandesError;
+                setDemandes(demandesData);
             } catch (error) {
                 setError(error.message);
             } finally {
