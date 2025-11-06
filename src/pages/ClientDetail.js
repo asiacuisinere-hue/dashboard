@@ -18,7 +18,7 @@ const DemandeDetail = ({ clientId, onClose }) => {
                     .order('created_at', { ascending: false });
 
                 if (demandesError) throw demandesError;
-                setDemandes(demandesData);
+                setDemande(demandesData?.[0] || null);
             } catch (error) {
                 setError(error.message);
             } finally {
