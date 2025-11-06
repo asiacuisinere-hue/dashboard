@@ -75,6 +75,31 @@ const DemandeDetail = ({ clientId, onClose }) => {
         }
     };
 
+    const generateQRCode = async () => {
+        try {
+            const response = await fetch('https://www.asiacuisine.re/generate-qrcode', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ demandId: clientId }),
+            });
+
+            if (!response.ok) {
+                const errorResult = await response.json();
+                throw new Error(errorResult.error || 'Erreur lors de la génération du QR code.');
+            }
+
+            const { qrCodeImage } = await response.json();
+            const newWindow = window.open();
+            newWindow.document.write(`<img src="${qrCodeImage}" alt="QR Code" />`);
+
+        } catch (error) {
+            console.error('Erreur lors de la génération du QR code:', error);
+            alert(`Erreur lors de la génération du QR code: ${error.message}`);
+        }
+    };
+
     if (loading) return <p>Chargement...</p>;
     if (error) return <p style={{ color: 'red' }}>Erreur: {error}</p>;
     if (!demande) return null;
@@ -101,6 +126,7 @@ const DemandeDetail = ({ clientId, onClose }) => {
                     <button onClick={() => updateStatus('Annulée')} style={{ marginRight: '10px', backgroundColor: '#dc3545', color: 'white' }}>Annuler</button>
                     <button onClick={() => generateDocument('Devis')} style={{ marginRight: '10px', backgroundColor: '#17a2b8', color: 'white' }}>Créer Devis</button>
                     <button onClick={() => generateDocument('Facture')} style={{ backgroundColor: '#ffc107', color: 'white' }}>Créer Facture</button>
+                    <button onClick={generateQRCode} style={{ marginLeft: '10px', backgroundColor: '#343a40', color: 'white' }}>Générer QR Code</button>
                 </div>
             </div>
         </div>
