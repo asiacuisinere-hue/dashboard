@@ -11,13 +11,11 @@ const DemandeDetail = ({ clientId, onClose }) => {
             if (!clientId) return;
             try {
                 setLoading(true);
-                let { data, error: demandeError } = await supabase
+                let { data: demandesData, error: demandesError } = await supabase
                     .from('demandes')
-                    .select(`*,
-                        clients ( id, first_name, last_name, email, phone, company_name, siret, address )
-                    `)
-                    .eq('id', clientId)
-                    .single();
+                    .select('*')
+                    .eq('client_id', clientId)
+                    .order('created_at', { ascending: false });
 
                 if (demandeError) {
                     console.error('Supabase error:', demandeError);
