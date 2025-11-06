@@ -84,7 +84,7 @@ const DemandeDetail = ({ demandeId, onClose }) => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ demandId }),
+                body: JSON.stringify({ demandeId }),
             });
 
             if (!response.ok) {
