@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from './supabaseClient';
+import { supabase } from '../supabaseClient';
+import { QRCodeSVG } from 'qrcode.react';
 
 const DemandeDetail = ({ demandeId, onClose }) => {
     const [demande, setDemande] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [showQR, setShowQR] = useState(false);
 
     useEffect(() => {
         const fetchDemande = async () => {
@@ -77,31 +79,6 @@ const DemandeDetail = ({ demandeId, onClose }) => {
         }
     };
 
-    const generateQRCode = async () => {
-        try {
-            const response = await fetch('https://www.asiacuisine.re/generate-qrcode', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ demandId: demandeId }),
-            });
-
-            if (!response.ok) {
-                const errorResult = await response.json();
-                throw new Error(errorResult.error || 'Erreur lors de la génération du QR code.');
-            }
-
-            const { qrCodeImage } = await response.json();
-            const newWindow = window.open();
-            newWindow.document.write(`<img src="${qrCodeImage}" alt="QR Code" />`);
-
-        } catch (error) {
-            console.error('Erreur lors de la génération du QR code:', error);
-            alert(`Erreur lors de la génération du QR code: ${error.message}`);
-        }
-    };
-
     if (loading) return <p>Chargement...</p>;
     if (error) return <p style={{ color: 'red' }}>Erreur: {error}</p>;
     if (!demande) return null;
@@ -120,6 +97,18 @@ const DemandeDetail = ({ demandeId, onClose }) => {
                 <p><strong>Statut actuel:</strong> {demande.status}</p>
                 <p><strong>Détails:</strong> <pre>{JSON.stringify(demande.details_json, null, 2)}</pre></p>
                 
+                {showQR && (
+                    <div style={{ marginTop: '20px', padding: '20px', border: '1px solid #ddd', textAlign: 'center' }}>
+                        <h4>QR Code pour cette demande:</h4>
+                        <QRCodeSVG 
+                            value={`https://www.asiacuisine.re/suivi?id=${demande.id}`}
+                            size={200}
+                            level="H"
+                        />
+                        <button onClick={() => setShowQR(false)} style={{ marginTop: '15px' }}>Fermer</button>
+                    </div>
+                )}
+
                 <div style={{ marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
                     <h4>Actions :</h4>
                     <button onClick={() => updateStatus('Confirmée')} style={{ marginRight: '10px', backgroundColor: '#28a745', color: 'white' }}>Confirmer</button>
@@ -128,7 +117,7 @@ const DemandeDetail = ({ demandeId, onClose }) => {
                     <button onClick={() => updateStatus('Annulée')} style={{ marginRight: '10px', backgroundColor: '#dc3545', color: 'white' }}>Annuler</button>
                     <button onClick={() => generateDocument('Devis')} style={{ marginRight: '10px', backgroundColor: '#17a2b8', color: 'white' }}>Créer Devis</button>
                     <button onClick={() => generateDocument('Facture')} style={{ backgroundColor: '#ffc107', color: 'white' }}>Créer Facture</button>
-                    <button onClick={generateQRCode} style={{ marginLeft: '10px', backgroundColor: '#343a40', color: 'white' }}>Générer QR Code</button>
+                    <button onClick={() => setShowQR(true)} style={{ marginLeft: '10px', backgroundColor: '#343a40', color: 'white' }}>Générer QR Code</button>
                 </div>
             </div>
         </div>
