@@ -13,7 +13,7 @@ const DemandeDetail = ({ clientId, onClose }) => {
                 setLoading(true);
                 let { data: demandesData, error: demandesError } = await supabase
                     .from('demandes')
-                    .select('*')
+                    .select('*, clients(*)')
                     .eq('client_id', clientId)
                     .order('created_at', { ascending: false });
 
