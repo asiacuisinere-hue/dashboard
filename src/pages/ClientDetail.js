@@ -49,7 +49,7 @@ const DemandeDetail = ({ clientId, onClose }) => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ clientId, documentType }),
+                body: JSON.stringify({ demandeId: clientId, documentType }),
             });
 
             if (!response.ok) {
