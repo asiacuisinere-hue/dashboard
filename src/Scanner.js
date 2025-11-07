@@ -13,7 +13,7 @@ const Scanner = () => {
                 height: 250,
             },
             fps: 5,
-            // facingMode: 'environment' // Use the rear camera
+            facingMode: 'environment' // Use the rear camera
         }, /* verbose= */ false);
 
         const onScanSuccess = (decodedText, decodedResult) => {
