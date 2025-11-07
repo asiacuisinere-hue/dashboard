@@ -63,8 +63,6 @@ const appStyle = {
     overflow: 'hidden',
 };
 
-
-
 const mainContentStyle = {
     flex: 1,
     padding: '20px',
@@ -83,10 +81,24 @@ const DashboardLayout = () => {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
+    const mobileLayoutStyle = {
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100vh',
+        overflow: 'hidden',
+    };
+
+    const mobileMainStyle = {
+        flex: 1,
+        padding: '20px',
+        overflowY: 'auto',
+        backgroundColor: '#f4f7fa',
+    };
+
     return (
-        <div style={isMobile ? { display: 'flex', flexDirection: 'column', height: '100vh' } : appStyle}>
-            {isMobile ? <Sidebar /> : <Sidebar />}
-            <main style={mainContentStyle}>
+        <div style={isMobile ? mobileLayoutStyle : appStyle}>
+            <Sidebar />
+            <main style={isMobile ? mobileMainStyle : mainContentStyle}>
                 <Routes>
                     <Route path="/" element={<Demandes />} />
                     <Route path="/demandes-en-cours" element={<DemandesEnCours />} />
