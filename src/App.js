@@ -10,7 +10,7 @@ import Entreprises from './pages/Entreprises';
 import Devis from './pages/Devis';
 import Factures from './pages/Factures';
 import Parametres from './pages/Parametres';
-import './responsive.css';
+
 
 // --- Composants ---
 
