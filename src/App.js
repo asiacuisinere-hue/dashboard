@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Route, Routes, Navigate } from 'react-router-dom';
+import { Route, Routes, Navigate, Outlet } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 import Sidebar from './Sidebar';
 import Scanner from './Scanner';
@@ -154,16 +154,7 @@ const DashboardLayout = () => {
     <div style={layoutStyle}>
       <Sidebar isMobile={isMobile} />
       <main style={mainStyle}>
-        <Routes>
-          <Route path="/" element={<Demandes />} />
-          <Route path="/demandes-en-cours" element={<DemandesEnCours />} />
-          <Route path="/particuliers" element={<Particuliers />} />
-          <Route path="/entreprises" element={<Entreprises />} />
-          <Route path="/devis" element={<Devis />} />
-          <Route path="/factures" element={<Factures />} />
-          <Route path="/scanner" element={<Scanner />} />
-          <Route path="/parametres" element={<Parametres />} />
-        </Routes>
+        <Outlet />
       </main>
     </div>
   );
@@ -206,7 +197,16 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={!session ? <Login /> : <Navigate to="/" />} />
-      <Route path="/*" element={session ? <DashboardLayout /> : <Navigate to="/login" />} />
+      <Route path="/" element={session ? <DashboardLayout /> : <Navigate to="/login" />}>
+        <Route index element={<Demandes />} />
+        <Route path="demandes-en-cours" element={<DemandesEnCours />} />
+        <Route path="particuliers" element={<Particuliers />} />
+        <Route path="entreprises" element={<Entreprises />} />
+        <Route path="devis" element={<Devis />} />
+        <Route path="factures" element={<Factures />} />
+        <Route path="scanner" element={<Scanner />} />
+        <Route path="parametres" element={<Parametres />} />
+      </Route>
     </Routes>
   );
 }
