@@ -71,34 +71,10 @@ const mainContentStyle = {
 };
 
 const DashboardLayout = () => {
-    const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-
-    useEffect(() => {
-        const handleResize = () => {
-            setIsMobile(window.innerWidth <= 768);
-        };
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
-
-    const mobileLayoutStyle = {
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100vh',
-        overflow: 'hidden',
-    };
-
-    const mobileMainStyle = {
-        flex: 1,
-        padding: '20px',
-        overflowY: 'auto',
-        backgroundColor: '#f4f7fa',
-    };
-
     return (
-        <div style={isMobile ? mobileLayoutStyle : appStyle}>
+        <div style={appStyle}>
             <Sidebar />
-            <main style={isMobile ? mobileMainStyle : mainContentStyle}>
+            <main style={mainContentStyle}>
                 <Routes>
                     <Route path="/" element={<Demandes />} />
                     <Route path="/demandes-en-cours" element={<DemandesEnCours />} />
