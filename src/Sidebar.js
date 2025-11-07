@@ -10,6 +10,15 @@ const sidebarStyle = {
     flexDirection: 'column',
 };
 
+const sidebarStyle = {
+    width: '250px',
+    backgroundColor: '#343a40',
+    padding: '20px',
+    color: 'white',
+    display: 'flex',
+    flexDirection: 'column',
+};
+
 const Sidebar = () => {
     const linkStyle = {
         display: 'block',
