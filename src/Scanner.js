@@ -13,7 +13,8 @@ const Scanner = () => {
                 height: 250,
             },
             fps: 5,
-        });
+            // facingMode: 'environment' // Use the rear camera
+        }, /* verbose= */ false);
 
         const onScanSuccess = (decodedText, decodedResult) => {
             scanner.clear();
@@ -67,10 +68,10 @@ const Scanner = () => {
     };
 
     return (
-        <div>
+        <div style={{ padding: '20px', maxWidth: '500px', margin: 'auto' }}>
             <h2>Scanner un QR Code</h2>
-            <div id="reader" style={{ width: '500px' }}></div>
-            {message && <p>{message}</p>}
+            <div id="reader"></div>
+            {message && <p style={{ marginTop: '20px', textAlign: 'center', fontSize: '1.2em' }}>{message}</p>}
         </div>
     );
 };
