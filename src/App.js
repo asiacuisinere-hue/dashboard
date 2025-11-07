@@ -58,6 +58,18 @@ const Login = () => {
 
 import './responsive.css';
 
+const appStyle = {
+    display: 'flex',
+    height: '100vh',
+};
+
+const mainContentStyle = {
+    flex: 1,
+    padding: '20px',
+    overflowY: 'auto',
+    backgroundColor: '#f4f7fa',
+};
+
 const DashboardLayout = ({ children }) => {
     return (
         <div className="app-container" style={appStyle}>
