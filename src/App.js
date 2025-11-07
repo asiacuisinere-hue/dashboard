@@ -63,17 +63,7 @@ const appStyle = {
     height: '100vh',
 };
 
-const mainContentStyle = {
-    flex: 1,
-    padding: '20px',
-    overflowY: 'auto',
-    backgroundColor: '#f4f7fa',
-};
 
-const appStyle = {
-    display: 'flex',
-    height: '100vh',
-};
 
 const mainContentStyle = {
     flex: 1,
