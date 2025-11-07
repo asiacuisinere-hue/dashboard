@@ -74,7 +74,16 @@ const DashboardLayout = ({ children }) => {
         <div className="app-container" style={appStyle}>
             <Sidebar />
             <main className="main-content" style={mainContentStyle}>
-                {children}
+                <Routes>
+                    <Route path="/" element={<Demandes />} />
+                    <Route path="/demandes-en-cours" element={<DemandesEnCours />} />
+                    <Route path="/particuliers" element={<Particuliers />} />
+                    <Route path="/entreprises" element={<Entreprises />} />
+                    <Route path="/devis" element={<Devis />} />
+                    <Route path="/factures" element={<Factures />} />
+                    <Route path="/parametres" element={<Parametres />} />
+                    <Route path="/scanner" element={<Scanner />} />
+                </Routes>
             </main>
         </div>
     );
