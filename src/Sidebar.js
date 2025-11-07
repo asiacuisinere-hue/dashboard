@@ -1,211 +1,218 @@
-import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import { supabase } from './supabaseClient';
+import Sidebar from './Sidebar';
+import Scanner from './Scanner';
+import Demandes from './Demandes';
+import DemandesEnCours from './DemandesEnCours';
+import Particuliers from './pages/Particuliers';
+import Entreprises from './pages/Entreprises';
+import Devis from './pages/Devis';
+import Factures from './pages/Factures';
+import Parametres from './pages/Parametres';
 
-const Sidebar = ({ isMobile }) => {
-  const [isOpen, setIsOpen] = useState(false);
+const Login = () => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [isError, setIsError] = useState(false);
 
-  const desktopSidebarStyle = {
-    width: '250px',
-    minWidth: '250px',
-    backgroundColor: '#343a40',
-    padding: '20px',
-    color: 'white',
-    display: 'flex',
-    flexDirection: 'column',
-    height: '100vh',
-    overflowY: 'auto',
-    flexShrink: 0,
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage('');
+    setIsError(false);
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      setMessage(error.message);
+      setIsError(true);
+    }
+    setLoading(false);
   };
 
-  const mobileHeaderStyle = {
-    width: '100%',
-    backgroundColor: '#343a40',
-    padding: '15px 20px',
-    color: 'white',
+  const loginContainerStyle = {
     display: 'flex',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignItems: 'center',
-    flexShrink: 0,
-    position: 'sticky',
-    top: 0,
-    zIndex: 50,
+    minHeight: '100vh',
+    background: '#f9f9f9',
+    padding: '20px',
   };
 
-  const hamburgerStyle = {
-    cursor: 'pointer',
-    fontSize: '28px',
+  const loginBoxStyle = {
+    width: '100%',
+    maxWidth: '400px',
+    padding: '30px',
+    background: 'white',
+    borderRadius: '8px',
+    boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
+  };
+
+  const inputStyle = {
+    width: '100%',
+    padding: '10px',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    boxSizing: 'border-box',
+    fontSize: '16px',
+  };
+
+  const buttonStyle = {
+    width: '100%',
+    padding: '12px',
+    backgroundColor: '#d4af37',
     color: 'white',
-    padding: '5px',
-    userSelect: 'none',
+    border: 'none',
+    borderRadius: '4px',
+    fontSize: '16px',
+    cursor: loading ? 'not-allowed' : 'pointer',
+    opacity: loading ? 0.7 : 1,
   };
 
-  const overlayStyle = {
+  return (
+    <div style={loginContainerStyle}>
+      <div style={loginBoxStyle}>
+        <h2 style={{ textAlign: 'center', color: '#333', marginBottom: '25px' }}>
+          Connexion Administrateur
+        </h2>
+        <form onSubmit={handleLogin}>
+          <div style={{ marginBottom: '15px' }}>
+            <label htmlFor="email" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+              Email:
+            </label>
+            <input
+              type="email"
+              id="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Votre email"
+              required
+              style={inputStyle}
+            />
+          </div>
+          <div style={{ marginBottom: '20px' }}>
+            <label htmlFor="password" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+              Mot de passe:
+            </label>
+            <input
+              type="password"
+              id="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Votre mot de passe"
+              required
+              style={inputStyle}
+            />
+          </div>
+          <button type="submit" disabled={loading} style={buttonStyle}>
+            {loading ? 'Chargement...' : 'Se connecter'}
+          </button>
+          {message && (
+            <p style={{ textAlign: 'center', marginTop: '15px', color: isError ? 'red' : 'green' }}>
+              {message}
+            </p>
+          )}
+        </form>
+      </div>
+    </div>
+  );
+};
+
+const DashboardLayout = () => {
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const layoutStyle = {
+    display: 'flex',
+    flexDirection: isMobile ? 'column' : 'row',
+    height: '100vh',
+    width: '100vw',
+    overflow: 'hidden',
     position: 'fixed',
     top: 0,
     left: 0,
-    right: 0,
-    bottom: 0,
-    width: '100vw',
-    height: '100vh',
-    backgroundColor: '#343a40',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    zIndex: 1000,
+  };
+
+  const mainStyle = {
+    flex: 1,
+    padding: '20px 15px',
     overflowY: 'auto',
     overflowX: 'hidden',
-    padding: '80px 20px 20px',
-    margin: 0,
+    backgroundColor: '#f4f7fa',
+    WebkitOverflowScrolling: 'touch',
+    maxWidth: '100vw',
     boxSizing: 'border-box',
   };
 
-  const closeButtonStyle = {
-    position: 'absolute',
-    top: '15px',
-    right: '20px',
-    fontSize: '40px',
-    color: 'white',
-    cursor: 'pointer',
-    lineHeight: '1',
-    padding: '5px',
-    userSelect: 'none',
-  };
+  return (
+    <div style={layoutStyle}>
+      <Sidebar isMobile={isMobile} />
+      <main style={mainStyle}>
+        <Routes>
+          <Route path="/" element={<Demandes />} />
+          <Route path="/demandes-en-cours" element={<DemandesEnCours />} />
+          <Route path="/particuliers" element={<Particuliers />} />
+          <Route path="/entreprises" element={<Entreprises />} />
+          <Route path="/devis" element={<Devis />} />
+          <Route path="/factures" element={<Factures />} />
+          <Route path="/scanner" element={<Scanner />} />
+          <Route path="/parametres" element={<Parametres />} />
+        </Routes>
+      </main>
+    </div>
+  );
+};
 
-  const titleStyle = {
-    color: 'white',
-    marginBottom: '40px',
-    fontSize: '24px',
-    textAlign: 'center',
-  };
+function App() {
+  const [session, setSession] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const desktopLinkStyle = {
-    display: 'block',
-    padding: '15px 20px',
-    color: '#ccc',
-    textDecoration: 'none',
-    borderLeft: '4px solid transparent',
-    transition: 'all 0.3s ease',
-    borderRadius: '4px',
-    marginBottom: '5px',
-  };
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoading(false);
+    });
 
-  const desktopActiveLinkStyle = {
-    ...desktopLinkStyle,
-    backgroundColor: '#495057',
-    borderLeft: '4px solid #d4af37',
-    fontWeight: 'bold',
-    color: 'white',
-  };
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
 
-  const mobileLinkStyle = {
-    display: 'block',
-    padding: '20px',
-    color: 'white',
-    fontSize: '18px',
-    textAlign: 'center',
-    textDecoration: 'none',
-    width: '100%',
-    maxWidth: '400px',
-    borderBottom: '1px solid rgba(255,255,255,0.1)',
-    transition: 'all 0.3s ease',
-  };
-
-  const mobileActiveLinkStyle = {
-    ...mobileLinkStyle,
-    color: '#d4af37',
-    backgroundColor: 'rgba(212, 175, 55, 0.1)',
-    fontWeight: 'bold',
-  };
-
-  const NavLinks = ({ mobile = false }) => {
-    const handleClick = () => {
-      if (mobile) {
-        setIsOpen(false);
-      }
+    return () => {
+      authListener.subscription.unsubscribe();
     };
+  }, []);
 
-    const links = [
-      { to: '/', label: 'Nouvelles Demandes' },
-      { to: '/demandes-en-cours', label: 'Demandes en Cours' },
-      { to: '/particuliers', label: 'Particuliers' },
-      { to: '/entreprises', label: 'Entreprises' },
-      { to: '/devis', label: 'Devis' },
-      { to: '/factures', label: 'Factures' },
-      { to: '/scanner', label: 'Scanner' },
-      { to: '/parametres', label: 'Paramètres' },
-    ];
-
+  if (loading) {
     return (
-      <nav style={{ 
+      <div style={{ 
         display: 'flex', 
-        flexDirection: 'column', 
-        width: '100%',
-        alignItems: mobile ? 'center' : 'stretch',
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        fontSize: '18px',
+        color: '#666'
       }}>
-        {links.map(link => (
-          <NavLink
-            key={link.to}
-            to={link.to}
-            style={({ isActive }) => 
-              mobile 
-                ? (isActive ? mobileActiveLinkStyle : mobileLinkStyle)
-                : (isActive ? desktopActiveLinkStyle : desktopLinkStyle)
-            }
-            onClick={handleClick}
-          >
-            {link.label}
-          </NavLink>
-        ))}
-      </nav>
-    );
-  };
-
-  if (isMobile) {
-    return (
-      <>
-        <header style={mobileHeaderStyle}>
-          <h2 style={{ margin: 0, fontSize: '20px' }}>Asiacuisine.re</h2>
-          <div 
-            style={hamburgerStyle} 
-            onClick={() => setIsOpen(true)}
-            role="button"
-            aria-label="Ouvrir le menu"
-          >
-            ☰
-          </div>
-        </header>
-        {isOpen && (
-          <div style={overlayStyle}>
-            <div 
-              style={closeButtonStyle} 
-              onClick={() => setIsOpen(false)}
-              role="button"
-              aria-label="Fermer le menu"
-            >
-              ×
-            </div>
-            <h2 style={titleStyle}>Menu</h2>
-            <NavLinks mobile />
-          </div>
-        )}
-      </>
+        Chargement...
+      </div>
     );
   }
 
   return (
-    <aside style={desktopSidebarStyle}>
-      <h2 style={{ 
-        textAlign: 'center', 
-        marginBottom: '30px',
-        fontSize: '22px',
-        color: 'white',
-      }}>
-        Asiacuisine.re
-      </h2>
-      <NavLinks />
-    </aside>
+    <Router>
+      <Routes>
+        <Route path="/login" element={!session ? <Login /> : <Navigate to="/" />} />
+        <Route path="/*" element={session ? <DashboardLayout /> : <Navigate to="/login" />} />
+      </Routes>
+    </Router>
   );
-};
+}
 
-export default Sidebar;
+export default App;
