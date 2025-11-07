@@ -63,12 +63,7 @@ const appStyle = {
     overflow: 'hidden',
 };
 
-const mobileAppStyle = {
-    display: 'flex',
-    flexDirection: 'column',
-    height: '100vh',
-    overflow: 'hidden',
-};
+
 
 const mainContentStyle = {
     flex: 1,
