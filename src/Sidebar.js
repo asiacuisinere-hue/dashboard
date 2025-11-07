@@ -33,12 +33,13 @@ const mobileNavOverlayStyle = {
     left: 0,
     width: '100%',
     height: '100%',
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    backgroundColor: '#343a40',  // Fond solide
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 100,
+    padding: '20px',
 };
 
 const closeButtonStyle = {
@@ -82,18 +83,23 @@ const Sidebar = () => {
     const mobileLinkStyle = {
         ...linkStyle,
         color: 'white',
-        fontSize: '24px',
+        fontSize: '20px',
         textAlign: 'center',
         border: 'none',
+        padding: '20px',
+        width: '100%',
+        borderBottom: '1px solid rgba(255,255,255,0.1)',
     };
 
     const mobileActiveLinkStyle = {
         ...mobileLinkStyle,
         color: '#d4af37',
+        backgroundColor: 'rgba(212, 175, 55, 0.1)',
+        fontWeight: 'bold',
     };
 
     const NavLinks = ({ mobile = false }) => (
-        <nav style={{ display: 'flex', flexDirection: 'column' }}>
+        <nav style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
             <NavLink to="/" style={({ isActive }) => (mobile ? (isActive ? mobileActiveLinkStyle : mobileLinkStyle) : (isActive ? activeLinkStyle : linkStyle))} onClick={() => setIsOpen(false)}>Nouvelles Demandes</NavLink>
             <NavLink to="/demandes-en-cours" style={({ isActive }) => (mobile ? (isActive ? mobileActiveLinkStyle : mobileLinkStyle) : (isActive ? activeLinkStyle : linkStyle))} onClick={() => setIsOpen(false)}>Demandes en Cours</NavLink>
             <NavLink to="/particuliers" style={({ isActive }) => (mobile ? (isActive ? mobileActiveLinkStyle : mobileLinkStyle) : (isActive ? activeLinkStyle : linkStyle))} onClick={() => setIsOpen(false)}>Particuliers</NavLink>
@@ -117,6 +123,7 @@ const Sidebar = () => {
                 {isOpen && (
                     <div style={mobileNavOverlayStyle}>
                         <div style={closeButtonStyle} onClick={() => setIsOpen(false)}>&times;</div>
+                        <h2 style={{ color: 'white', marginBottom: '40px' }}>Menu</h2>
                         <NavLinks mobile />
                     </div>
                 )}
