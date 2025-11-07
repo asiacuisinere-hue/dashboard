@@ -19,7 +19,7 @@ const Sidebar = () => {
     };
 
     return (
-        <div style={{ width: '250px', height: '100vh', background: '#fff', borderRight: '1px solid #eee', paddingTop: '20px' }}>
+        <div className="sidebar" style={sidebarStyle}>
             <h2 style={{ textAlign: 'center', marginBottom: '30px' }}>Asiacuisine.re</h2>
             <nav>
                 <NavLink to="/" style={({ isActive }) => isActive ? activeLinkStyle : linkStyle}>Nouvelles Demandes</NavLink>

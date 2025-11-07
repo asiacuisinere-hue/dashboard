@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 import Sidebar from './Sidebar';
+import Scanner from './Scanner';
 import Demandes from './Demandes';
 import DemandesEnCours from './DemandesEnCours';
 import Particuliers from './pages/Particuliers';
@@ -55,33 +56,17 @@ const Login = () => {
   );
 };
 
-const DashboardLayout = () => {
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-  };
+import './responsive.css';
 
-  return (
-    <div style={{ display: 'flex' }}>
-      <Sidebar />
-      <main style={{ flex: 1, padding: '30px', background: '#f9f9f9' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-          <h1>Tableau de Bord</h1>
-          <button onClick={handleLogout} style={{ padding: '10px 20px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', fontSize: '16px', cursor: 'pointer' }}>
-            Déconnexion
-          </button>
+const DashboardLayout = ({ children }) => {
+    return (
+        <div className="app-container" style={appStyle}>
+            <Sidebar />
+            <main className="main-content" style={mainContentStyle}>
+                {children}
+            </main>
         </div>
-        <Routes>
-          <Route path="/" element={<Demandes />} />
-          <Route path="/demandes-en-cours" element={<DemandesEnCours />} />
-          <Route path="/particuliers" element={<Particuliers />} />
-          <Route path="/entreprises" element={<Entreprises />} />
-          <Route path="/devis" element={<Devis />} />
-          <Route path="/factures" element={<Factures />} />
-          <Route path="/parametres" element={<Parametres />} />
-        </Routes>
-      </main>
-    </div>
-  );
+    );
 };
 
 // --- Composant principal ---
