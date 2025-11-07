@@ -204,12 +204,10 @@ function App() {
   }
 
   return (
-    <Router>
-      <Routes>
-        <Route path="/login" element={!session ? <Login /> : <Navigate to="/" />} />
-        <Route path="/*" element={session ? <DashboardLayout /> : <Navigate to="/login" />} />
-      </Routes>
-    </Router>
+    <Routes>
+      <Route path="/login" element={!session ? <Login /> : <Navigate to="/" />} />
+      <Route path="/*" element={session ? <DashboardLayout /> : <Navigate to="/login" />} />
+    </Routes>
   );
 }
 
