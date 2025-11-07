@@ -45,8 +45,8 @@ const Sidebar = ({ isMobile }) => {
     left: 0,
     right: 0,
     bottom: 0,
-    width: '100%',
-    height: '100%',
+    width: '100vw',
+    height: '100vh',
     backgroundColor: '#343a40',
     display: 'flex',
     flexDirection: 'column',
@@ -54,7 +54,10 @@ const Sidebar = ({ isMobile }) => {
     justifyContent: 'flex-start',
     zIndex: 1000,
     overflowY: 'auto',
+    overflowX: 'hidden',
     padding: '80px 20px 20px',
+    margin: 0,
+    boxSizing: 'border-box',
   };
 
   const closeButtonStyle = {
