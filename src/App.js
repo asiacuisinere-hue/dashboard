@@ -11,7 +11,6 @@ import Devis from './pages/Devis';
 import Factures from './pages/Factures';
 import Parametres from './pages/Parametres';
 
-
 // --- Composants ---
 
 const Login = () => {
@@ -59,7 +58,16 @@ const Login = () => {
 
 const appStyle = {
     display: 'flex',
+    flexDirection: 'row',
     height: '100vh',
+    overflow: 'hidden',
+};
+
+const mobileAppStyle = {
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100vh',
+    overflow: 'hidden',
 };
 
 const mainContentStyle = {
@@ -69,11 +77,21 @@ const mainContentStyle = {
     backgroundColor: '#f4f7fa',
 };
 
-const DashboardLayout = ({ children }) => {
+const DashboardLayout = () => {
+    const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth <= 768);
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     return (
-        <div className="app-container" style={appStyle}>
+        <div style={isMobile ? mobileAppStyle : appStyle}>
             <Sidebar />
-            <main className="main-content" style={mainContentStyle}>
+            <main style={mainContentStyle}>
                 <Routes>
                     <Route path="/" element={<Demandes />} />
                     <Route path="/demandes-en-cours" element={<DemandesEnCours />} />
@@ -81,8 +99,8 @@ const DashboardLayout = ({ children }) => {
                     <Route path="/entreprises" element={<Entreprises />} />
                     <Route path="/devis" element={<Devis />} />
                     <Route path="/factures" element={<Factures />} />
-                    <Route path="/parametres" element={<Parametres />} />
                     <Route path="/scanner" element={<Scanner />} />
+                    <Route path="/parametres" element={<Parametres />} />
                 </Routes>
             </main>
         </div>

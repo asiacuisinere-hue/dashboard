@@ -1,50 +1,66 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 
-const sidebarStyle = {
+const desktopSidebarStyle = {
     width: '250px',
     backgroundColor: '#343a40',
     padding: '20px',
     color: 'white',
     display: 'flex',
     flexDirection: 'column',
+    height: '100vh',
 };
 
-const mobileSidebarStyle = {
+const mobileHeaderStyle = {
     width: '100%',
-    height: 'auto',
     backgroundColor: '#343a40',
-    padding: '10px',
+    padding: '10px 20px',
     color: 'white',
     display: 'flex',
-    flexDirection: 'column',
-    position: 'relative',
+    justifyContent: 'space-between',
+    alignItems: 'center',
 };
 
 const hamburgerStyle = {
-    display: 'none',
-    position: 'absolute',
-    top: '15px',
-    right: '20px',
     cursor: 'pointer',
     fontSize: '24px',
     color: 'white',
 };
 
-const navStyle = {
+const mobileNavOverlayStyle = {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
     display: 'flex',
     flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 100,
 };
 
-const mobileNavStyle = {
-    display: 'none',
-    flexDirection: 'column',
-    width: '100%',
+const closeButtonStyle = {
+    position: 'absolute',
+    top: '20px',
+    right: '20px',
+    fontSize: '30px',
+    color: 'white',
+    cursor: 'pointer',
 };
 
 const Sidebar = () => {
+    const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
     const [isOpen, setIsOpen] = useState(false);
-    const isMobile = window.innerWidth <= 768;
+
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth <= 768);
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     const linkStyle = {
         display: 'block',
@@ -63,31 +79,55 @@ const Sidebar = () => {
         color: 'white',
     };
 
+    const mobileLinkStyle = {
+        ...linkStyle,
+        color: 'white',
+        fontSize: '24px',
+        textAlign: 'center',
+        border: 'none',
+    };
+
+    const mobileActiveLinkStyle = {
+        ...mobileLinkStyle,
+        color: '#d4af37',
+    };
+
+    const NavLinks = ({ mobile = false }) => (
+        <nav style={{ display: 'flex', flexDirection: 'column' }}>
+            <NavLink to="/" style={({ isActive }) => (mobile ? (isActive ? mobileActiveLinkStyle : mobileLinkStyle) : (isActive ? activeLinkStyle : linkStyle))} onClick={() => setIsOpen(false)}>Nouvelles Demandes</NavLink>
+            <NavLink to="/demandes-en-cours" style={({ isActive }) => (mobile ? (isActive ? mobileActiveLinkStyle : mobileLinkStyle) : (isActive ? activeLinkStyle : linkStyle))} onClick={() => setIsOpen(false)}>Demandes en Cours</NavLink>
+            <NavLink to="/particuliers" style={({ isActive }) => (mobile ? (isActive ? mobileActiveLinkStyle : mobileLinkStyle) : (isActive ? activeLinkStyle : linkStyle))} onClick={() => setIsOpen(false)}>Particuliers</NavLink>
+            <NavLink to="/entreprises" style={({ isActive }) => (mobile ? (isActive ? mobileActiveLinkStyle : mobileLinkStyle) : (isActive ? activeLinkStyle : linkStyle))} onClick={() => setIsOpen(false)}>Entreprises</NavLink>
+            <NavLink to="/devis" style={({ isActive }) => (mobile ? (isActive ? mobileActiveLinkStyle : mobileLinkStyle) : (isActive ? activeLinkStyle : linkStyle))} onClick={() => setIsOpen(false)}>Devis</NavLink>
+            <NavLink to="/factures" style={({ isActive }) => (mobile ? (isActive ? mobileActiveLinkStyle : mobileLinkStyle) : (isActive ? activeLinkStyle : linkStyle))} onClick={() => setIsOpen(false)}>Factures</NavLink>
+            <NavLink to="/scanner" style={({ isActive }) => (mobile ? (isActive ? mobileActiveLinkStyle : mobileLinkStyle) : (isActive ? activeLinkStyle : linkStyle))} onClick={() => setIsOpen(false)}>Scanner</NavLink>
+            <NavLink to="/parametres" style={({ isActive }) => (mobile ? (isActive ? mobileActiveLinkStyle : mobileLinkStyle) : (isActive ? activeLinkStyle : linkStyle))} onClick={() => setIsOpen(false)}>Paramètres</NavLink>
+        </nav>
+    );
+
     if (isMobile) {
-        hamburgerStyle.display = 'block';
-        if (isOpen) {
-            mobileNavStyle.display = 'flex';
-        }
+        return (
+            <>
+                <header style={mobileHeaderStyle}>
+                    <h2>Asiacuisine.re</h2>
+                    <div style={hamburgerStyle} onClick={() => setIsOpen(true)}>
+                        &#9776;
+                    </div>
+                </header>
+                {isOpen && (
+                    <div style={mobileNavOverlayStyle}>
+                        <div style={closeButtonStyle} onClick={() => setIsOpen(false)}>&times;</div>
+                        <NavLinks mobile />
+                    </div>
+                )}
+            </>
+        );
     }
 
     return (
-        <div style={isMobile ? mobileSidebarStyle : sidebarStyle}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h2 style={{ textAlign: 'center', marginBottom: '30px' }}>Asiacuisine.re</h2>
-                <div style={hamburgerStyle} onClick={() => setIsOpen(!isOpen)}>
-                    &#9776;
-                </div>
-            </div>
-            <nav style={isMobile ? mobileNavStyle : navStyle}>
-                <NavLink to="/" style={({ isActive }) => isActive ? activeLinkStyle : linkStyle}>Nouvelles Demandes</NavLink>
-                <NavLink to="/demandes-en-cours" style={({ isActive }) => isActive ? activeLinkStyle : linkStyle}>Demandes en Cours</NavLink>
-                <NavLink to="/particuliers" style={({ isActive }) => isActive ? activeLinkStyle : linkStyle}>Particuliers</NavLink>
-                <NavLink to="/entreprises" style={({ isActive }) => isActive ? activeLinkStyle : linkStyle}>Entreprises</NavLink>
-                <NavLink to="/devis" style={({ isActive }) => isActive ? activeLinkStyle : linkStyle}>Devis</NavLink>
-                <NavLink to="/factures" style={({ isActive }) => isActive ? activeLinkStyle : linkStyle}>Factures</NavLink>
-                <NavLink to="/scanner" style={({ isActive }) => isActive ? activeLinkStyle : linkStyle}>Scanner</NavLink>
-                <NavLink to="/parametres" style={({ isActive }) => isActive ? activeLinkStyle : linkStyle}>Paramètres</NavLink>
-            </nav>
+        <div style={desktopSidebarStyle}>
+            <h2 style={{ textAlign: 'center', marginBottom: '30px' }}>Asiacuisine.re</h2>
+            <NavLinks />
         </div>
     );
 };
