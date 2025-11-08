@@ -1,8 +1,28 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 
-const Sidebar = ({ isMobile }) => {
+const Sidebar = ({ isMobile, newCount, inProgressCount }) => {
   const [isOpen, setIsOpen] = useState(false);
+
+  const badgeStyle = {
+    marginLeft: '10px',
+    padding: '2px 8px',
+    borderRadius: '12px',
+    fontSize: '12px',
+    fontWeight: 'bold',
+    color: 'white',
+  };
+
+  const newBadgeStyle = {
+    ...badgeStyle,
+    backgroundColor: '#28a745', // Vert
+  };
+
+  const inProgressBadgeStyle = {
+    ...badgeStyle,
+    backgroundColor: '#ffc107', // Jaune
+    color: '#333',
+  };
 
   const desktopSidebarStyle = {
     width: '250px',
@@ -64,6 +84,13 @@ const Sidebar = ({ isMobile }) => {
     fontSize: '24px',
   };
 
+  const linkContentStyle = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+  };
+
   const desktopLinkStyle = {
     display: 'block',
     padding: '15px 20px',
@@ -108,8 +135,8 @@ const Sidebar = ({ isMobile }) => {
     };
 
     const links = [
-      { to: '/', label: 'Nouvelles Demandes' },
-      { to: '/demandes-en-cours', label: 'Demandes en Cours' },
+      { to: '/', label: 'Nouvelles Demandes', count: newCount, style: newBadgeStyle },
+      { to: '/demandes-en-cours', label: 'Demandes en Cours', count: inProgressCount, style: inProgressBadgeStyle },
       { to: '/particuliers', label: 'Particuliers' },
       { to: '/entreprises', label: 'Entreprises' },
       { to: '/devis', label: 'Devis' },
@@ -131,7 +158,10 @@ const Sidebar = ({ isMobile }) => {
             }
             onClick={handleClick}
           >
-            {link.label}
+            <div style={linkContentStyle}>
+              <span>{link.label}</span>
+              {link.count > 0 && <span style={link.style}>{link.count}</span>}
+            </div>
           </NavLink>
         ))}
       </nav>
