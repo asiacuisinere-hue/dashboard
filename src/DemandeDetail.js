@@ -47,13 +47,15 @@ const DemandeDetail = ({ demandeId, onClose }) => {
     };
 
     const generateDocument = async (documentType) => {
+        const sendEmail = window.confirm(`Voulez-vous également envoyer ce ${documentType.toLowerCase()} par e-mail au client ?`);
+
         try {
             const response = await fetch('https://www.asiacuisine.re/generate-document', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ demandeId, documentType }),
+                body: JSON.stringify({ demandeId, documentType, sendEmail }),
             });
 
             if (!response.ok) {
@@ -65,13 +67,16 @@ const DemandeDetail = ({ demandeId, onClose }) => {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${documentType}_${demandeId}.pdf`; // Nom de fichier temporaire
+            a.download = `${documentType}_${demandeId}.pdf`;
             document.body.appendChild(a);
             a.click();
             a.remove();
             window.URL.revokeObjectURL(url);
 
             alert(`${documentType} généré et téléchargé avec succès !`);
+            if (sendEmail) {
+                alert('Le document a également été envoyé par e-mail au client.');
+            }
 
         } catch (error) {
             console.error(`Erreur lors de la génération du ${documentType}:`, error);
