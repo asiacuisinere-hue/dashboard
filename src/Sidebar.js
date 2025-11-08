@@ -1,150 +1,173 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 
-// --- Styles ---
+const Sidebar = ({ isMobile }) => {
+  const [isOpen, setIsOpen] = useState(false);
 
-const desktopSidebarStyle = {
+  const desktopSidebarStyle = {
     width: '250px',
+    minWidth: '250px',
     backgroundColor: '#343a40',
     padding: '20px',
     color: 'white',
     display: 'flex',
     flexDirection: 'column',
     height: '100vh',
-};
+    overflowY: 'auto',
+    flexShrink: 0,
+  };
 
-const mobileHeaderStyle = {
+  const mobileHeaderStyle = {
     width: '100%',
     backgroundColor: '#343a40',
-    padding: '10px 20px',
+    padding: '15px 20px',
     color: 'white',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-};
+    boxSizing: 'border-box',
+  };
 
-const hamburgerStyle = {
+  const hamburgerStyle = {
     cursor: 'pointer',
-    fontSize: '24px',
+    fontSize: '28px',
     color: 'white',
-};
+  };
 
-const mobileNavOverlayStyle = {
+  const overlayStyle = {
     position: 'fixed',
     top: 0,
     left: 0,
-    width: '100%',
-    height: '100%',
+    right: 0,
+    bottom: 0,
     backgroundColor: '#343a40',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000,
-    padding: '20px',
-};
+    overflowY: 'auto',
+  };
 
-const closeButtonStyle = {
+  const closeButtonStyle = {
     position: 'absolute',
-    top: '20px',
+    top: '15px',
     right: '20px',
-    fontSize: '30px',
+    fontSize: '40px',
     color: 'white',
     cursor: 'pointer',
-};
+  };
 
-const linkStyle = {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  const titleStyle = {
+    color: 'white',
+    marginBottom: '40px',
+    fontSize: '24px',
+  };
+
+  const desktopLinkStyle = {
+    display: 'block',
     padding: '15px 20px',
     color: '#ccc',
     textDecoration: 'none',
     borderLeft: '4px solid transparent',
-    transition: 'all 0.3s ease'
-};
+    transition: 'all 0.3s ease',
+    borderRadius: '4px',
+    marginBottom: '5px',
+  };
 
-const activeLinkStyle = {
-    ...linkStyle,
+  const desktopActiveLinkStyle = {
+    ...desktopLinkStyle,
     backgroundColor: '#495057',
     borderLeft: '4px solid #d4af37',
     fontWeight: 'bold',
     color: 'white',
-};
+  };
 
-const badgeStyle = {
-    padding: '2px 8px',
-    borderRadius: '12px',
-    fontSize: '0.8em',
+  const mobileLinkStyle = {
+    display: 'block',
+    padding: '20px',
     color: 'white',
-    fontWeight: 'bold',
-};
+    fontSize: '18px',
+    textAlign: 'center',
+    textDecoration: 'none',
+    width: '100%',
+    borderBottom: '1px solid rgba(255,255,255,0.1)',
+  };
 
-// --- Composants ---
+  const mobileActiveLinkStyle = {
+    ...mobileLinkStyle,
+    color: '#d4af37',
+    backgroundColor: 'rgba(212, 175, 55, 0.1)',
+  };
 
-const Badge = ({ count, color }) => {
-    if (!count || count === 0) return null;
-    return (
-        <span style={{ ...badgeStyle, backgroundColor: color }}>
-            {count}
-        </span>
-    );
-};
+  const NavLinks = ({ mobile = false }) => {
+    const handleClick = () => {
+      if (mobile) {
+        setIsOpen(false);
+      }
+    };
 
-const NavLinks = ({ newCount, inProgressCount, mobile = false, onLinkClick = () => {} }) => {
-    const mobileLinkStyle = { ...linkStyle, fontSize: '20px', textAlign: 'center', border: 'none', padding: '20px', width: '100%', borderBottom: '1px solid rgba(255,255,255,0.1)' };
-    const mobileActiveLinkStyle = { ...mobileLinkStyle, color: '#d4af37', backgroundColor: 'rgba(212, 175, 55, 0.1)' };
-
-    const getStyle = (isActive) => mobile ? (isActive ? mobileActiveLinkStyle : mobileLinkStyle) : (isActive ? activeLinkStyle : linkStyle);
-
-    return (
-        <nav style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-            <NavLink to="/" style={({ isActive }) => getStyle(isActive)} onClick={onLinkClick}>
-                <span>Nouvelles Demandes</span>
-                <Badge count={newCount} color="#dc3545" />
-            </NavLink>
-            <NavLink to="/demandes-en-cours" style={({ isActive }) => getStyle(isActive)} onClick={onLinkClick}>
-                <span>Demandes en Cours</span>
-                <Badge count={inProgressCount} color="#ffc107" />
-            </NavLink>
-            <NavLink to="/particuliers" style={({ isActive }) => getStyle(isActive)} onClick={onLinkClick}>Particuliers</NavLink>
-            <NavLink to="/entreprises" style={({ isActive }) => getStyle(isActive)} onClick={onLinkClick}>Entreprises</NavLink>
-            <NavLink to="/devis" style={({ isActive }) => getStyle(isActive)} onClick={onLinkClick}>Devis</NavLink>
-            <NavLink to="/factures" style={({ isActive }) => getStyle(isActive)} onClick={onLinkClick}>Factures</NavLink>
-            <NavLink to="/scanner" style={({ isActive }) => getStyle(isActive)} onClick={onLinkClick}>Scanner</NavLink>
-            <NavLink to="/parametres" style={({ isActive }) => getStyle(isActive)} onClick={onLinkClick}>Paramètres</NavLink>
-        </nav>
-    );
-};
-
-
-const Sidebar = ({ newCount, inProgressCount, isMobile }) => {
-    const [isOpen, setIsOpen] = useState(false);
-
-    if (isMobile) {
-        return (
-            <>
-                <header style={mobileHeaderStyle}>
-                    <h2>Asiacuisine.re</h2>
-                    <div style={hamburgerStyle} onClick={() => setIsOpen(true)}>&#9776;</div>
-                </header>
-                {isOpen && (
-                    <div style={mobileNavOverlayStyle}>
-                        <div style={closeButtonStyle} onClick={() => setIsOpen(false)}>&times;</div>
-                        <h2 style={{ color: 'white', marginBottom: '40px' }}>Menu</h2>
-                        <NavLinks newCount={newCount} inProgressCount={inProgressCount} mobile onLinkClick={() => setIsOpen(false)} />
-                    </div>
-                )}
-            </>
-        );
-    }
+    const links = [
+      { to: '/', label: 'Nouvelles Demandes' },
+      { to: '/demandes-en-cours', label: 'Demandes en Cours' },
+      { to: '/particuliers', label: 'Particuliers' },
+      { to: '/entreprises', label: 'Entreprises' },
+      { to: '/devis', label: 'Devis' },
+      { to: '/factures', label: 'Factures' },
+      { to: '/scanner', label: 'Scanner' },
+      { to: '/parametres', label: 'Paramètres' },
+    ];
 
     return (
-        <div style={desktopSidebarStyle}>
-            <h2 style={{ textAlign: 'center', marginBottom: '30px' }}>Asiacuisine.re</h2>
-            <NavLinks newCount={newCount} inProgressCount={inProgressCount} />
-        </div>
+      <nav style={{ width: '100%' }}>
+        {links.map(link => (
+          <NavLink
+            key={link.to}
+            to={link.to}
+            style={({ isActive }) => 
+              mobile 
+                ? (isActive ? mobileActiveLinkStyle : mobileLinkStyle)
+                : (isActive ? desktopActiveLinkStyle : desktopLinkStyle)
+            }
+            onClick={handleClick}
+          >
+            {link.label}
+          </NavLink>
+        ))}
+      </nav>
     );
+  };
+
+  if (isMobile) {
+    return (
+      <>
+        <header style={mobileHeaderStyle}>
+          <h2 style={{ margin: 0, fontSize: '20px' }}>Asiacuisine.re</h2>
+          <div style={hamburgerStyle} onClick={() => setIsOpen(true)}>
+            ☰
+          </div>
+        </header>
+        {isOpen && (
+          <div style={overlayStyle}>
+            <div style={closeButtonStyle} onClick={() => setIsOpen(false)}>
+              ×
+            </div>
+            <h2 style={titleStyle}>Menu</h2>
+            <NavLinks mobile />
+          </div>
+        )}
+      </>
+    );
+  }
+
+  return (
+    <aside style={desktopSidebarStyle}>
+      <h2 style={{ textAlign: 'center', marginBottom: '30px' }}>
+        Asiacuisine.re
+      </h2>
+      <NavLinks />
+    </aside>
+  );
 };
 
 export default Sidebar;
