@@ -24,6 +24,17 @@ const Sidebar = ({ isMobile, newCount, inProgressCount }) => {
     color: '#333',
   };
 
+  const hamburgerBadgeStyle = {
+    position: 'absolute',
+    top: '5px',
+    right: '0px',
+    width: '10px',
+    height: '10px',
+    borderRadius: '50%',
+    backgroundColor: 'red',
+    border: '2px solid #343a40',
+  };
+
   const desktopSidebarStyle = {
     width: '250px',
     minWidth: '250px',
@@ -52,6 +63,8 @@ const Sidebar = ({ isMobile, newCount, inProgressCount }) => {
     cursor: 'pointer',
     fontSize: '28px',
     color: 'white',
+    position: 'relative',
+    padding: '5px',
   };
 
   const overlayStyle = {
@@ -184,6 +197,7 @@ const Sidebar = ({ isMobile, newCount, inProgressCount }) => {
           <h2 style={{ margin: 0, fontSize: '20px' }}>Asiacuisine.re</h2>
           <div style={hamburgerStyle} onClick={() => setIsOpen(true)}>
             ☰
+            {newCount > 0 && <span style={hamburgerBadgeStyle}></span>}
           </div>
         </header>
         {isOpen && (
