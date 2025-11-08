@@ -56,13 +56,6 @@ const Login = () => {
   );
 };
 
-const appStyle = {
-    display: 'flex',
-    flexDirection: 'row',
-    height: '100vh',
-    overflow: 'hidden',
-};
-
 const mainContentStyle = {
     flex: 1,
     padding: '20px',
@@ -73,39 +66,35 @@ const mainContentStyle = {
 const DashboardLayout = () => {
     const [newCount, setNewCount] = useState(0);
     const [inProgressCount, setInProgressCount] = useState(0);
+    const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+    const appStyle = {
+        display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
+        height: '100vh',
+        overflow: 'hidden',
+    };
 
     const fetchCounts = useCallback(async () => {
-        // Fetch new demands count
-        const { count: newDemandsCount } = await supabase
-            .from('demandes')
-            .select('*', { count: 'exact', head: true })
-            .eq('status', 'Nouvelle');
+        const { count: newDemandsCount } = await supabase.from('demandes').select('*', { count: 'exact', head: true }).eq('status', 'Nouvelle');
         setNewCount(newDemandsCount);
 
-        // Fetch in-progress demands count
-        const { count: inProgressDemandsCount } = await supabase
-            .from('demandes')
-            .select('*', { count: 'exact', head: true })
-            .in('status', ['Payée', 'Confirmée', 'En préparation']);
+        const { count: inProgressDemandsCount } = await supabase.from('demandes').select('*', { count: 'exact', head: true }).in('status', ['Payée', 'Confirmée', 'En préparation']);
         setInProgressCount(inProgressDemandsCount);
     }, []);
 
     useEffect(() => {
-        // Fetch initial counts
         fetchCounts();
-
-        // Set up real-time subscription
         const channel = supabase.channel('demandes-changes')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'demandes' }, (payload) => {
-                console.log('Change received!', payload);
-                // Re-fetch counts when any change occurs on the 'demandes' table
-                fetchCounts();
-            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'demandes' }, () => fetchCounts())
             .subscribe();
+        
+        const handleResize = () => setIsMobile(window.innerWidth <= 768);
+        window.addEventListener('resize', handleResize);
 
-        // Cleanup subscription on component unmount
         return () => {
             supabase.removeChannel(channel);
+            window.removeEventListener('resize', handleResize);
         };
     }, [fetchCounts]);
 
