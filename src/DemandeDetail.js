@@ -79,6 +79,36 @@ const DemandeDetail = ({ demandeId, onClose }) => {
         }
     };
 
+    const handleMarkAsPaid = async () => {
+        try {
+            // 1. Mettre à jour le statut dans Supabase
+            const { error: updateError } = await supabase
+                .from('demandes')
+                .update({ status: 'Payée' })
+                .eq('id', demandeId);
+
+            if (updateError) throw updateError;
+
+            // 2. Appeler la fonction pour envoyer l'e-mail
+            const response = await fetch('https://www.asiacuisine.re/send-qrcode', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ demandeId }),
+            });
+
+            if (!response.ok) {
+                const errorResult = await response.json();
+                throw new Error(errorResult.details || 'Erreur lors de l\'envoi de l\'e-mail');
+            }
+
+            alert('Statut mis à jour à "Payée" et QR code envoyé au client.');
+            onClose(); // Rafraîchir
+
+        } catch (error) {
+            alert(`Une erreur est survenue : ${error.message}`);
+        }
+    };
+
     if (loading) return <p>Chargement...</p>;
     if (error) return <p style={{ color: 'red' }}>Erreur: {error}</p>;
     if (!demande) return null;
@@ -112,6 +142,7 @@ const DemandeDetail = ({ demandeId, onClose }) => {
                 <div style={{ marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
                     <h4>Actions :</h4>
                     <button onClick={() => updateStatus('Confirmée')} style={{ marginRight: '10px', backgroundColor: '#28a745', color: 'white' }}>Confirmer</button>
+                    <button onClick={handleMarkAsPaid} style={{ marginRight: '10px', backgroundColor: '#e8a87c', color: 'white' }}>Marquer comme Payée</button>
                     <button onClick={() => updateStatus('En préparation')} style={{ marginRight: '10px', backgroundColor: '#007bff', color: 'white' }}>En préparation</button>
                     <button onClick={() => updateStatus('Terminée')} style={{ marginRight: '10px', backgroundColor: '#6c757d', color: 'white' }}>Terminer</button>
                     <button onClick={() => updateStatus('Annulée')} style={{ marginRight: '10px', backgroundColor: '#dc3545', color: 'white' }}>Annuler</button>
