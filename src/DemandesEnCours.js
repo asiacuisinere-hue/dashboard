@@ -1,142 +1,195 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from './supabaseClient';
-import DemandeDetail from './DemandeDetail';
+import DemandeDetail from './DemandeDetail'; // Assurez-vous que ce composant est adapté
 
 const DemandesEnCours = () => {
     const [demandes, setDemandes] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
     const [selectedDemande, setSelectedDemande] = useState(null);
-    const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-
-    // State for filters
-    const [selectedDate, setSelectedDate] = useState('');
-    const [selectedStatus, setSelectedStatus] = useState('all');
-
-    useEffect(() => {
-        const handleResize = () => setIsMobile(window.innerWidth <= 768);
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
+    const [filter, setFilter] = useState({ date: '', status: '' });
 
     const fetchDemandes = useCallback(async () => {
-        try {
-            setLoading(true);
-            let query = supabase
-                .from('demandes')
-                .select(`id, created_at, type, status, request_date, details_json, clients ( id, first_name, last_name, email, phone )`);
+        setLoading(true);
+        let query = supabase
+            .from('demandes')
+            .select(`
+                *,
+                clients (
+                    *
+                )
+            `)
+            .in('status', ['Payée', 'Confirmée', 'En préparation']);
 
-            // Apply status filter
-            if (selectedStatus === 'all') {
-                query = query.in('status', ['Payée', 'Confirmée', 'En préparation']);
-            } else {
-                query = query.eq('status', selectedStatus);
-            }
-
-            // Apply date filter
-            if (selectedDate) {
-                const startDate = new Date(selectedDate);
-                const endDate = new Date(startDate);
-                endDate.setDate(startDate.getDate() + 1);
-                query = query.gte('request_date', startDate.toISOString()).lt('request_date', endDate.toISOString());
-            }
-
-            query = query.order('request_date', { ascending: true });
-
-            let { data, error } = await query;
-
-            if (error) throw error;
-
-            setDemandes(data);
-        } catch (error) {
-            setError(error.message);
-        } finally {
-            setLoading(false);
+        if (filter.date) {
+            query = query.eq('request_date', filter.date);
         }
-    }, [selectedDate, selectedStatus]); // useCallback depends on these filters
+        if (filter.status) {
+            query = query.eq('status', filter.status);
+        }
 
-    // Re-fetch when fetchDemandes changes (i.e., when filters change)
+        const { data, error } = await query.order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('Erreur de chargement des demandes en cours:', error);
+        } else {
+            setDemandes(data);
+        }
+        setLoading(false);
+    }, [filter]);
+
     useEffect(() => {
         fetchDemandes();
     }, [fetchDemandes]);
 
-    const handleCloseDetail = () => {
-        setSelectedDemande(null);
-        fetchDemandes(); // Refresh the list after closing
+    const handleFilterChange = (e) => {
+        const { name, value } = e.target;
+        setFilter(prev => ({ ...prev, [name]: value }));
     };
     
     const resetFilters = () => {
-        setSelectedDate('');
-        setSelectedStatus('all');
+        setFilter({ date: '', status: '' });
     };
 
-    const getStatusStyle = (status) => {
-        const baseStyle = { padding: '3px 8px', borderRadius: '12px', fontSize: '0.8em', color: 'white' };
-        switch (status) {
-            case 'Payée': return { ...baseStyle, background: '#28a745' };
-            case 'Confirmée': return { ...baseStyle, background: '#17a2b8' };
-            case 'En préparation': return { ...baseStyle, background: '#007bff' };
-            default: return { ...baseStyle, background: '#6c757d' };
-        }
-    };
-
-    const filterContainerStyle = {
-        display: 'flex',
-        flexDirection: isMobile ? 'column' : 'row',
-        gap: '15px',
-        marginBottom: '20px',
-        alignItems: isMobile ? 'stretch' : 'center',
-    };
-
-    const filterGroupStyle = {
-        display: 'flex',
-        flexDirection: 'column',
-    };
-
-    if (error) return <p style={{ color: 'red' }}>Erreur: {error}</p>;
+    if (loading) {
+        return <div>Chargement des demandes en cours...</div>;
+    }
 
     return (
-        <div style={{ padding: '20px' }}>
-            <h3 style={{ marginBottom: '20px' }}>Demandes en Cours</h3>
+        <div>
+            <h1>Demandes en cours</h1>
+            <p>Suivi des demandes confirmées, payées et en préparation.</p>
 
-            {/* --- Filtres --- */}
             <div style={filterContainerStyle}>
-                <div style={filterGroupStyle}>
-                    <label htmlFor="date-filter" style={{ marginBottom: '5px' }}>Filtrer par date :</label>
-                    <input type="date" id="date-filter" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
-                </div>
-                <div style={filterGroupStyle}>
-                    <label htmlFor="status-filter" style={{ marginBottom: '5px' }}>Filtrer par statut :</label>
-                    <select id="status-filter" value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>
-                        <option value="all">Tous les statuts</option>
-                        <option value="Payée">Payée</option>
-                        <option value="Confirmée">Confirmée</option>
-                        <option value="En préparation">En préparation</option>
-                    </select>
-                </div>
-                <button onClick={resetFilters} style={{ alignSelf: isMobile ? 'flex-start' : 'center', marginTop: isMobile ? '10px' : '0' }}>
-                    Réinitialiser
-                </button>
+                <input 
+                    type="date" 
+                    name="date" 
+                    value={filter.date} 
+                    onChange={handleFilterChange}
+                    style={filterInputStyle}
+                />
+                <select 
+                    name="status" 
+                    value={filter.status} 
+                    onChange={handleFilterChange}
+                    style={filterInputStyle}
+                >
+                    <option value="">Tous les statuts</option>
+                    <option value="Confirmée">Confirmée</option>
+                    <option value="Payée">Payée</option>
+                    <option value="En préparation">En préparation</option>
+                </select>
+                <button onClick={resetFilters} style={detailsButtonStyle}>Réinitialiser</button>
             </div>
 
-            {loading ? <p>Chargement...</p> : demandes.length > 0 ? (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
-                    {demandes.map((demande) => (
-                        <div key={demande.id} onClick={() => setSelectedDemande(demande.id)} style={{ background: 'white', padding: '15px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.08)', cursor: 'pointer' }}>
-                            <p><strong>Client:</strong> {demande.clients.last_name || demande.clients.email}</p>
-                            <p><strong>Type:</strong> {demande.type}</p>
-                            <p><strong>Date:</strong> {new Date(demande.request_date).toLocaleDateString('fr-FR')}</p>
-                            <p><strong>Statut:</strong> <span style={getStatusStyle(demande.status)}>{demande.status}</span></p>
-                        </div>
-                    ))}
-                </div>
-            ) : (
-                <p>Aucune demande en cours correspondant à vos filtres.</p>
-            )}
+            <div style={tableContainerStyle}>
+                <table style={tableStyle}>
+                    <thead>
+                        <tr>
+                            <th style={thStyle}>Date Demande</th>
+                            <th style={thStyle}>Client</th>
+                            <th style={thStyle}>Type</th>
+                            <th style={thStyle}>Statut</th>
+                            <th style={thStyle}>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {demandes.map(demande => (
+                            <tr key={demande.id}>
+                                <td style={tdStyle}>{new Date(demande.created_at).toLocaleDateString('fr-FR')}</td>
+                                <td style={tdStyle}>{demande.clients?.last_name || 'N/A'}</td>
+                                <td style={tdStyle}>{demande.type}</td>
+                                <td style={tdStyle}><span style={statusBadgeStyle(demande.status)}>{demande.status}</span></td>
+                                <td style={tdStyle}>
+                                    <button onClick={() => setSelectedDemande(demande)} style={detailsButtonStyle}>
+                                        Voir Détails
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
 
-            {selectedDemande && <DemandeDetail demandeId={selectedDemande} onClose={handleCloseDetail} />}
+            {selectedDemande && (
+                <DemandeDetail 
+                    demande={selectedDemande} 
+                    onClose={() => setSelectedDemande(null)}
+                    onUpdate={fetchDemandes} 
+                />
+            )}
         </div>
     );
+};
+
+
+// --- Styles ---
+
+const filterContainerStyle = {
+    display: 'flex',
+    gap: '1rem',
+    marginBottom: '2rem',
+    alignItems: 'center'
+};
+
+const filterInputStyle = {
+    padding: '8px',
+    borderRadius: '5px',
+    border: '1px solid #ccc'
+};
+
+const tableContainerStyle = {
+    marginTop: '2rem',
+    boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+    borderRadius: '8px',
+    overflow: 'hidden',
+    background: 'white'
+};
+
+const tableStyle = {
+    width: '100%',
+    borderCollapse: 'collapse',
+};
+
+const thStyle = {
+    background: '#f4f7fa',
+    padding: '12px 15px',
+    textAlign: 'left',
+    fontWeight: 'bold',
+    color: '#333',
+    borderBottom: '2px solid #ddd'
+};
+
+const tdStyle = {
+    padding: '12px 15px',
+    borderBottom: '1px solid #eee',
+    color: '#555'
+};
+
+const detailsButtonStyle = {
+    padding: '8px 12px',
+    background: '#d4af37',
+    color: 'white',
+    border: 'none',
+    borderRadius: '5px',
+    cursor: 'pointer',
+};
+
+const statusBadgeStyle = (status) => {
+    const colors = {
+        'Confirmée': '#28a745',
+        'Payée': '#17a2b8',
+        'En préparation': '#ffc107',
+        'Terminée': '#6c757d',
+        'Annulée': '#dc3545'
+    };
+    return {
+        padding: '4px 8px',
+        borderRadius: '12px',
+        color: status === 'En préparation' ? 'black' : 'white',
+        fontWeight: 'bold',
+        fontSize: '12px',
+        backgroundColor: colors[status] || '#6c757d'
+    };
 };
 
 export default DemandesEnCours;

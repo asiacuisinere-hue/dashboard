@@ -1,81 +1,278 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from './supabaseClient';
-import DemandeDetail from './DemandeDetail';
 
-const Demandes = () => {
-    const [demandes, setDemandes] = useState({});
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [selectedDemande, setSelectedDemande] = useState(null);
+// --- Composants ---
 
-    const fetchDemandes = async () => {
-        try {
-            setLoading(true);
-            let { data, error } = await supabase
-                .from('demandes')
-                .select(`id, created_at, type, status, request_date, details_json, clients ( id, first_name, last_name, email, phone )`)
-                .eq('status', 'Nouvelle')
-                .order('created_at', { ascending: true });
+const DetailsRenderer = ({ details }) => {
+    if (!details) return null;
 
-            if (error) throw error;
+    const keyMap = {
+        customerType: 'Type de client',
+        serviceType: 'Type de service',
+        numberOfPeople: 'Nombre de personnes',
+        customerMessage: 'Message du client',
+        formulaName: 'Formule',
+        formulaOption: 'Option de la formule',
+        deliveryCity: 'Ville de livraison'
+    };
 
-            const groupedByCity = data.reduce((acc, demande) => {
-                const city = demande.details_json?.deliveryCity || 'Non spécifiée';
-                if (!acc[city]) {
-                    acc[city] = [];
-                }
-                acc[city].push(demande);
-                return acc;
-            }, {});
+    return (
+        <ul style={{ listStyleType: 'none', padding: 0 }}>
+            {Object.entries(details).map(([key, value]) => {
+                if (!value) return null;
+                const label = keyMap[key] || key;
+                return (
+                    <li key={key} style={{ marginBottom: '8px' }}>
+                        <strong style={{ color: '#333' }}>{label}:</strong>
+                        <span style={{ marginLeft: '8px', color: '#555' }}>{value}</span>
+                    </li>
+                );
+            })}
+        </ul>
+    );
+};
 
-            setDemandes(groupedByCity);
-        } catch (error) {
-            setError(error.message);
-        } finally {
-            setLoading(false);
+const DemandeModal = ({ demande, onClose, onUpdate }) => {
+    if (!demande) return null;
+
+    const handleUpdateStatus = async (newStatus) => {
+        const { error } = await supabase
+            .from('demandes')
+            .update({ status: newStatus })
+            .eq('id', demande.id);
+        
+        if (error) {
+            alert(`Erreur lors de la mise à jour : ${error.message}`);
+        } else {
+            alert('Statut mis à jour avec succès !');
+            onUpdate(); // Callback pour rafraîchir la liste
+            onClose();
         }
     };
 
-    useEffect(() => {
-        fetchDemandes();
-    }, []);
-
-    const handleCloseDetail = () => {
-        setSelectedDemande(null);
-        fetchDemandes(); // Rafraîchir la liste après la fermeture
-    };
-
-    if (loading) return <p>Chargement des nouvelles demandes...</p>;
-    if (error) return <p style={{ color: 'red' }}>Erreur: {error}</p>;
-
     return (
-        <div style={{ padding: '20px' }}>
-            <h3 style={{ marginBottom: '20px' }}>Nouvelles Demandes</h3>
-            {Object.keys(demandes).length > 0 ? (
-                Object.entries(demandes).map(([city, demandesList]) => (
-                    <div key={city} style={{ marginBottom: '30px' }}>
-                        <h4 style={{ borderBottom: '2px solid #eee', paddingBottom: '10px', marginBottom: '15px' }}>
-                            📍 {city} ({demandesList.length} demande{demandesList.length > 1 ? 's' : ''})
-                        </h4>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
-                            {demandesList.map((demande) => (
-                                <div key={demande.id} onClick={() => setSelectedDemande(demande.id)} style={{ background: 'white', padding: '15px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.08)', cursor: 'pointer' }}>
-                                    <p><strong>Client:</strong> {demande.clients.last_name || demande.clients.email}</p>
-                                    <p><strong>Type:</strong> {demande.type}</p>
-                                    <p><strong>Date:</strong> {new Date(demande.request_date).toLocaleDateString('fr-FR')}</p>
-                                    <p><strong>Statut:</strong> <span style={{ background: '#ffc107', padding: '3px 8px', borderRadius: '12px', fontSize: '0.8em' }}>{demande.status}</span></p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                ))
-            ) : (
-                <p>Aucune nouvelle demande pour le moment.</p>
-            )}
+        <div style={modalOverlayStyle}>
+            <div style={modalContentStyle}>
+                <button onClick={onClose} style={closeButtonStyle}>&times;</button>
+                <h2 style={{ borderBottom: '2px solid #eee', paddingBottom: '10px', marginBottom: '20px' }}>Détails de la demande</h2>
+                
+                <div style={detailSectionStyle}>
+                    <h3 style={detailTitleStyle}>Client</h3>
+                    <p><strong>Nom:</strong> {demande.clients.last_name} {demande.clients.first_name}</p>
+                    <p><strong>Email:</strong> {demande.clients.email}</p>
+                    <p><strong>Téléphone:</strong> {demande.clients.phone}</p>
+                    <p><strong>ID Client:</strong> {demande.clients.client_id}</p>
+                </div>
 
-            {selectedDemande && <DemandeDetail demandeId={selectedDemande} onClose={handleCloseDetail} />}
+                <div style={detailSectionStyle}>
+                    <h3 style={detailTitleStyle}>Demande</h3>
+                    <p><strong>Type:</strong> {demande.type}</p>
+                    <p><strong>Date souhaitée:</strong> {new Date(demande.request_date).toLocaleDateString('fr-FR')}</p>
+                    <p><strong>Statut actuel:</strong> <span style={statusBadgeStyle(demande.status)}>{demande.status}</span></p>
+                </div>
+
+                <div style={detailSectionStyle}>
+                    <h3 style={detailTitleStyle}>Détails Spécifiques</h3>
+                    <DetailsRenderer details={demande.details_json} />
+                </div>
+
+                <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                    <button onClick={() => handleUpdateStatus('Confirmée')} style={actionButtonStyle}>Marquer comme Confirmée</button>
+                    <button onClick={() => handleUpdateStatus('Annulée')} style={{...actionButtonStyle, backgroundColor: '#dc3545'}}>Marquer comme Annulée</button>
+                </div>
+            </div>
         </div>
     );
+};
+
+
+const Demandes = () => {
+    const [demandes, setDemandes] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [selectedDemande, setSelectedDemande] = useState(null);
+
+    const fetchDemandes = useCallback(async () => {
+        setLoading(true);
+        const { data, error } = await supabase
+            .from('demandes')
+            .select(`
+                *,
+                clients (
+                    *
+                )
+            `)
+            .eq('status', 'Nouvelle')
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('Erreur de chargement des demandes:', error);
+            alert('Erreur de chargement des demandes.');
+        } else {
+            setDemandes(data);
+        }
+        setLoading(false);
+    }, []);
+
+    useEffect(() => {
+        fetchDemandes();
+    }, [fetchDemandes]);
+
+    if (loading) {
+        return <div>Chargement des nouvelles demandes...</div>;
+    }
+
+    return (
+        <div>
+            <h1>Nouvelles Demandes</h1>
+            <p>Voici la liste des nouvelles demandes en attente de traitement.</p>
+            
+            <div style={tableContainerStyle}>
+                <table style={tableStyle}>
+                    <thead>
+                        <tr>
+                            <th style={thStyle}>Date Demande</th>
+                            <th style={thStyle}>Client</th>
+                            <th style={thStyle}>Type</th>
+                            <th style={thStyle}>Date Souhaitée</th>
+                            <th style={thStyle}>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {demandes.map(demande => (
+                            <tr key={demande.id} style={trStyle}>
+                                <td style={tdStyle}>{new Date(demande.created_at).toLocaleDateString('fr-FR')}</td>
+                                <td style={tdStyle}>{demande.clients?.last_name || 'N/A'}</td>
+                                <td style={tdStyle}>{demande.type}</td>
+                                <td style={tdStyle}>{new Date(demande.request_date).toLocaleDateString('fr-FR')}</td>
+                                <td style={tdStyle}>
+                                    <button onClick={() => setSelectedDemande(demande)} style={detailsButtonStyle}>
+                                        Voir Détails
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            {selectedDemande && (
+                <DemandeModal 
+                    demande={selectedDemande} 
+                    onClose={() => setSelectedDemande(null)}
+                    onUpdate={fetchDemandes} 
+                />
+            )}
+        </div>
+    );
+};
+
+// --- Styles ---
+
+const tableContainerStyle = {
+    marginTop: '2rem',
+    boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+    borderRadius: '8px',
+    overflow: 'hidden',
+    background: 'white'
+};
+
+const tableStyle = {
+    width: '100%',
+    borderCollapse: 'collapse',
+};
+
+const thStyle = {
+    background: '#f4f7fa',
+    padding: '12px 15px',
+    textAlign: 'left',
+    fontWeight: 'bold',
+    color: '#333',
+    borderBottom: '2px solid #ddd'
+};
+
+const tdStyle = {
+    padding: '12px 15px',
+    borderBottom: '1px solid #eee',
+    color: '#555'
+};
+
+const trStyle = {
+    transition: 'background-color 0.2s ease'
+};
+
+const detailsButtonStyle = {
+    padding: '8px 12px',
+    background: '#d4af37',
+    color: 'white',
+    border: 'none',
+    borderRadius: '5px',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s ease'
+};
+
+const modalOverlayStyle = {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000
+};
+
+const modalContentStyle = {
+    background: 'white',
+    padding: '30px',
+    borderRadius: '8px',
+    width: '90%',
+    maxWidth: '700px',
+    maxHeight: '90vh',
+    overflowY: 'auto',
+    position: 'relative'
+};
+
+const closeButtonStyle = {
+    position: 'absolute',
+    top: '15px',
+    right: '15px',
+    background: 'transparent',
+    border: 'none',
+    fontSize: '24px',
+    cursor: 'pointer'
+};
+
+const detailSectionStyle = {
+    marginBottom: '20px',
+    paddingBottom: '20px',
+    borderBottom: '1px solid #f0f0f0'
+};
+
+const detailTitleStyle = {
+    fontSize: '18px',
+    color: '#d4af37',
+    marginBottom: '10px'
+};
+
+const statusBadgeStyle = (status) => ({
+    padding: '4px 8px',
+    borderRadius: '12px',
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: '12px',
+    backgroundColor: status === 'Nouvelle' ? '#007bff' : (status === 'Confirmée' ? '#28a745' : '#dc3545')
+});
+
+const actionButtonStyle = {
+    padding: '10px 15px',
+    border: 'none',
+    borderRadius: '5px',
+    cursor: 'pointer',
+    color: 'white',
+    backgroundColor: '#28a745',
+    fontWeight: 'bold'
 };
 
 export default Demandes;

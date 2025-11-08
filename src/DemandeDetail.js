@@ -1,163 +1,190 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { supabase } from './supabaseClient';
-import { QRCodeSVG } from 'qrcode.react';
 
-const DemandeDetail = ({ demandeId, onClose }) => {
-    const [demande, setDemande] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [showQR, setShowQR] = useState(false);
+// --- Composants ---
 
-    useEffect(() => {
-        const fetchDemande = async () => {
-            if (!demandeId) return;
-            try {
-                setLoading(true);
-                let { data, error: demandeError } = await supabase
-                    .from('demandes')
-                    .select(`*,
-                        clients ( id, first_name, last_name, email, phone, company_name, siret, address )
-                    `)
-                    .eq('id', demandeId)
-                    .single();
+const DetailsRenderer = ({ details }) => {
+    if (!details) return null;
 
-                if (demandeError) throw demandeError;
-                setDemande(data);
-            } catch (error) {
-                setError(error.message);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchDemande();
-    }, [demandeId]);
-
-    const updateStatus = async (newStatus) => {
-        try {
-            const { error } = await supabase
-                .from('demandes')
-                .update({ status: newStatus })
-                .eq('id', demandeId);
-
-            if (error) throw error;
-            onClose(); // Fermer le modal et rafraîchir la liste
-        } catch (error) {
-            alert(`Erreur lors de la mise à jour du statut : ${error.message}`);
-        }
+    const keyMap = {
+        customerType: 'Type de client',
+        serviceType: 'Type de service',
+        numberOfPeople: 'Nombre de personnes',
+        customerMessage: 'Message du client',
+        formulaName: 'Formule',
+        formulaOption: 'Option de la formule',
+        deliveryCity: 'Ville de livraison'
     };
 
-    const generateDocument = async (documentType) => {
-        const sendEmail = window.confirm(`Voulez-vous également envoyer ce ${documentType.toLowerCase()} par e-mail au client ?`);
+    return (
+        <ul style={{ listStyleType: 'none', padding: 0, background: '#f9f9f9', borderRadius: '5px', padding: '15px' }}>
+            {Object.entries(details).map(([key, value]) => {
+                if (!value) return null;
+                const label = keyMap[key] || key;
+                return (
+                    <li key={key} style={{ marginBottom: '8px', borderBottom: '1px solid #eee', paddingBottom: '8px' }}>
+                        <strong style={{ color: '#333', minWidth: '150px', display: 'inline-block' }}>{label}</strong>
+                        <span style={{ color: '#555' }}>{value}</span>
+                    </li>
+                );
+            })}
+        </ul>
+    );
+};
 
-        try {
-            const response = await fetch('https://www.asiacuisine.re/generate-document', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ demandeId, documentType, sendEmail }),
-            });
+const DemandeDetail = ({ demande, onClose, onUpdate }) => {
+    if (!demande) return null;
 
-            if (!response.ok) {
-                const errorResult = await response.json();
-                throw new Error(errorResult.error || 'Erreur lors de la génération du document.');
-            }
-
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${documentType}_${demandeId}.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            window.URL.revokeObjectURL(url);
-
-            alert(`${documentType} généré et téléchargé avec succès !`);
-            if (sendEmail) {
-                alert('Le document a également été envoyé par e-mail au client.');
-            }
-
-        } catch (error) {
-            console.error(`Erreur lors de la génération du ${documentType}:`, error);
-            alert(`Erreur lors de la génération du ${documentType}: ${error.message}`);
+    const handleUpdateStatus = async (newStatus) => {
+        const { error } = await supabase
+            .from('demandes')
+            .update({ status: newStatus })
+            .eq('id', demande.id);
+        
+        if (error) {
+            alert(`Erreur lors de la mise à jour : ${error.message}`);
+        } else {
+            alert('Statut mis à jour avec succès !');
+            onUpdate();
+            onClose();
         }
     };
 
     const handleMarkAsPaid = async () => {
+        // 1. Mettre à jour le statut
+        await handleUpdateStatus('Payée');
+        
+        // 2. Envoyer le QR Code
         try {
-            // 1. Mettre à jour le statut dans Supabase
-            const { error: updateError } = await supabase
-                .from('demandes')
-                .update({ status: 'Payée' })
-                .eq('id', demandeId);
-
-            if (updateError) throw updateError;
-
-            // 2. Appeler la fonction pour envoyer l'e-mail
-            const response = await fetch('https://www.asiacuisine.re/send-qrcode', {
+            const response = await fetch('/send-qrcode/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ demandeId }),
+                body: JSON.stringify({ demandeId: demande.id })
             });
-
+            const result = await response.json();
             if (!response.ok) {
-                const errorResult = await response.json();
-                throw new Error(errorResult.details || 'Erreur lors de l\'envoi de l\'e-mail');
+                throw new Error(result.error || 'Erreur inconnue');
             }
-
-            alert('Statut mis à jour à "Payée" et QR code envoyé au client.');
-            onClose(); // Rafraîchir
-
+            alert('E-mail avec QR code envoyé au client.');
         } catch (error) {
-            alert(`Une erreur est survenue : ${error.message}`);
+            alert(`Erreur lors de l'envoi du QR code : ${error.message}`);
         }
     };
 
-    if (loading) return <p>Chargement...</p>;
-    if (error) return <p style={{ color: 'red' }}>Erreur: {error}</p>;
-    if (!demande) return null;
-
     return (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
-            <div style={{ background: 'white', padding: '30px', borderRadius: '8px', width: '80%', maxWidth: '900px', maxHeight: '90vh', overflowY: 'auto', position: 'relative' }}>
-                <button onClick={onClose} style={{ position: 'absolute', top: '15px', right: '15px', background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>&times;</button>
-                <h2>Détails de la Demande</h2>
-                <p><strong>Client:</strong> {demande.clients.last_name || demande.clients.email} {demande.clients.first_name}</p>
-                {demande.clients.company_name && <p><strong>Entreprise:</strong> {demande.clients.company_name}</p>}
-                <p><strong>Email:</strong> {demande.clients.email}</p>
-                <p><strong>Téléphone:</strong> {demande.clients.phone}</p>
-                <p><strong>Type de demande:</strong> {demande.type}</p>
-                <p><strong>Date de la demande:</strong> {new Date(demande.request_date).toLocaleDateString('fr-FR')}</p>
-                <p><strong>Statut actuel:</strong> {demande.status}</p>
-                <p><strong>Détails:</strong> <pre>{JSON.stringify(demande.details_json, null, 2)}</pre></p>
+        <div style={modalOverlayStyle}>
+            <div style={modalContentStyle}>
+                <button onClick={onClose} style={closeButtonStyle}>&times;</button>
+                <h2 style={{ borderBottom: '2px solid #eee', paddingBottom: '10px', marginBottom: '20px' }}>Détails de la demande</h2>
                 
-                {showQR && (
-                    <div style={{ marginTop: '20px', padding: '20px', border: '1px solid #ddd', textAlign: 'center' }}>
-                        <h4>QR Code pour cette demande:</h4>
-                        <QRCodeSVG 
-                            value={`https://www.asiacuisine.re/suivi?id=${demande.id}`}
-                            size={200}
-                            level="H"
-                        />
-                        <button onClick={() => setShowQR(false)} style={{ marginTop: '15px' }}>Fermer</button>
-                    </div>
-                )}
+                <div style={detailSectionStyle}>
+                    <h3 style={detailTitleStyle}>Client</h3>
+                    <p><strong>Nom:</strong> {demande.clients.last_name} {demande.clients.first_name}</p>
+                    <p><strong>Email:</strong> {demande.clients.email}</p>
+                    <p><strong>Téléphone:</strong> {demande.clients.phone}</p>
+                    <p><strong>ID Client:</strong> {demande.clients.client_id}</p>
+                </div>
 
-                <div style={{ marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
-                    <h4>Actions :</h4>
-                    <button onClick={() => updateStatus('Confirmée')} style={{ marginRight: '10px', backgroundColor: '#28a745', color: 'white' }}>Confirmer</button>
-                    <button onClick={handleMarkAsPaid} style={{ marginRight: '10px', backgroundColor: '#e8a87c', color: 'white' }}>Marquer comme Payée</button>
-                    <button onClick={() => updateStatus('En préparation')} style={{ marginRight: '10px', backgroundColor: '#007bff', color: 'white' }}>En préparation</button>
-                    <button onClick={() => updateStatus('Terminée')} style={{ marginRight: '10px', backgroundColor: '#6c757d', color: 'white' }}>Terminer</button>
-                    <button onClick={() => updateStatus('Annulée')} style={{ marginRight: '10px', backgroundColor: '#dc3545', color: 'white' }}>Annuler</button>
-                    <button onClick={() => generateDocument('Devis')} style={{ marginRight: '10px', backgroundColor: '#17a2b8', color: 'white' }}>Créer Devis</button>
-                    <button onClick={() => generateDocument('Facture')} style={{ backgroundColor: '#ffc107', color: 'white' }}>Créer Facture</button>
-                    <button onClick={() => setShowQR(true)} style={{ marginLeft: '10px', backgroundColor: '#343a40', color: 'white' }}>Générer QR Code</button>
+                <div style={detailSectionStyle}>
+                    <h3 style={detailTitleStyle}>Demande</h3>
+                    <p><strong>Type:</strong> {demande.type}</p>
+                    <p><strong>Date souhaitée:</strong> {new Date(demande.request_date).toLocaleDateString('fr-FR')}</p>
+                    <p><strong>Statut actuel:</strong> <span style={statusBadgeStyle(demande.status)}>{demande.status}</span></p>
+                </div>
+
+                <div style={detailSectionStyle}>
+                    <h3 style={detailTitleStyle}>Détails Spécifiques</h3>
+                    <DetailsRenderer details={demande.details_json} />
+                </div>
+
+                <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                    {demande.status === 'Confirmée' && (
+                        <button onClick={handleMarkAsPaid} style={{...actionButtonStyle, backgroundColor: '#17a2b8'}}>Marquer comme Payée & Envoyer QR</button>
+                    )}
+                    {demande.status === 'Payée' && (
+                         <button onClick={() => handleUpdateStatus('En préparation')} style={{...actionButtonStyle, backgroundColor: '#ffc107', color: 'black'}}>Marquer comme "En préparation"</button>
+                    )}
+                    <button onClick={() => handleUpdateStatus('Annulée')} style={{...actionButtonStyle, backgroundColor: '#dc3545'}}>Annuler la demande</button>
                 </div>
             </div>
         </div>
     );
+};
+
+// --- Styles ---
+
+const modalOverlayStyle = {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000
+};
+
+const modalContentStyle = {
+    background: 'white',
+    padding: '30px',
+    borderRadius: '8px',
+    width: '90%',
+    maxWidth: '700px',
+    maxHeight: '90vh',
+    overflowY: 'auto',
+    position: 'relative'
+};
+
+const closeButtonStyle = {
+    position: 'absolute',
+    top: '15px',
+    right: '15px',
+    background: 'transparent',
+    border: 'none',
+    fontSize: '24px',
+    cursor: 'pointer'
+};
+
+const detailSectionStyle = {
+    marginBottom: '20px',
+    paddingBottom: '20px',
+    borderBottom: '1px solid #f0f0f0'
+};
+
+const detailTitleStyle = {
+    fontSize: '18px',
+    color: '#d4af37',
+    marginBottom: '10px'
+};
+
+const statusBadgeStyle = (status) => {
+    const colors = {
+        'Nouvelle': '#007bff',
+        'Confirmée': '#28a745',
+        'Payée': '#17a2b8',
+        'En préparation': '#ffc107',
+        'Terminée': '#6c757d',
+        'Annulée': '#dc3545'
+    };
+    return {
+        padding: '4px 8px',
+        borderRadius: '12px',
+        color: status === 'En préparation' ? 'black' : 'white',
+        fontWeight: 'bold',
+        fontSize: '12px',
+        backgroundColor: colors[status] || '#6c757d'
+    };
+};
+
+const actionButtonStyle = {
+    padding: '10px 15px',
+    border: 'none',
+    borderRadius: '5px',
+    cursor: 'pointer',
+    color: 'white',
+    fontWeight: 'bold'
 };
 
 export default DemandeDetail;
