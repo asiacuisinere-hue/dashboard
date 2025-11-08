@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { BrowserRouter, Route, Routes, Navigate } from 'react-router-dom';
+import { Route, Routes, Navigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 import Sidebar from './Sidebar';
 import Scanner from './Scanner';
@@ -154,12 +154,10 @@ function App() {
   }
 
   return (
-    <BrowserRouter>
       <Routes>
         <Route path="/login" element={!session ? <Login /> : <Navigate to="/" />} />
         <Route path="/*" element={session ? <DashboardLayout /> : <Navigate to="/login" />} />
       </Routes>
-    </BrowserRouter>
   );
 }
 
