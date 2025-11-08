@@ -1,216 +1,73 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { NavLink } from 'react-router-dom';
 
-const Sidebar = ({ isMobile }) => {
-  const [isOpen, setIsOpen] = useState(false);
-
-  const desktopSidebarStyle = {
+const sidebarStyle = {
     width: '250px',
-    minWidth: '250px',
     backgroundColor: '#343a40',
     padding: '20px',
     color: 'white',
     display: 'flex',
     flexDirection: 'column',
-    height: '100vh',
-    overflowY: 'auto',
-    flexShrink: 0,
-  };
+};
 
-  const mobileHeaderStyle = {
-    width: '100%',
-    maxWidth: '100vw',
-    backgroundColor: '#343a40',
-    padding: '15px 15px',
-    color: 'white',
-    display: 'flex',
-    justifyContent: 'space-between',
+const linkStyle = {
+    display: 'flex', // Changed to flex to align text and badge
+    justifyContent: 'space-between', // Puts space between text and badge
     alignItems: 'center',
-    flexShrink: 0,
-    position: 'sticky',
-    top: 0,
-    left: 0,
-    zIndex: 50,
-    boxSizing: 'border-box',
-    overflow: 'hidden',
-  };
-
-  const hamburgerStyle = {
-    cursor: 'pointer',
-    fontSize: '28px',
-    color: 'white',
-    padding: '5px',
-    userSelect: 'none',
-  };
-
-  const overlayStyle = {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: '100vw',
-    height: '100vh',
-    backgroundColor: '#343a40',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    zIndex: 1000,
-    overflowY: 'auto',
-    overflowX: 'hidden',
-    padding: '80px 20px 20px',
-    margin: 0,
-    boxSizing: 'border-box',
-  };
-
-  const closeButtonStyle = {
-    position: 'absolute',
-    top: '15px',
-    right: '20px',
-    fontSize: '40px',
-    color: 'white',
-    cursor: 'pointer',
-    lineHeight: '1',
-    padding: '5px',
-    userSelect: 'none',
-  };
-
-  const titleStyle = {
-    color: 'white',
-    marginBottom: '40px',
-    fontSize: '24px',
-    textAlign: 'center',
-  };
-
-  const desktopLinkStyle = {
-    display: 'block',
     padding: '15px 20px',
     color: '#ccc',
     textDecoration: 'none',
     borderLeft: '4px solid transparent',
-    transition: 'all 0.3s ease',
-    borderRadius: '4px',
-    marginBottom: '5px',
-  };
+    transition: 'all 0.3s ease'
+};
 
-  const desktopActiveLinkStyle = {
-    ...desktopLinkStyle,
+const activeLinkStyle = {
+    ...linkStyle,
     backgroundColor: '#495057',
     borderLeft: '4px solid #d4af37',
     fontWeight: 'bold',
     color: 'white',
-  };
+};
 
-  const mobileLinkStyle = {
-    display: 'block',
-    padding: '20px 15px',
+const badgeStyle = {
+    padding: '2px 8px',
+    borderRadius: '12px',
+    fontSize: '0.8em',
     color: 'white',
-    fontSize: '18px',
-    textAlign: 'center',
-    textDecoration: 'none',
-    width: '100%',
-    maxWidth: '400px',
-    borderBottom: '1px solid rgba(255,255,255,0.1)',
-    transition: 'all 0.3s ease',
-    boxSizing: 'border-box',
-  };
-
-  const mobileActiveLinkStyle = {
-    ...mobileLinkStyle,
-    color: '#d4af37',
-    backgroundColor: 'rgba(212, 175, 55, 0.1)',
     fontWeight: 'bold',
-  };
+};
 
-  const NavLinks = ({ mobile = false }) => {
-    const handleClick = () => {
-      if (mobile) {
-        setIsOpen(false);
-      }
-    };
-
-    const links = [
-      { to: '/', label: 'Nouvelles Demandes' },
-      { to: '/demandes-en-cours', label: 'Demandes en Cours' },
-      { to: '/particuliers', label: 'Particuliers' },
-      { to: '/entreprises', label: 'Entreprises' },
-      { to: '/devis', label: 'Devis' },
-      { to: '/factures', label: 'Factures' },
-      { to: '/scanner', label: 'Scanner' },
-      { to: '/parametres', label: 'Paramètres' },
-    ];
-
+const Badge = ({ count, color }) => {
+    if (count === 0) return null;
     return (
-      <nav style={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        width: '100%',
-        alignItems: mobile ? 'center' : 'stretch',
-      }}>
-        {links.map(link => (
-          <NavLink
-            key={link.to}
-            to={link.to}
-            style={({ isActive }) => 
-              mobile 
-                ? (isActive ? mobileActiveLinkStyle : mobileLinkStyle)
-                : (isActive ? desktopActiveLinkStyle : desktopLinkStyle)
-            }
-            onClick={handleClick}
-          >
-            {link.label}
-          </NavLink>
-        ))}
-      </nav>
+        <span style={{ ...badgeStyle, backgroundColor: color }}>
+            {count}
+        </span>
     );
-  };
+};
 
-  if (isMobile) {
+const Sidebar = ({ newCount, inProgressCount }) => {
     return (
-      <>
-        <header style={mobileHeaderStyle}>
-          <h2 style={{ margin: 0, fontSize: '20px' }}>Asiacuisine.re</h2>
-          <div 
-            style={hamburgerStyle} 
-            onClick={() => setIsOpen(true)}
-            role="button"
-            aria-label="Ouvrir le menu"
-          >
-            ☰
-          </div>
-        </header>
-        {isOpen && (
-          <div style={overlayStyle}>
-            <div 
-              style={closeButtonStyle} 
-              onClick={() => setIsOpen(false)}
-              role="button"
-              aria-label="Fermer le menu"
-            >
-              ×
-            </div>
-            <h2 style={titleStyle}>Menu</h2>
-            <NavLinks mobile />
-          </div>
-        )}
-      </>
+        <div style={sidebarStyle}>
+            <h2 style={{ textAlign: 'center', marginBottom: '30px' }}>Asiacuisine.re</h2>
+            <nav>
+                <NavLink to="/" style={({ isActive }) => isActive ? activeLinkStyle : linkStyle}>
+                    <span>Nouvelles Demandes</span>
+                    <Badge count={newCount} color="#dc3545" />
+                </NavLink>
+                <NavLink to="/demandes-en-cours" style={({ isActive }) => isActive ? activeLinkStyle : linkStyle}>
+                    <span>Demandes en Cours</span>
+                    <Badge count={inProgressCount} color="#ffc107" />
+                </NavLink>
+                <NavLink to="/particuliers" style={({ isActive }) => isActive ? activeLinkStyle : linkStyle}>Particuliers</NavLink>
+                <NavLink to="/entreprises" style={({ isActive }) => isActive ? activeLinkStyle : linkStyle}>Entreprises</NavLink>
+                <NavLink to="/devis" style={({ isActive }) => isActive ? activeLinkStyle : linkStyle}>Devis</NavLink>
+                <NavLink to="/factures" style={({ isActive }) => isActive ? activeLinkStyle : linkStyle}>Factures</NavLink>
+                <NavLink to="/scanner" style={({ isActive }) => isActive ? activeLinkStyle : linkStyle}>Scanner</NavLink>
+                <NavLink to="/parametres" style={({ isActive }) => isActive ? activeLinkStyle : linkStyle}>Paramètres</NavLink>
+            </nav>
+        </div>
     );
-  }
-
-  return (
-    <aside style={desktopSidebarStyle}>
-      <h2 style={{ 
-        textAlign: 'center', 
-        marginBottom: '30px',
-        fontSize: '22px',
-        color: 'white',
-      }}>
-        Asiacuisine.re
-      </h2>
-      <NavLinks />
-    </aside>
-  );
 };
 
 export default Sidebar;
