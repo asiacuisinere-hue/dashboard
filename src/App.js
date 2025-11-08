@@ -14,6 +14,7 @@ import Parametres from './pages/Parametres';
 // --- Composants ---
 
 const Login = () => {
+  // ... (contenu inchangé)
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -100,7 +101,7 @@ const DashboardLayout = () => {
 
     return (
         <div style={appStyle}>
-            <Sidebar newCount={newCount} inProgressCount={inProgressCount} />
+            <Sidebar newCount={newCount} inProgressCount={inProgressCount} isMobile={isMobile} />
             <main style={mainContentStyle}>
                 <Routes>
                     <Route path="/" element={<Demandes />} />
@@ -116,8 +117,6 @@ const DashboardLayout = () => {
         </div>
     );
 };
-
-// --- Composant principal ---
 
 function App() {
   const [session, setSession] = useState(null);
