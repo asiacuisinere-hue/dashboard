@@ -84,11 +84,18 @@ const Sidebar = ({ isMobile, newCount, inProgressCount }) => {
     fontSize: '24px',
   };
 
-  const linkContentStyle = {
+  const desktopLinkContentStyle = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     width: '100%',
+  };
+
+  const mobileLinkContentStyle = {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: '10px',
   };
 
   const desktopLinkStyle = {
@@ -145,6 +152,8 @@ const Sidebar = ({ isMobile, newCount, inProgressCount }) => {
       { to: '/parametres', label: 'Paramètres' },
     ];
 
+    const contentStyle = mobile ? mobileLinkContentStyle : desktopLinkContentStyle;
+
     return (
       <nav style={{ width: '100%' }}>
         {links.map(link => (
@@ -158,7 +167,7 @@ const Sidebar = ({ isMobile, newCount, inProgressCount }) => {
             }
             onClick={handleClick}
           >
-            <div style={linkContentStyle}>
+            <div style={contentStyle}>
               <span>{link.label}</span>
               {link.count > 0 && <span style={link.style}>{link.count}</span>}
             </div>
