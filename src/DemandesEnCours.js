@@ -7,10 +7,17 @@ const DemandesEnCours = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [selectedDemande, setSelectedDemande] = useState(null);
+    const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
     // State for filters
     const [selectedDate, setSelectedDate] = useState('');
     const [selectedStatus, setSelectedStatus] = useState('all');
+
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth <= 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     const fetchDemandes = useCallback(async () => {
         try {
@@ -73,6 +80,19 @@ const DemandesEnCours = () => {
         }
     };
 
+    const filterContainerStyle = {
+        display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
+        gap: '15px',
+        marginBottom: '20px',
+        alignItems: isMobile ? 'stretch' : 'center',
+    };
+
+    const filterGroupStyle = {
+        display: 'flex',
+        flexDirection: 'column',
+    };
+
     if (error) return <p style={{ color: 'red' }}>Erreur: {error}</p>;
 
     return (
@@ -80,13 +100,13 @@ const DemandesEnCours = () => {
             <h3 style={{ marginBottom: '20px' }}>Demandes en Cours</h3>
 
             {/* --- Filtres --- */}
-            <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', alignItems: 'center' }}>
-                <div>
-                    <label htmlFor="date-filter" style={{ marginRight: '10px' }}>Filtrer par date :</label>
+            <div style={filterContainerStyle}>
+                <div style={filterGroupStyle}>
+                    <label htmlFor="date-filter" style={{ marginBottom: '5px' }}>Filtrer par date :</label>
                     <input type="date" id="date-filter" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
                 </div>
-                <div>
-                    <label htmlFor="status-filter" style={{ marginRight: '10px' }}>Filtrer par statut :</label>
+                <div style={filterGroupStyle}>
+                    <label htmlFor="status-filter" style={{ marginBottom: '5px' }}>Filtrer par statut :</label>
                     <select id="status-filter" value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>
                         <option value="all">Tous les statuts</option>
                         <option value="Payée">Payée</option>
@@ -94,7 +114,9 @@ const DemandesEnCours = () => {
                         <option value="En préparation">En préparation</option>
                     </select>
                 </div>
-                <button onClick={resetFilters}>Réinitialiser les filtres</button>
+                <button onClick={resetFilters} style={{ alignSelf: isMobile ? 'flex-start' : 'center', marginTop: isMobile ? '10px' : '0' }}>
+                    Réinitialiser
+                </button>
             </div>
 
             {loading ? <p>Chargement...</p> : demandes.length > 0 ? (
