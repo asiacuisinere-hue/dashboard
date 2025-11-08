@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from './supabaseClient';
 import DemandeDetail from './DemandeDetail';
 
@@ -12,7 +12,7 @@ const DemandesEnCours = () => {
     const [selectedDate, setSelectedDate] = useState('');
     const [selectedStatus, setSelectedStatus] = useState('all');
 
-    const fetchDemandes = async () => {
+    const fetchDemandes = useCallback(async () => {
         try {
             setLoading(true);
             let query = supabase
@@ -46,12 +46,12 @@ const DemandesEnCours = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [selectedDate, selectedStatus]); // useCallback depends on these filters
 
-    // Re-fetch when filters change
+    // Re-fetch when fetchDemandes changes (i.e., when filters change)
     useEffect(() => {
         fetchDemandes();
-    }, [selectedDate, selectedStatus]);
+    }, [fetchDemandes]);
 
     const handleCloseDetail = () => {
         setSelectedDemande(null);
