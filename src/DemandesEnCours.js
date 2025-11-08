@@ -14,7 +14,7 @@ const DemandesEnCours = () => {
             let { data, error } = await supabase
                 .from('demandes')
                 .select(`id, created_at, type, status, request_date, details_json, clients ( id, first_name, last_name, email, phone )`)
-                .in('status', ['Confirmée', 'En préparation'])
+                .in('status', ['Payée', 'Confirmée', 'En préparation'])
                 .order('request_date', { ascending: true });
 
             if (error) throw error;
@@ -36,6 +36,20 @@ const DemandesEnCours = () => {
         fetchDemandes(); // Rafraîchir la liste après la fermeture
     };
 
+    const getStatusStyle = (status) => {
+        const baseStyle = { padding: '3px 8px', borderRadius: '12px', fontSize: '0.8em', color: 'white' };
+        switch (status) {
+            case 'Payée':
+                return { ...baseStyle, background: '#28a745' }; // Vert
+            case 'Confirmée':
+                return { ...baseStyle, background: '#17a2b8' }; // Cyan
+            case 'En préparation':
+                return { ...baseStyle, background: '#007bff' }; // Bleu
+            default:
+                return { ...baseStyle, background: '#6c757d' }; // Gris
+        }
+    };
+
     if (loading) return <p>Chargement des demandes en cours...</p>;
     if (error) return <p style={{ color: 'red' }}>Erreur: {error}</p>;
 
@@ -49,7 +63,7 @@ const DemandesEnCours = () => {
                             <p><strong>Client:</strong> {demande.clients.last_name || demande.clients.email}</p>
                             <p><strong>Type:</strong> {demande.type}</p>
                             <p><strong>Date:</strong> {new Date(demande.request_date).toLocaleDateString('fr-FR')}</p>
-                            <p><strong>Statut:</strong> <span style={{ background: '#ffc107', padding: '3px 8px', borderRadius: '12px', fontSize: '0.8em' }}>{demande.status}</span></p>
+                            <p><strong>Statut:</strong> <span style={getStatusStyle(demande.status)}>{demande.status}</span></p>
                         </div>
                     ))}
                 </div>
