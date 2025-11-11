@@ -43,10 +43,10 @@ const DemandeDetail = ({ demande, onClose, onUpdate }) => {
     const handleGenerateDocument = async (documentType) => {
         alert(`Génération du ${documentType}...`);
         try {
-            const response = await fetch('https://www.asiacuisine.re/generate-document/', {
+            const response = await fetch('https://www.asiacuisine.re/generate-document', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ demandeId: demande.id, documentType: documentType })
+                body: JSON.stringify({ demandeId: demande.id, documentType, sendEmail: shouldSendEmail })
             });
 
             if (!response.ok) throw new Error(`Erreur du serveur: ${response.statusText}`);
@@ -85,7 +85,7 @@ const DemandeDetail = ({ demande, onClose, onUpdate }) => {
         }
         
         try {
-            const response = await fetch('/send-qrcode/', {
+            const response = await fetch('https://www.asiacuisine.re/send-qrcode', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ demandeId: demande.id })
