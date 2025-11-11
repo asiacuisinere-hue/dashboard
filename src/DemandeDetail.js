@@ -44,7 +44,7 @@ const DemandeDetail = ({ demande, onClose, onUpdate }) => {
         const shouldSendEmail = window.confirm(`Voulez-vous envoyer ce ${documentType} par e-mail au client ?`);
         
         try {
-            const response = await fetch('/generate-document/', {
+            const response = await fetch('/generate-document', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ demandeId: demande.id, documentType, sendEmail: shouldSendEmail })
