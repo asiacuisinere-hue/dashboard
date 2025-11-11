@@ -18,7 +18,7 @@ const Historique = () => {
 
         if (error) {
             console.error('Erreur de chargement de l\'historique:', error);
-            alert(`Erreur de chargement de l\'historique: ${error.message}`);
+            alert(`Erreur de chargement de l'historique: ${error.message}`);
         } else {
             setDemandes(data);
         }
