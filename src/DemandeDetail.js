@@ -40,8 +40,9 @@ const DemandeDetail = ({ demande, onClose, onUpdate }) => {
         return true;
     };
 
-    const handleGenerateDocument = async (documentType) => {
-        alert(`Génération du ${documentType}...`);
+    const handleGenerateDocument = async (documentType, shouldUpdateStatus = true) => {
+        const shouldSendEmail = window.confirm(`Voulez-vous envoyer ce ${documentType} par e-mail au client ?`);
+        
         try {
             const response = await fetch('https://www.asiacuisine.re/generate-document', {
                 method: 'POST',
