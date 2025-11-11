@@ -11,7 +11,7 @@ const DetailsRenderer = ({ details }) => {
         deliveryCity: 'Ville de livraison'
     };
     return (
-        <ul style={{ listStyleType: 'none', padding: 0, background: '#f9f9f9', borderRadius: '5px', padding: '15px' }}>
+        <ul style={{ listStyleType: 'none', background: '#f9f9f9', borderRadius: '5px', padding: '15px' }}>
             {Object.entries(details).map(([key, value]) => {
                 if (!value) return null;
                 const label = keyMap[key] || key;
