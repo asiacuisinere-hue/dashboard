@@ -109,6 +109,15 @@ const DemandeDetail = ({ demande, onClose, onUpdate }) => {
         }
     };
 
+    const handleMoveToPreparation = async () => {
+        const success = await handleUpdateStatus('En attente de préparation');
+        if (success) {
+            alert('Statut mis à jour à "En attente de préparation".');
+            onUpdate();
+            onClose();
+        }
+    };
+
     const renderActions = () => {
         const statusActions = {
             'En attente de traitement': (
@@ -126,11 +135,20 @@ const DemandeDetail = ({ demande, onClose, onUpdate }) => {
                 <button onClick={handleMarkAsPaid} style={{...actionButtonStyle, backgroundColor: '#6f42c1'}}>Marquer comme Payée & Envoyer QR</button>
             ),
             'Payée': ( // Action pour les anciennes demandes
-                <button onClick={() => handleUpdateStatus('En attente de préparation')} style={{...actionButtonStyle, backgroundColor: '#6f42c1'}}>Passer à "En attente de préparation"</button>
+                <button onClick={handleMoveToPreparation} style={{...actionButtonStyle, backgroundColor: '#6f42c1'}}>Passer à "En attente de préparation"</button>
             ),
             'En attente de préparation': (
                 <button onClick={handleStartPreparation} style={{...actionButtonStyle, backgroundColor: '#20c997', color: 'black'}}>Mettre en préparation</button>
             ),
+            'Confirmée': (
+                <button onClick={() => handleUpdateStatus('Archivée')} style={{...actionButtonStyle, backgroundColor: '#6c757d'}}>Archiver</button>
+            ),
+            'Refusée': (
+                <button onClick={() => handleUpdateStatus('Archivée')} style={{...actionButtonStyle, backgroundColor: '#6c757d'}}>Archiver</button>
+            ),
+            'Annulée': (
+                <button onClick={() => handleUpdateStatus('Archivée')} style={{...actionButtonStyle, backgroundColor: '#6c757d'}}>Archiver</button>
+            )
         };
 
         const duplicateButton = (
