@@ -152,7 +152,7 @@ const tableContainerStyle = {
     marginTop: '2rem',
     boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
     borderRadius: '8px',
-    overflow: 'hidden',
+    overflowX: 'auto',
     background: 'white'
 };
 

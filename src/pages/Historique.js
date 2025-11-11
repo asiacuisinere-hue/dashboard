@@ -141,7 +141,7 @@ const Historique = () => {
 };
 
 // --- Styles (copiés de DemandesEnCours.js pour la cohérence) ---
-const tableContainerStyle = { marginTop: '2rem', boxShadow: '0 4px 8px rgba(0,0,0,0.1)', borderRadius: '8px', overflow: 'hidden', background: 'white' };
+const tableContainerStyle = { marginTop: '2rem', boxShadow: '0 4px 8px rgba(0,0,0,0.1)', borderRadius: '8px', overflowX: 'auto', background: 'white' };
 const tableStyle = { width: '100%', borderCollapse: 'collapse' };
 const thStyle = { background: '#f4f7fa', padding: '12px 15px', textAlign: 'left', fontWeight: 'bold', color: '#333', borderBottom: '2px solid #ddd' };
 const tdStyle = { padding: '12px 15px', borderBottom: '1px solid #eee', color: '#555' };
