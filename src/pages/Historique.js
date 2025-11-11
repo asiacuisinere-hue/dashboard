@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { supabase } from './supabaseClient';
-import DemandeDetail from './DemandeDetail'; // On le réutilise pour voir le détail
+import { supabase } from '../supabaseClient';
+import DemandeDetail from '../DemandeDetail'; // On le réutilise pour voir le détail
 
 const Historique = () => {
     const [demandes, setDemandes] = useState([]);
