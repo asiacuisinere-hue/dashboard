@@ -18,7 +18,7 @@ const DemandesEnCours = () => {
                     *
                 )
             `)
-            .in('status', ['En attente de traitement', 'En attente de validation de devis', 'En attente de paiement', 'En attente de préparation', 'Préparation en cours']);
+            .in('status', ['En attente de traitement']); // DEBUG: Test with a single status
 
         if (filter.date) {
             query = query.eq('request_date', filter.date);
