@@ -157,6 +157,7 @@ const Sidebar = ({ isMobile, newCount, inProgressCount }) => {
     const links = [
       { to: '/', label: 'Nouvelles Demandes', count: newCount, style: newBadgeStyle },
       { to: '/demandes-en-cours', label: 'Demandes en Cours', count: inProgressCount, style: inProgressBadgeStyle },
+      { to: '/historique', label: 'Historique' },
       { to: '/particuliers', label: 'Particuliers' },
       { to: '/entreprises', label: 'Entreprises' },
       { to: '/devis', label: 'Devis' },
