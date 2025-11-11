@@ -70,7 +70,7 @@ const Scanner = () => {
                 // Validation de la date
                 const today = new Date().toISOString().split('T')[0];
                 if (qrDate !== today) {
-                    throw new Error(`Date du QR code (${qrDate}) ne correspond pas à la date du jour (${today}).`);
+                    throw new Error(`Date du QR code (${qrDate}) ne correspond pas à la date du jour (${today}). Commande non validée.`);
                 }
 
                 // Mise à jour du statut dans Supabase
