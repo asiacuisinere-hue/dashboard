@@ -18,7 +18,14 @@ const DemandesEnCours = () => {
                     *
                 )
             `)
-            .in('status', ['En attente de traitement']); // DEBUG: Test with a single status
+            .in('status', [
+                'En attente de traitement', 
+                'En attente de validation de devis', 
+                'En attente de paiement', 
+                'En attente de préparation', 
+                'Préparation en cours',
+                'Payée' // Ajout des anciens statuts pour la visibilité
+            ]);
 
         if (filter.date) {
             query = query.eq('request_date', filter.date);
@@ -78,6 +85,7 @@ const DemandesEnCours = () => {
                     <option value="En attente de traitement">En attente de traitement</option>
                     <option value="En attente de validation de devis">En attente de validation de devis</option>
                     <option value="En attente de paiement">En attente de paiement</option>
+                    <option value="Payée">Payée</option>
                     <option value="En attente de préparation">En attente de préparation</option>
                     <option value="Préparation en cours">Préparation en cours</option>
                 </select>
