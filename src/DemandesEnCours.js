@@ -31,6 +31,7 @@ const DemandesEnCours = () => {
 
         if (error) {
             console.error('Erreur de chargement des demandes en cours:', error);
+            alert(`Une erreur est survenue lors du chargement des données : ${error.message}`);
         } else {
             setDemandes(data);
         }
