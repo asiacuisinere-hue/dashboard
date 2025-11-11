@@ -53,7 +53,7 @@ const DemandeDetail = ({ demande, onClose, onUpdate }) => {
     const handleGenerateDocument = async (documentType) => {
         alert(`Génération du ${documentType}...`);
         try {
-            const response = await fetch('/generate-document/', {
+            const response = await fetch('https://www.asiacuisine.re/generate-document/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ demandeId: demande.id, documentType: documentType })
