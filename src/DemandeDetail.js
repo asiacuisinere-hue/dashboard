@@ -40,14 +40,13 @@ const DemandeDetail = ({ demande, onClose, onUpdate }) => {
         return true;
     };
 
-    const handleGenerateDocument = async (documentType, shouldUpdateStatus = true) => {
-        const shouldSendEmail = window.confirm(`Voulez-vous envoyer ce ${documentType} par e-mail au client ?`);
-        
+    const handleGenerateDocument = async (documentType) => {
+        alert(`Génération du ${documentType}...`);
         try {
-            const response = await fetch('/generate-document', {
+            const response = await fetch('https://www.asiacuisine.re/generate-document/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ demandeId: demande.id, documentType, sendEmail: shouldSendEmail })
+                body: JSON.stringify({ demandeId: demande.id, documentType: documentType })
             });
 
             if (!response.ok) throw new Error(`Erreur du serveur: ${response.statusText}`);
