@@ -50,6 +50,36 @@ const DemandeDetail = ({ demande, onClose, onUpdate }) => {
         }
     };
 
+    const handleGenerateDocument = async (documentType) => {
+        alert(`Génération du ${documentType}...`);
+        try {
+            const response = await fetch('/generate-document', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ demandeId: demande.id, documentType: documentType })
+            });
+
+            if (!response.ok) {
+                const errorResult = await response.json();
+                throw new Error(errorResult.error || `Erreur lors de la génération du ${documentType}`);
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = `${documentType}-${demande.id}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+        } catch (error) {
+            alert(`Erreur: ${error.message}`);
+        }
+    };
+
     const handleMarkAsPaid = async () => {
         // 1. Mettre à jour le statut
         await handleUpdateStatus('Payée');
@@ -97,7 +127,7 @@ const DemandeDetail = ({ demande, onClose, onUpdate }) => {
                     <DetailsRenderer details={demande.details_json} />
                 </div>
 
-                <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
                     {demande.status === 'Confirmée' && (
                         <button onClick={handleMarkAsPaid} style={{...actionButtonStyle, backgroundColor: '#17a2b8'}}>Marquer comme Payée & Envoyer QR</button>
                     )}
@@ -105,6 +135,8 @@ const DemandeDetail = ({ demande, onClose, onUpdate }) => {
                          <button onClick={() => handleUpdateStatus('En préparation')} style={{...actionButtonStyle, backgroundColor: '#ffc107', color: 'black'}}>Marquer comme "En préparation"</button>
                     )}
                     <button onClick={() => handleUpdateStatus('Annulée')} style={{...actionButtonStyle, backgroundColor: '#dc3545'}}>Annuler la demande</button>
+                    <button onClick={() => handleGenerateDocument('Devis')} style={{...actionButtonStyle, backgroundColor: '#6c757d'}}>Générer Devis</button>
+                    <button onClick={() => handleGenerateDocument('Facture')} style={{...actionButtonStyle, backgroundColor: '#007bff'}}>Générer Facture</button>
                 </div>
             </div>
         </div>
