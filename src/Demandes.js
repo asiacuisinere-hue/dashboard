@@ -44,8 +44,8 @@ const DemandeModal = ({ demande, onClose, onUpdate }) => {
         if (error) {
             alert(`Erreur lors de la mise à jour : ${error.message}`);
         } else {
-            alert('Statut mis à jour avec succès !');
-            onUpdate(); // Callback pour rafraîchir la liste
+            alert(`La demande a été marquée comme "${newStatus}".`);
+            onUpdate(); 
             onClose();
         }
     };
@@ -54,7 +54,7 @@ const DemandeModal = ({ demande, onClose, onUpdate }) => {
         <div style={modalOverlayStyle}>
             <div style={modalContentStyle}>
                 <button onClick={onClose} style={closeButtonStyle}>&times;</button>
-                <h2 style={{ borderBottom: '2px solid #eee', paddingBottom: '10px', marginBottom: '20px' }}>Détails de la demande</h2>
+                <h2 style={{ borderBottom: '2px solid #eee', paddingBottom: '10px', marginBottom: '20px' }}>Détails de la nouvelle demande</h2>
                 
                 <div style={detailSectionStyle}>
                     <h3 style={detailTitleStyle}>Client</h3>
@@ -77,8 +77,8 @@ const DemandeModal = ({ demande, onClose, onUpdate }) => {
                 </div>
 
                 <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                    <button onClick={() => handleUpdateStatus('Confirmée')} style={actionButtonStyle}>Marquer comme Confirmée</button>
-                    <button onClick={() => handleUpdateStatus('Annulée')} style={{...actionButtonStyle, backgroundColor: '#dc3545'}}>Marquer comme Annulée</button>
+                    <button onClick={() => handleUpdateStatus('Refusée')} style={{...actionButtonStyle, backgroundColor: '#dc3545'}}>Refuser</button>
+                    <button onClick={() => handleUpdateStatus('En attente de traitement')} style={actionButtonStyle}>Accepter</button>
                 </div>
             </div>
         </div>

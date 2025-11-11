@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from './supabaseClient';
-import DemandeDetail from './DemandeDetail'; // Assurez-vous que ce composant est adapté
+import DemandeDetail from './DemandeDetail';
 
 const DemandesEnCours = () => {
     const [demandes, setDemandes] = useState([]);
@@ -18,7 +18,7 @@ const DemandesEnCours = () => {
                     *
                 )
             `)
-            .in('status', ['Payée', 'Confirmée', 'En préparation']);
+            .in('status', ['En attente de traitement', 'En attente de validation de devis', 'En attente de paiement', 'En attente de préparation', 'Préparation en cours']);
 
         if (filter.date) {
             query = query.eq('request_date', filter.date);
@@ -57,7 +57,7 @@ const DemandesEnCours = () => {
     return (
         <div>
             <h1>Demandes en cours</h1>
-            <p>Suivi des demandes confirmées, payées et en préparation.</p>
+            <p>Suivi de toutes les demandes actives.</p>
 
             <div style={filterContainerStyle}>
                 <input 
@@ -74,9 +74,11 @@ const DemandesEnCours = () => {
                     style={filterInputStyle}
                 >
                     <option value="">Tous les statuts</option>
-                    <option value="Confirmée">Confirmée</option>
-                    <option value="Payée">Payée</option>
-                    <option value="En préparation">En préparation</option>
+                    <option value="En attente de traitement">En attente de traitement</option>
+                    <option value="En attente de validation de devis">En attente de validation de devis</option>
+                    <option value="En attente de paiement">En attente de paiement</option>
+                    <option value="En attente de préparation">En attente de préparation</option>
+                    <option value="Préparation en cours">Préparation en cours</option>
                 </select>
                 <button onClick={resetFilters} style={detailsButtonStyle}>Réinitialiser</button>
             </div>
@@ -101,7 +103,7 @@ const DemandesEnCours = () => {
                                 <td style={tdStyle}><span style={statusBadgeStyle(demande.status)}>{demande.status}</span></td>
                                 <td style={tdStyle}>
                                     <button onClick={() => setSelectedDemande(demande)} style={detailsButtonStyle}>
-                                        Voir Détails
+                                        Gérer
                                     </button>
                                 </td>
                             </tr>
@@ -176,16 +178,20 @@ const detailsButtonStyle = {
 
 const statusBadgeStyle = (status) => {
     const colors = {
+        'Nouvelle': '#007bff',
+        'En attente de traitement': '#ffc107',
+        'En attente de validation de devis': '#fd7e14',
+        'En attente de paiement': '#17a2b8',
+        'En attente de préparation': '#6f42c1',
+        'Préparation en cours': '#20c997',
         'Confirmée': '#28a745',
-        'Payée': '#17a2b8',
-        'En préparation': '#ffc107',
-        'Terminée': '#6c757d',
+        'Refusée': '#6c757d',
         'Annulée': '#dc3545'
     };
     return {
         padding: '4px 8px',
         borderRadius: '12px',
-        color: status === 'En préparation' ? 'black' : 'white',
+        color: ['En attente de traitement', 'Préparation en cours'].includes(status) ? 'black' : 'white',
         fontWeight: 'bold',
         fontSize: '12px',
         backgroundColor: colors[status] || '#6c757d'
