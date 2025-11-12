@@ -134,11 +134,11 @@ const Demandes = () => {
         setLoading(true);
         const { data, error } = await supabase
             .from('demandes')
-            .select('
+            .select(`
                 *,
                 clients (*),
                 entreprises (*)
-            ')
+            `)
             .eq('status', 'Nouvelle')
             .order('created_at', { ascending: false });
 
