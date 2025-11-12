@@ -163,6 +163,7 @@ const Sidebar = ({ isMobile, newCount, inProgressCount }) => {
       { to: '/devis', label: 'Devis' },
       { to: '/factures', label: 'Factures' },
       { to: '/scanner', label: 'Scanner' },
+      { to: '/services', label: 'Services' }, // Added Services link
       { to: '/parametres', label: 'Paramètres' },
     ];
 

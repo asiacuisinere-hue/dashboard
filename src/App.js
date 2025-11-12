@@ -11,6 +11,7 @@ import Entreprises from './pages/Entreprises';
 import Devis from './pages/Devis';
 import Factures from './pages/Factures';
 import Parametres from './pages/Parametres';
+import Services from './pages/Services'; // Importation de la page Services
 
 // --- Composants ---
 
@@ -114,6 +115,7 @@ const DashboardLayout = () => {
                     <Route path="/factures" element={<Factures />} />
                     <Route path="/scanner" element={<Scanner />} />
                     <Route path="/parametres" element={<Parametres />} />
+                    <Route path="/services" element={<Services />} /> {/* Route pour la page Services */}
                 </Routes>
             </main>
         </div>
