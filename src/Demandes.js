@@ -43,10 +43,28 @@ const DemandeModal = ({ demande, onClose, onUpdate }) => {
         
         if (error) {
             alert(`Erreur lors de la mise à jour : ${error.message}`);
-        } else {
-            alert(`La demande a été marquée comme "${newStatus}".`);
-            onUpdate(); 
-            onClose();
+            return false;
+        }
+        alert(`La demande a été marquée comme "${newStatus}".`);
+        onUpdate(); 
+        onClose();
+        return true;
+    };
+
+    const handleRefuseDemande = async () => {
+        const statusUpdated = await handleUpdateStatus('Refusée');
+        if (!statusUpdated) return;
+
+        try {
+            const response = await fetch('https://www.asiacuisine.re/send-refusal-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ demandeId: demande.id })
+            });
+            if (!response.ok) throw new Error((await response.json()).error || 'Erreur inconnue lors de l\'envoi de l\'e-mail de refus.');
+            alert('E-mail de refus envoyé au client.');
+        } catch (error) {
+            alert(`Erreur lors de l\'envoi de l\'e-mail de refus : ${error.message}`);
         }
     };
 
@@ -63,7 +81,7 @@ const DemandeModal = ({ demande, onClose, onUpdate }) => {
         } else if (demande.entreprises) { // C'est une entreprise
             return (
                 <>
-                    <p><strong>Nom de l'entreprise:</strong> {demande.entreprises.nom_entreprise}</p>
+                    <p><strong>Nom de l\'entreprise:</strong> {demande.entreprises.nom_entreprise}</p>
                     <p><strong>SIRET:</strong> {demande.entreprises.siret}</p>
                     <p><strong>Nom du contact:</strong> {demande.entreprises.contact_name}</p>
                     <p><strong>Email du contact:</strong> {demande.entreprises.contact_email}</p>
@@ -98,7 +116,7 @@ const DemandeModal = ({ demande, onClose, onUpdate }) => {
                 </div>
 
                 <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                    <button onClick={() => handleUpdateStatus('Refusée')} style={{...actionButtonStyle, backgroundColor: '#dc3545'}}>Refuser</button>
+                    <button onClick={handleRefuseDemande} style={{...actionButtonStyle, backgroundColor: '#dc3545'}}>Refuser & Envoyer E-mail</button>
                     <button onClick={() => handleUpdateStatus('En attente de traitement')} style={actionButtonStyle}>Accepter</button>
                 </div>
             </div>
@@ -116,11 +134,11 @@ const Demandes = () => {
         setLoading(true);
         const { data, error } = await supabase
             .from('demandes')
-            .select(`
+            .select('
                 *,
                 clients (*),
                 entreprises (*)
-            `)
+            ')
             .eq('status', 'Nouvelle')
             .order('created_at', { ascending: false });
 
