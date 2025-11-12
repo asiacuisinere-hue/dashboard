@@ -110,13 +110,33 @@ const Devis = () => {
             return;
         }
 
-        // Logic to save quote to DB and generate PDF (to be implemented)
-        alert('Fonctionnalité de génération de devis à implémenter.');
-        console.log('Devis à générer:', {
-            customer: selectedCustomer,
-            items: quoteItems,
-            total: calculateTotal()
-        });
+        try {
+            const response = await fetch('https://www.asiacuisine.re/create-quote', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    customer: selectedCustomer,
+                    items: quoteItems,
+                    total: calculateTotal()
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.details || 'Erreur inconnue lors de la création du devis.');
+            }
+
+            const result = await response.json();
+            alert(`Devis ${result.quoteId.substring(0, 8)} créé et envoyé avec succès !`);
+
+            // Reset form
+            setSelectedCustomer(null);
+            setQuoteItems([]);
+            setSearchTerm('');
+
+        } catch (error) {
+            alert(`Erreur lors de la génération du devis : ${error.message}`);
+        }
     };
 
     return (
