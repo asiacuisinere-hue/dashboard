@@ -15,7 +15,7 @@ const DemandesEnCours = () => {
             .select(`
                 *,
                 clients (*),
-                entreprises (*)
+                entreprises!entreprise_id (*)
             `)
             .in('status', [
                 'En attente de traitement', 
@@ -106,7 +106,7 @@ const DemandesEnCours = () => {
                         {demandes.map(demande => (
                             <tr key={demande.id}>
                                 <td style={tdStyle}>{new Date(demande.created_at).toLocaleDateString('fr-FR')}</td>
-                                <td style={tdStyle}>{demande.clients?.last_name || demande.entreprises?.nom_entreprise || 'N/A'}</td>
+                                <td style={tdStyle}>{demande.clients?.last_name || demande.entreprises?.company_name || 'N/A'}</td>
                                 <td style={tdStyle}>{demande.type}</td>
                                 <td style={tdStyle}><span style={statusBadgeStyle(demande.status)}>{demande.status}</span></td>
                                 <td style={tdStyle}>
