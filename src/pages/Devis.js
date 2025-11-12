@@ -55,16 +55,6 @@ const Devis = () => {
         setIsSearching(false);
     }, [searchTerm]);
 
-    useEffect(() => {
-        const handler = setTimeout(() => {
-            handleSearch();
-        }, 500); // Debounce search
-
-        return () => {
-            clearTimeout(handler);
-        };
-    }, [searchTerm, handleSearch]);
-
     const handleSelectCustomer = (customer, type) => {
         setSelectedCustomer({ ...customer, type });
         setSearchTerm(type === 'client' ? `${customer.last_name} ${customer.first_name}` : customer.nom_entreprise); // Keep name in search bar
@@ -124,7 +114,7 @@ const Devis = () => {
             };
             console.log('--- [DEBUG] handleGenerateQuote: Payload envoyé:', JSON.stringify(payload, null, 2));
 
-            const response = await fetch('https://www.asiacuisine.re/create-quote', {
+            const response = await fetch('/create-quote', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -167,6 +157,7 @@ const Devis = () => {
                     onChange={(e) => setSearchTerm(e.target.value)}
                     style={inputStyle}
                 />
+                <button onClick={handleSearch} style={{...addServiceButtonStyle, marginLeft: '10px'}}>Rechercher</button>
                 {isSearching && <p>Recherche en cours...</p>}
                 {(clients.length > 0 || entreprises.length > 0) && !selectedCustomer && (
                     <div style={searchResultsStyle}>
