@@ -101,32 +101,44 @@ const Devis = () => {
     };
 
     const handleGenerateQuote = async () => {
+        console.log('--- [DEBUG] handleGenerateQuote: Démarrage');
+
         if (!selectedCustomer) {
+            console.log('--- [DEBUG] handleGenerateQuote: Pas de client sélectionné');
             alert('Veuillez sélectionner un client ou une entreprise.');
             return;
         }
         if (quoteItems.length === 0) {
+            console.log('--- [DEBUG] handleGenerateQuote: Pas de services dans le devis');
             alert('Veuillez ajouter au moins un service au devis.');
             return;
         }
 
+        console.log('--- [DEBUG] handleGenerateQuote: Début du try/catch');
         try {
+            const payload = {
+                customer: selectedCustomer,
+                items: quoteItems,
+                total: calculateTotal()
+            };
+            console.log('--- [DEBUG] handleGenerateQuote: Payload envoyé:', JSON.stringify(payload, null, 2));
+
             const response = await fetch('https://www.asiacuisine.re/create-quote', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    customer: selectedCustomer,
-                    items: quoteItems,
-                    total: calculateTotal()
-                })
+                body: JSON.stringify(payload)
             });
+
+            console.log('--- [DEBUG] handleGenerateQuote: Réponse reçue du serveur, statut:', response.status);
 
             if (!response.ok) {
                 const errorData = await response.json();
+                console.error('--- [ERREUR] handleGenerateQuote: Réponse non-OK', errorData);
                 throw new Error(errorData.details || 'Erreur inconnue lors de la création du devis.');
             }
 
             const result = await response.json();
+            console.log('--- [DEBUG] handleGenerateQuote: Réponse OK, résultat:', result);
             alert(`Devis ${result.quoteId.substring(0, 8)} créé et envoyé avec succès !`);
 
             // Reset form
@@ -135,6 +147,7 @@ const Devis = () => {
             setSearchTerm('');
 
         } catch (error) {
+            console.error('--- [ERREUR] handleGenerateQuote: Erreur capturée dans le catch', error);
             alert(`Erreur lors de la génération du devis : ${error.message}`);
         }
     };
