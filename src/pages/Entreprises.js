@@ -1,79 +1,77 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
-import ClientDetail from './ClientDetail';
 
 const Entreprises = () => {
-    const [clients, setClients] = useState([]);
+    const [entreprises, setEntreprises] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [selectedClient, setSelectedClient] = useState(null);
 
-    const fetchClients = async () => {
-        try {
-            setLoading(true);
-            let { data, error } = await supabase
-                .from('clients')
-                .select('*')
-                .eq('type', 'Entreprise')
-                .order('company_name', { ascending: true });
+    const fetchEntreprises = useCallback(async () => {
+        setLoading(true);
+        const { data, error } = await supabase
+            .from('entreprises')
+            .select('*')
+            .order('created_at', { ascending: false });
 
-            if (error) throw error;
-            setClients(data);
-        } catch (error) {
-            setError(error.message);
-        } finally {
-            setLoading(false);
+        if (error) {
+            console.error('Erreur de chargement des entreprises:', error);
+            alert(`Erreur de chargement des entreprises: ${error.message}`);
+        } else {
+            setEntreprises(data);
         }
-    };
-
-    useEffect(() => {
-        fetchClients();
+        setLoading(false);
     }, []);
 
-    const filteredClients = clients.filter(client =>
-        (client.company_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (client.email || '').toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    useEffect(() => {
+        fetchEntreprises();
+    }, [fetchEntreprises]);
 
-    const handleCloseDetail = () => {
-        setSelectedClient(null);
-        fetchClients(); // Rafraîchir la liste après la fermeture
-    };
-
-    if (loading) return <p>Chargement des clients entreprises...</p>;
-    if (error) return <p style={{ color: 'red' }}>Erreur: {error}</p>;
+    if (loading) {
+        return <div>Chargement de la liste des entreprises...</div>;
+    }
 
     return (
         <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h2>Gestion des Entreprises ({filteredClients.length})</h2>
-                <input
-                    type="text"
-                    placeholder="Rechercher une entreprise..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    style={{ padding: '8px', width: '300px', borderRadius: '4px', border: '1px solid #ccc' }}
-                />
-            </div>
+            <h1>Liste des Entreprises</h1>
+            <p>Voici la liste de toutes les entreprises enregistrées.</p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
-                {filteredClients.length > 0 ? (
-                    filteredClients.map((client) => (
-                        <div key={client.id} onClick={() => setSelectedClient(client.id)} style={{ background: 'white', padding: '15px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.08)', cursor: 'pointer' }}>
-                            <p><strong>Entreprise:</strong> {client.company_name}</p>
-                            <p><strong>Contact Email:</strong> {client.email}</p>
-                            <p><strong>Téléphone:</strong> {client.phone}</p>
-                        </div>
-                    ))
-                ) : (
-                    <p>Aucune entreprise trouvée.</p>
-                )}
+            <div style={tableContainerStyle}>
+                <table style={tableStyle}>
+                    <thead>
+                        <tr>
+                            <th style={thStyle}>Nom de l'entreprise</th>
+                            <th style={thStyle}>SIRET</th>
+                            <th style={thStyle}>Nom du contact</th>
+                            <th style={thStyle}>Email du contact</th>
+                            <th style={thStyle}>Téléphone du contact</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {entreprises.map(entreprise => (
+                            <tr key={entreprise.id}>
+                                <td style={tdStyle}>{entreprise.nom_entreprise}</td>
+                                <td style={tdStyle}>{entreprise.siret}</td>
+                                <td style={tdStyle}>{entreprise.contact_name}</td>
+                                <td style={tdStyle}>{entreprise.contact_email}</td>
+                                <td style={tdStyle}>{entreprise.contact_phone}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
             </div>
-
-            {selectedClient && <ClientDetail clientId={selectedClient} onClose={handleCloseDetail} />}
         </div>
     );
 };
+
+// --- Styles ---
+const tableContainerStyle = {
+    marginTop: '2rem',
+    boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+    borderRadius: '8px',
+    overflowX: 'auto',
+    background: 'white'
+};
+const tableStyle = { width: '100%', borderCollapse: 'collapse' };
+const thStyle = { background: '#f4f7fa', padding: '12px 15px', textAlign: 'left', fontWeight: 'bold', color: '#333', borderBottom: '2px solid #ddd' };
+const tdStyle = { padding: '12px 15px', borderBottom: '1px solid #eee', color: '#555' };
 
 export default Entreprises;

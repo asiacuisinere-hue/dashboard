@@ -14,9 +14,8 @@ const DemandesEnCours = () => {
             .from('demandes')
             .select(`
                 *,
-                clients (
-                    *
-                )
+                clients (*),
+                entreprises (*)
             `)
             .in('status', [
                 'En attente de traitement', 
@@ -24,7 +23,7 @@ const DemandesEnCours = () => {
                 'En attente de paiement', 
                 'En attente de préparation', 
                 'Préparation en cours',
-                'Payée' // Ajout des anciens statuts pour la visibilité
+                'Payée'
             ]);
 
         if (filter.date) {
@@ -97,7 +96,7 @@ const DemandesEnCours = () => {
                     <thead>
                         <tr>
                             <th style={thStyle}>Date Demande</th>
-                            <th style={thStyle}>Client</th>
+                            <th style={thStyle}>Client / Entreprise</th>
                             <th style={thStyle}>Type</th>
                             <th style={thStyle}>Statut</th>
                             <th style={thStyle}>Actions</th>
@@ -107,7 +106,7 @@ const DemandesEnCours = () => {
                         {demandes.map(demande => (
                             <tr key={demande.id}>
                                 <td style={tdStyle}>{new Date(demande.created_at).toLocaleDateString('fr-FR')}</td>
-                                <td style={tdStyle}>{demande.clients?.last_name || 'N/A'}</td>
+                                <td style={tdStyle}>{demande.clients?.last_name || demande.entreprises?.nom_entreprise || 'N/A'}</td>
                                 <td style={tdStyle}>{demande.type}</td>
                                 <td style={tdStyle}><span style={statusBadgeStyle(demande.status)}>{demande.status}</span></td>
                                 <td style={tdStyle}>
@@ -195,7 +194,8 @@ const statusBadgeStyle = (status) => {
         'Préparation en cours': '#20c997',
         'Confirmée': '#28a745',
         'Refusée': '#6c757d',
-        'Annulée': '#dc3545'
+        'Annulée': '#dc3545',
+        'Payée': '#6f42c1' // Ajout de la couleur pour Payée
     };
     return {
         padding: '4px 8px',

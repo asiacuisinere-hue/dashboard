@@ -118,6 +118,25 @@ const DemandeDetail = ({ demande, onClose, onUpdate }) => {
         }
     };
 
+    const renderCustomerDetails = () => {
+        if (demande.clients) { // C'est un particulier
+            return (
+                <>
+                    <p><strong>Nom:</strong> {demande.clients.last_name} {demande.clients.first_name}</p>
+                    <p><strong>Email:</strong> {demande.clients.email}</p>
+                </>
+            );
+        } else if (demande.entreprises) { // C'est une entreprise
+            return (
+                <>
+                    <p><strong>Nom de l'entreprise:</strong> {demande.entreprises.nom_entreprise}</p>
+                    <p><strong>Email du contact:</strong> {demande.entreprises.contact_email}</p>
+                </>
+            );
+        }
+        return <p>Informations client non disponibles.</p>;
+    };
+
     const renderActions = () => {
         const statusActions = {
             'En attente de traitement': (
@@ -174,9 +193,8 @@ const DemandeDetail = ({ demande, onClose, onUpdate }) => {
                 <h2 style={{ borderBottom: '2px solid #eee', paddingBottom: '10px', marginBottom: '20px' }}>Gérer la demande</h2>
                 
                 <div style={detailSectionStyle}>
-                    <h3 style={detailTitleStyle}>Client</h3>
-                    <p><strong>Nom:</strong> {demande.clients.last_name} {demande.clients.first_name}</p>
-                    <p><strong>Email:</strong> {demande.clients.email}</p>
+                    <h3 style={detailTitleStyle}>Client / Entreprise</h3>
+                    {renderCustomerDetails()}
                 </div>
 
                 <div style={detailSectionStyle}>

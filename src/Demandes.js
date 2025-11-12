@@ -50,6 +50,30 @@ const DemandeModal = ({ demande, onClose, onUpdate }) => {
         }
     };
 
+    const renderCustomerDetails = () => {
+        if (demande.clients) { // C'est un particulier
+            return (
+                <>
+                    <p><strong>Nom:</strong> {demande.clients.last_name} {demande.clients.first_name}</p>
+                    <p><strong>Email:</strong> {demande.clients.email}</p>
+                    <p><strong>Téléphone:</strong> {demande.clients.phone}</p>
+                    <p><strong>ID Client:</strong> {demande.clients.client_id}</p>
+                </>
+            );
+        } else if (demande.entreprises) { // C'est une entreprise
+            return (
+                <>
+                    <p><strong>Nom de l'entreprise:</strong> {demande.entreprises.nom_entreprise}</p>
+                    <p><strong>SIRET:</strong> {demande.entreprises.siret}</p>
+                    <p><strong>Nom du contact:</strong> {demande.entreprises.contact_name}</p>
+                    <p><strong>Email du contact:</strong> {demande.entreprises.contact_email}</p>
+                    <p><strong>Téléphone du contact:</strong> {demande.entreprises.contact_phone}</p>
+                </>
+            );
+        }
+        return <p>Informations client non disponibles.</p>;
+    };
+
     return (
         <div style={modalOverlayStyle}>
             <div style={modalContentStyle}>
@@ -57,11 +81,8 @@ const DemandeModal = ({ demande, onClose, onUpdate }) => {
                 <h2 style={{ borderBottom: '2px solid #eee', paddingBottom: '10px', marginBottom: '20px' }}>Détails de la nouvelle demande</h2>
                 
                 <div style={detailSectionStyle}>
-                    <h3 style={detailTitleStyle}>Client</h3>
-                    <p><strong>Nom:</strong> {demande.clients.last_name} {demande.clients.first_name}</p>
-                    <p><strong>Email:</strong> {demande.clients.email}</p>
-                    <p><strong>Téléphone:</strong> {demande.clients.phone}</p>
-                    <p><strong>ID Client:</strong> {demande.clients.client_id}</p>
+                    <h3 style={detailTitleStyle}>Client / Entreprise</h3>
+                    {renderCustomerDetails()}
                 </div>
 
                 <div style={detailSectionStyle}>
@@ -97,9 +118,8 @@ const Demandes = () => {
             .from('demandes')
             .select(`
                 *,
-                clients (
-                    *
-                )
+                clients (*),
+                entreprises (*)
             `)
             .eq('status', 'Nouvelle')
             .order('created_at', { ascending: false });
@@ -131,7 +151,7 @@ const Demandes = () => {
                     <thead>
                         <tr>
                             <th style={thStyle}>Date Demande</th>
-                            <th style={thStyle}>Client</th>
+                            <th style={thStyle}>Client / Entreprise</th>
                             <th style={thStyle}>Type</th>
                             <th style={thStyle}>Date Souhaitée</th>
                             <th style={thStyle}>Actions</th>
@@ -141,7 +161,7 @@ const Demandes = () => {
                         {demandes.map(demande => (
                             <tr key={demande.id} style={trStyle}>
                                 <td style={tdStyle}>{new Date(demande.created_at).toLocaleDateString('fr-FR')}</td>
-                                <td style={tdStyle}>{demande.clients?.last_name || 'N/A'}</td>
+                                <td style={tdStyle}>{demande.clients?.last_name || demande.entreprises?.nom_entreprise || 'N/A'}</td>
                                 <td style={tdStyle}>{demande.type}</td>
                                 <td style={tdStyle}>{new Date(demande.request_date).toLocaleDateString('fr-FR')}</td>
                                 <td style={tdStyle}>
