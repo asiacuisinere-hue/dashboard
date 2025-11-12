@@ -161,7 +161,7 @@ const Demandes = () => {
                         {demandes.map(demande => (
                             <tr key={demande.id} style={trStyle}>
                                 <td style={tdStyle}>{new Date(demande.created_at).toLocaleDateString('fr-FR')}</td>
-                                <td style={tdStyle}>{demande.clients?.last_name || demande.entreprises?.company_name || 'N/A'}</td>
+                                <td style={tdStyle}>{demande.clients?.last_name || demande.entreprises?.nom_entreprise || 'N/A'}</td>
                                 <td style={tdStyle}>{demande.type}</td>
                                 <td style={tdStyle}>{new Date(demande.request_date).toLocaleDateString('fr-FR')}</td>
                                 <td style={tdStyle}>
