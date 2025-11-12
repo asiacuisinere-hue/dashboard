@@ -8,7 +8,6 @@ const Devis = () => {
     const [selectedCustomer, setSelectedCustomer] = useState(null); // Peut être un client ou une entreprise
     const [services, setServices] = useState([]); // Services disponibles
     const [quoteItems, setQuoteItems] = useState([]); // Lignes du devis
-    const [loading, setLoading] = useState(true);
     const [isSearching, setIsSearching] = useState(false);
 
     // Fetch available services
