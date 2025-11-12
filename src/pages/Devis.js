@@ -67,7 +67,7 @@ const Devis = () => {
 
     const handleSelectCustomer = (customer, type) => {
         setSelectedCustomer({ ...customer, type });
-        setSearchTerm(''); // Clear search after selection
+        setSearchTerm(type === 'client' ? `${customer.last_name} ${customer.first_name}` : customer.nom_entreprise); // Keep name in search bar
         setClients([]);
         setEntreprises([]);
     };
