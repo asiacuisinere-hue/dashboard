@@ -102,6 +102,7 @@ const Devis = () => {
 
     const handleGenerateQuote = async () => {
         console.log('--- [DEBUG] handleGenerateQuote: Démarrage');
+        console.log('--- [DEBUG] handleGenerateQuote: Valeur de selectedCustomer:', selectedCustomer);
 
         if (!selectedCustomer) {
             console.log('--- [DEBUG] handleGenerateQuote: Pas de client sélectionné');
