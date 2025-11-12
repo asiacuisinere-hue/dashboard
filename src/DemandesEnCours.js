@@ -15,7 +15,7 @@ const DemandesEnCours = () => {
             .select(`
                 *,
                 clients (*),
-                entreprises!entreprise_id (*)
+                entreprises (*)
             `)
             .in('status', [
                 'En attente de traitement', 

@@ -119,7 +119,7 @@ const Demandes = () => {
             .select(`
                 *,
                 clients (*),
-                entreprises!entreprise_id (*)
+                entreprises (*)
             `)
             .eq('status', 'Nouvelle')
             .order('created_at', { ascending: false });
