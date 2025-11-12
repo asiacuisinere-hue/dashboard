@@ -114,7 +114,7 @@ const Devis = () => {
             };
             console.log('--- [DEBUG] handleGenerateQuote: Payload envoyé:', JSON.stringify(payload, null, 2));
 
-            const response = await fetch('/create-quote', {
+            const response = await fetch('/api/create-quote', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
