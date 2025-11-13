@@ -46,7 +46,8 @@ const Factures = () => {
 
     const statusBadgeStyle = (status) => {
         const colors = {
-            'Brouillon': '#6c757d', // Gris
+            'draft': '#6c757d', // Gris
+            'Brouillon': '#6c757d', // Gris (pour compatibilité si jamais)
             'En attente de paiement': '#ffc107', // Jaune
             'Acompte versé': '#17a2b8', // Bleu clair
             'Payée': '#28a745', // Vert
@@ -55,7 +56,7 @@ const Factures = () => {
         return {
             padding: '4px 8px',
             borderRadius: '12px',
-            color: status === 'En attente de paiement' ? 'black' : 'white',
+            color: (status === 'En attente de paiement' || status === 'draft') ? 'black' : 'white', // Texte noir pour jaune et gris clair
             fontWeight: 'bold',
             fontSize: '12px',
             backgroundColor: colors[status] || '#6c757d'
@@ -167,7 +168,7 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
                 {console.log("Invoice Status:", invoice.status)}
                 {/* Action buttons */}
                 <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
-                    {invoice.status === 'Brouillon' && (
+                    {(invoice.status === 'Brouillon' || invoice.status === 'draft') && (
                         <button onClick={handleSendInvoice} disabled={isSending} style={{...actionButtonStyle, backgroundColor: '#007bff'}}>
                             {isSending ? 'Envoi en cours...' : 'Envoyer la facture'}
                         </button>
