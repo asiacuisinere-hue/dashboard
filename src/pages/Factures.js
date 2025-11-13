@@ -164,6 +164,7 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
                 <h2>Détails de la Facture #{invoice.id.substring(0, 8)}</h2>
                 <p><strong>Statut:</strong> {invoice.status}</p>
                 <p><strong>Total:</strong> {invoice.total_amount.toFixed(2)} €</p>
+                {console.log("Invoice Status:", invoice.status)}
                 {/* Action buttons */}
                 <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
                     {invoice.status === 'Brouillon' && (
