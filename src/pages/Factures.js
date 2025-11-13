@@ -262,13 +262,41 @@ const modalContentStyle = {
 };
 
 const closeButtonStyle = {
+
     position: 'absolute',
+
     top: '15px',
+
     right: '15px',
+
     background: 'transparent',
+
     border: 'none',
+
     fontSize: '24px',
+
     cursor: 'pointer'
+
 };
+
+
+
+const actionButtonStyle = {
+
+    padding: '10px 15px',
+
+    border: 'none',
+
+    borderRadius: '5px',
+
+    cursor: 'pointer',
+
+    color: 'white',
+
+    fontWeight: 'bold'
+
+};
+
+
 
 export default Factures;
