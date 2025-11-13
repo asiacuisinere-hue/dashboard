@@ -395,6 +395,7 @@ const Devis = () => {
                     quote={selectedQuote}
                     onClose={() => setSelectedQuote(null)}
                     onUpdateStatus={handleUpdateQuoteStatus}
+                    onCreateInvoice={handleCreateInvoice} // Pass the function down
                 />
             )}
         </div>
@@ -402,7 +403,7 @@ const Devis = () => {
 };
 
 // --- Quote Detail Modal Component ---
-const QuoteDetailModal = ({ quote, onClose, onUpdateStatus }) => {
+const QuoteDetailModal = ({ quote, onClose, onUpdateStatus, onCreateInvoice }) => {
     const [quoteItems, setQuoteItems] = useState([]);
     const [loadingItems, setLoadingItems] = useState(true);
 
