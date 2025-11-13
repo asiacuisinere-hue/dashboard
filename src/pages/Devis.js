@@ -167,6 +167,31 @@ const Devis = () => {
         }
     };
 
+    const handleCreateInvoice = async (quoteId) => {
+        if (!window.confirm(`Confirmer la création d'une facture pour le devis ${quoteId.substring(0, 8)} ?`)) {
+            return;
+        }
+        try {
+            const response = await fetch('https://www.asiacuisine.re/api/create-invoice-from-quote', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ quote_id: quoteId })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.details || 'Erreur inconnue lors de la création de la facture.');
+            }
+
+            const result = await response.json();
+            alert(`Facture ${result.invoiceId.substring(0, 8)} créée avec succès !`);
+            fetchExistingQuotes(); // Refresh the list to show the new 'invoiced' status
+
+        } catch (error) {
+            alert(`Erreur lors de la création de la facture : ${error.message}`);
+        }
+    };
+
     const handleUpdateQuoteStatus = async (quoteId, newStatus) => {
         if (!window.confirm(`Confirmer le changement de statut du devis ${quoteId.substring(0, 8)} à "${newStatus}" ?`)) {
             return;
@@ -352,6 +377,9 @@ const Devis = () => {
                                                 <button onClick={() => handleUpdateQuoteStatus(quote.id, 'accepted')} style={{ ...actionButtonStyle, backgroundColor: '#28a745', marginLeft: '5px' }}>Accepter</button>
                                                 <button onClick={() => handleUpdateQuoteStatus(quote.id, 'rejected')} style={{ ...actionButtonStyle, backgroundColor: '#dc3545', marginLeft: '5px' }}>Refuser</button>
                                             </>
+                                        )}
+                                        {quote.status === 'accepted' && (
+                                            <button onClick={() => handleCreateInvoice(quote.id)} style={{ ...actionButtonStyle, backgroundColor: '#007bff', marginLeft: '5px' }}>Créer la facture</button>
                                         )}
                                     </td>
                                 </tr>
