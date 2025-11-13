@@ -28,8 +28,8 @@ const Devis = () => {
             .from('quotes')
             .select(`
                 *,
-                clients(*),
-                entreprises(*) 
+                clients!client_id(*),
+                entreprises!entreprise_id(*) 
             `)
             .order('created_at', { ascending: false });
 
