@@ -694,4 +694,14 @@ const actionButtonStyle = {
     fontWeight: 'bold'
 };
 
+const detailsButtonStyle = {
+    padding: '8px 12px',
+    background: '#d4af37',
+    color: 'white',
+    border: 'none',
+    borderRadius: '5px',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s ease'
+};
+
 export default Devis;
