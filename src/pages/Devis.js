@@ -28,8 +28,8 @@ const Devis = () => {
             .from('quotes')
             .select(`
                 *,
-                clients (first_name, last_name, email),
-                entreprises (nom_entreprise, contact_name, contact_email)
+                clients(*),
+                entreprises(*) 
             `)
             .order('created_at', { ascending: false });
 
@@ -43,6 +43,8 @@ const Devis = () => {
     useEffect(() => {
         fetchServices();
         fetchExistingQuotes();
+        // Optionnel: Déclencher la recherche initiale si un terme pré-existant est là ou un auto-focus.
+        // if (searchTerm) handleSearch();
     }, [fetchServices, fetchExistingQuotes]);
 
     // Search clients and entreprises
@@ -135,7 +137,7 @@ const Devis = () => {
             };
             console.log('--- [DEBUG] handleGenerateQuote: Payload envoyé:', JSON.stringify(payload, null, 2));
 
-            const response = await fetch('/api/create-quote', {
+            const response = await fetch('https://www.asiacuisine.re/api/create-quote', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
