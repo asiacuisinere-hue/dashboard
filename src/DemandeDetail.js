@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 
 // --- Helper Components ---
@@ -29,6 +30,7 @@ const DetailsRenderer = ({ details }) => {
 // --- Main Component ---
 
 const DemandeDetail = ({ demande, onClose, onUpdate }) => {
+    const navigate = useNavigate();
     if (!demande) return null;
 
     const handleUpdateStatus = async (newStatus) => {
@@ -41,6 +43,15 @@ const DemandeDetail = ({ demande, onClose, onUpdate }) => {
     };
 
     const handleGenerateDocument = async (documentType, shouldUpdateStatus = true) => {
+        // Si c'est une RESERVATION_SERVICE, on redirige vers la page Devis
+        if (demande.type === 'RESERVATION_SERVICE' && documentType === 'Devis') {
+            const customerName = demande.clients ? `${demande.clients.last_name} ${demande.clients.first_name}`.trim() : demande.entreprises.nom_entreprise;
+            navigate('/devis', { state: { prefillSearch: customerName } });
+            onClose(); // Ferme la modale actuelle
+            return;
+        }
+
+        // Comportement existant pour les autres cas (ex: COMMANDE_MENU)
         const shouldSendEmail = window.confirm(`Voulez-vous envoyer ce ${documentType} par e-mail au client ?`);
         
         try {

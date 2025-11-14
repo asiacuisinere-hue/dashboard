@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 
 const Devis = () => {
+    const location = useLocation();
     const [clients, setClients] = useState([]);
     const [entreprises, setEntreprises] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -40,30 +42,24 @@ const Devis = () => {
         }
     }, []);
 
-    useEffect(() => {
-        fetchServices();
-        fetchExistingQuotes();
-        // Optionnel: Déclencher la recherche initiale si un terme pré-existant est là ou un auto-focus.
-        // if (searchTerm) handleSearch();
-    }, [fetchServices, fetchExistingQuotes]);
-
     // Search clients and entreprises
-    const handleSearch = useCallback(async () => {
+    const handleSearch = useCallback(async (term) => {
+        const currentSearchTerm = term || searchTerm;
+        if (currentSearchTerm.length < 3) {
+            setIsSearching(false);
+            return;
+        }
+
         setIsSearching(true);
         setClients([]);
         setEntreprises([]);
         setSelectedCustomer(null);
 
-        if (searchTerm.length < 3) {
-            setIsSearching(false);
-            return;
-        }
-
         // Search clients
         const { data: clientsData, error: clientsError } = await supabase
             .from('clients')
             .select('*')
-            .ilike('last_name', `%${searchTerm}%`);
+            .ilike('last_name', `%${currentSearchTerm}%`);
         if (clientsError) console.error('Error searching clients:', clientsError);
         else setClients(clientsData);
 
@@ -71,12 +67,25 @@ const Devis = () => {
         const { data: entreprisesData, error: entreprisesError } = await supabase
             .from('entreprises')
             .select('*')
-            .ilike('nom_entreprise', `%${searchTerm}%`);
+            .ilike('nom_entreprise', `%${currentSearchTerm}%`);
         if (entreprisesError) console.error('Error searching entreprises:', entreprisesError);
         else setEntreprises(entreprisesData);
 
         setIsSearching(false);
     }, [searchTerm]);
+
+    useEffect(() => {
+        fetchServices();
+        fetchExistingQuotes();
+        
+        const prefillSearch = location.state?.prefillSearch;
+        if (prefillSearch) {
+            setSearchTerm(prefillSearch);
+            // We need to trigger the search. Since handleSearch uses the state which updates asynchronously,
+            // we pass the term directly to it.
+            handleSearch(prefillSearch);
+        }
+    }, [fetchServices, fetchExistingQuotes, location.state, handleSearch]);
 
     const handleSelectCustomer = (customer, type) => {
         setSelectedCustomer({ ...customer, type });
