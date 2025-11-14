@@ -184,7 +184,7 @@ const Devis = () => {
             const response = await fetch('https://www.asiacuisine.re/api/create-invoice-from-quote', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ quote_id: quoteId })
+                body: JSON.stringify({ quoteId: quoteId }) // Correction de quote_id en quoteId
             });
 
             if (!response.ok) {
