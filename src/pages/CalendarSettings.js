@@ -114,6 +114,21 @@ const CalendarSettings = () => {
         }
     };
 
+    const handleDeleteIndisponibilite = async (id) => {
+        if (window.confirm('Êtes-vous sûr de vouloir supprimer cette indisponibilité ?')) {
+            const { error } = await supabase
+                .from('indisponibilites')
+                .delete()
+                .eq('id', id);
+
+            if (error) {
+                alert(`Erreur lors de la suppression de l'indisponibilité : ${error.message}`);
+            } else {
+                fetchIndisponibilites();
+            }
+        }
+    };
+
     if (loading) {
         return <div>Chargement des paramètres du calendrier...</div>;
     }
