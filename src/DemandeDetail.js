@@ -153,7 +153,9 @@ const DemandeDetail = ({ demande, onClose, onUpdate }) => {
             'En attente de traitement': (
                 <>
                     <button onClick={() => handleGenerateDocument('Devis')} style={{...actionButtonStyle, backgroundColor: '#fd7e14'}}>Générer Devis</button>
-                    <button onClick={() => handleGenerateDocument('Facture')} style={{...actionButtonStyle, backgroundColor: '#17a2b8'}}>Générer Facture</button>
+                    {demande.type !== 'RESERVATION_SERVICE' && (
+                        <button onClick={() => handleGenerateDocument('Facture')} style={{...actionButtonStyle, backgroundColor: '#17a2b8'}}>Générer Facture</button>
+                    )}
                 </>
             ),
             'En attente de validation de devis': (
