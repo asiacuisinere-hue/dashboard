@@ -3,6 +3,16 @@ import { supabase } from '../supabaseClient';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css'; // Default calendar styles
 
+// Custom CSS for blocked dates
+const customCalendarStyle = `
+  .blocked-date {
+    background-color: #ffcdd2;
+    color: #c62828;
+    border-radius: 50%;
+    text-decoration: line-through;
+  }
+`;
+
 const CalendarSettings = () => {
     const [indisponibilites, setIndisponibilites] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -140,6 +150,7 @@ const CalendarSettings = () => {
 
     return (
         <div style={containerStyle}>
+            <style>{customCalendarStyle}</style>
             <h1>Paramètres du Calendrier</h1>
 
             <div style={sectionStyle}>
