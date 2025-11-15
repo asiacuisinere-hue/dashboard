@@ -12,6 +12,7 @@ import Devis from './pages/Devis';
 import Factures from './pages/Factures';
 import Parametres from './pages/Parametres';
 import Services from './pages/Services'; // Importation de la page Services
+import CalendarSettings from './pages/CalendarSettings'; // Importation de la page CalendarSettings
 
 // --- Composants ---
 
@@ -116,6 +117,7 @@ const DashboardLayout = () => {
                     <Route path="/scanner" element={<Scanner />} />
                     <Route path="/parametres" element={<Parametres />} />
                     <Route path="/services" element={<Services />} /> {/* Route pour la page Services */}
+                    <Route path="/calendrier" element={<CalendarSettings />} /> {/* Route pour la page Calendrier */}
                 </Routes>
             </main>
         </div>
