@@ -44,7 +44,11 @@ const CalendarSettings = () => {
 
     // Fonction pour vérifier si une date est bloquée
     const isDateBlocked = (date) => {
-        const dateString = date.toISOString().split('T')[0];
+        // Manually format the date to YYYY-MM-DD to avoid timezone issues
+        const year = date.getFullYear();
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        const dateString = `${year}-${month}-${day}`;
         return indisponibilites.some(item => item.date === dateString);
     };
 
