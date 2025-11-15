@@ -45,7 +45,12 @@ const CalendarSettings = () => {
 
     // Gérer le clic sur une date du calendrier
     const handleDateClick = async (date) => {
-        const dateString = date.toISOString().split('T')[0];
+        // Manually format the date to YYYY-MM-DD to avoid timezone issues
+        const year = date.getFullYear();
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        const dateString = `${year}-${month}-${day}`;
+
         setSelectedDate(date);
 
         const existing = indisponibilites.find(item => item.date === dateString);
