@@ -154,7 +154,22 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
                 console.error('--- [ERROR] handleUpdateStatus: Erreur Supabase lors de la mise à jour:', error);
                 throw error;
             }
-            console.log(`--- [DEBUG] handleUpdateStatus: Statut mis à jour avec succès à "${newStatus}"`);
+            console.log(`--- [DEBUG] handleUpdateStatus: Statut mis à jour avec succès à "${newStatus}" (selon Supabase client)`);
+
+            // --- Vérification immédiate après la mise à jour ---
+            const { data: updatedInvoiceData, error: fetchError } = await supabase
+                .from('invoices')
+                .select('status')
+                .eq('id', invoice.id)
+                .single();
+
+            if (fetchError) {
+                console.error('--- [ERROR] handleUpdateStatus: Erreur lors de la relecture de la facture après mise à jour:', fetchError);
+            } else {
+                console.log(`--- [DEBUG] handleUpdateStatus: Statut réel de la facture ${invoice.id.substring(0, 8)} après relecture: "${updatedInvoiceData.status}"`);
+            }
+            // --- Fin de la vérification ---
+
             alert('Statut mis à jour avec succès !');
             onUpdate();
             onClose();
