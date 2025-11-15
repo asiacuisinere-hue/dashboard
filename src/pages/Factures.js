@@ -144,16 +144,22 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
 
     const handleUpdateStatus = async (newStatus) => {
         if (!window.confirm(`Confirmer le passage au statut "${newStatus}" ?`)) return;
+        console.log(`--- [DEBUG] handleUpdateStatus: Tentative de mise à jour du statut de la facture ${invoice.id.substring(0, 8)} à "${newStatus}"`);
         try {
             const { error } = await supabase
                 .from('invoices')
                 .update({ status: newStatus })
                 .eq('id', invoice.id);
-            if (error) throw error;
+            if (error) {
+                console.error('--- [ERROR] handleUpdateStatus: Erreur Supabase lors de la mise à jour:', error);
+                throw error;
+            }
+            console.log(`--- [DEBUG] handleUpdateStatus: Statut mis à jour avec succès à "${newStatus}"`);
             alert('Statut mis à jour avec succès !');
             onUpdate();
             onClose();
         } catch (err) {
+            console.error('--- [ERROR] handleUpdateStatus: Erreur capturée:', err);
             alert(`Erreur lors de la mise à jour du statut: ${err.message}`);
         }
     };
@@ -165,7 +171,6 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
                 <h2>Détails de la Facture #{invoice.id.substring(0, 8)}</h2>
                 <p><strong>Statut:</strong> {invoice.status}</p>
                 <p><strong>Total:</strong> {invoice.total_amount.toFixed(2)} €</p>
-                {console.log("Invoice Status:", invoice.status)}
                 {/* Action buttons */}
                 <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
                     {(invoice.status === 'Brouillon' || invoice.status === 'draft') && (
