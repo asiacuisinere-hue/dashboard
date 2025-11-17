@@ -12,7 +12,7 @@ const Parametres = () => {
         const fetchWelcomeMessage = async () => {
             try {
                 // This is a public function, no auth needed
-                const response = await fetch('/functions/get-setting?key=welcomePopupMessage');
+                const response = await fetch('/get-setting?key=welcomePopupMessage');
                 if (response.ok) {
                     const data = await response.json();
                     if (data.value) {
