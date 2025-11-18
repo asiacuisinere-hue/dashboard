@@ -7,19 +7,20 @@ const Parametres = () => {
     const [status, setStatus] = useState({ message: '', isError: false });
     const [isLoading, setIsLoading] = useState(false);
 
+    // Define the base URL for the API from environment variables
+    const API_URL = process.env.REACT_APP_API_URL || '';
+
     // Fetch the current welcome message on component mount
     useEffect(() => {
         const fetchWelcomeMessage = async () => {
             try {
-                // This is a public function, no auth needed
-                const response = await fetch('/get-setting?key=welcomePopupMessage');
+                const response = await fetch(`${API_URL}/get-setting?key=welcomePopupMessage`);
                 if (response.ok) {
                     const data = await response.json();
                     if (data.value) {
                         setWelcomeMessage(data.value);
                     }
                 } else if (response.status !== 404) {
-                    // 404 is okay (setting not created yet), but other errors are not
                     throw new Error('Failed to fetch settings');
                 }
             } catch (error) {
@@ -29,7 +30,7 @@ const Parametres = () => {
         };
 
         fetchWelcomeMessage();
-    }, []);
+    }, [API_URL]);
 
     // Handle saving the new message
     const handleSave = async () => {
@@ -42,7 +43,7 @@ const Parametres = () => {
                 throw new Error('Authentication error. Please log in again.');
             }
 
-            const response = await fetch('/api/update-setting', {
+            const response = await fetch(`${API_URL}/api/update-setting`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -66,7 +67,6 @@ const Parametres = () => {
             setStatus({ message: error.message, isError: true });
         } finally {
             setIsLoading(false);
-            // Hide the status message after 3 seconds
             setTimeout(() => setStatus({ message: '', isError: false }), 3000);
         }
     };
