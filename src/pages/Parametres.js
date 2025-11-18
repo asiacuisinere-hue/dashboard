@@ -13,6 +13,8 @@ const Parametres = () => {
     const [menuStandard, setMenuStandard] = useState('');
     const [menuConfort, setMenuConfort] = useState('');
     const [menuDuo, setMenuDuo] = useState('');
+    const [menuOverrideMessage, setMenuOverrideMessage] = useState('');
+    const [menuOverrideEnabled, setMenuOverrideEnabled] = useState(false);
     const [menuStatus, setMenuStatus] = useState({ message: '', isError: false });
     const [isMenuLoading, setIsMenuLoading] = useState(false);
 
@@ -43,6 +45,8 @@ const Parametres = () => {
                 setMenuStandard(data.menu_standard || '');
                 setMenuConfort(data.menu_confort || '');
                 setMenuDuo(data.menu_duo || '');
+                setMenuOverrideMessage(data.menu_override_message || '');
+                setMenuOverrideEnabled(data.menu_override_enabled === 'true');
             } else {
                  throw new Error('Failed to fetch menu settings');
             }
@@ -100,6 +104,8 @@ const Parametres = () => {
                 saveSetting('menu_standard', menuStandard),
                 saveSetting('menu_confort', menuConfort),
                 saveSetting('menu_duo', menuDuo),
+                saveSetting('menu_override_message', menuOverrideMessage),
+                saveSetting('menu_override_enabled', String(menuOverrideEnabled)),
             ]);
             setMenuStatus({ message: 'Menus enregistrés !', isError: false });
         } catch (error) {
@@ -136,25 +142,51 @@ const Parametres = () => {
                 {/* Card for Weekly Menus */}
                 <div style={{...cardStyle, gridColumn: 'span 2'}}>
                     <h2>Gestion des Menus de la Semaine</h2>
-                    <p>Indiquez ici le contenu de chaque formule pour la semaine.</p>
-                    <div style={menuGridStyle}>
-                        <div>
-                            <label style={labelStyle}>Formule Découverte</label>
-                            <textarea value={menuDecouverte} onChange={(e) => setMenuDecouverte(e.target.value)} style={textareaStyle} placeholder="Ex: Plat 1, Plat 2..."/>
+                    
+                    <div style={{ border: '1px solid #eee', borderRadius: '8px', padding: '15px', marginTop: '15px' }}>
+                        <h3 style={{ marginTop: 0, fontSize: '1.1rem' }}>Message personnalisé (prioritaire)</h3>
+                        <p style={{fontSize: '0.9rem', color: '#666'}}>Si activé, ce message remplacera l'affichage des menus sur la page.</p>
+                        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+                            <input
+                                type="checkbox"
+                                id="override-enabled"
+                                checked={menuOverrideEnabled}
+                                onChange={(e) => setMenuOverrideEnabled(e.target.checked)}
+                                style={{ marginRight: '10px', height: '18px', width: '18px' }}
+                            />
+                            <label htmlFor="override-enabled">Activer le message personnalisé</label>
                         </div>
-                        <div>
-                            <label style={labelStyle}>Formule Standard</label>
-                            <textarea value={menuStandard} onChange={(e) => setMenuStandard(e.target.value)} style={textareaStyle} placeholder="Ex: Plat 1, Plat 2..."/>
-                        </div>
-                        <div>
-                            <label style={labelStyle}>Formule Confort</label>
-                            <textarea value={menuConfort} onChange={(e) => setMenuConfort(e.target.value)} style={textareaStyle} placeholder="Ex: Plat 1, Plat 2..."/>
-                        </div>
-                        <div>
-                            <label style={labelStyle}>Option Duo</label>
-                            <textarea value={menuDuo} onChange={(e) => setMenuDuo(e.target.value)} style={textareaStyle} placeholder="Ex: 2x Plat 1, 2x Plat 2..."/>
+                        <textarea
+                            value={menuOverrideMessage}
+                            onChange={(e) => setMenuOverrideMessage(e.target.value)}
+                            style={{...textareaStyle, marginTop: '5px', backgroundColor: menuOverrideEnabled ? '#fff' : '#f9f9f9' }}
+                            placeholder="Ex: Les livraisons reprendront le 2 janvier."
+                            disabled={!menuOverrideEnabled}
+                        />
+                    </div>
+
+                    <div style={{ marginTop: '20px' }}>
+                        <h3 style={{ marginTop: 0, fontSize: '1.1rem' }}>Contenu des formules</h3>
+                        <div style={menuGridStyle}>
+                            <div>
+                                <label style={labelStyle}>Formule Découverte</label>
+                                <textarea value={menuDecouverte} onChange={(e) => setMenuDecouverte(e.target.value)} style={textareaStyle} placeholder="Ex: Plat 1, Plat 2..."/>
+                            </div>
+                            <div>
+                                <label style={labelStyle}>Formule Standard</label>
+                                <textarea value={menuStandard} onChange={(e) => setMenuStandard(e.target.value)} style={textareaStyle} placeholder="Ex: Plat 1, Plat 2..."/>
+                            </div>
+                            <div>
+                                <label style={labelStyle}>Formule Confort</label>
+                                <textarea value={menuConfort} onChange={(e) => setMenuConfort(e.target.value)} style={textareaStyle} placeholder="Ex: Plat 1, Plat 2..."/>
+                            </div>
+                            <div>
+                                <label style={labelStyle}>Option Duo</label>
+                                <textarea value={menuDuo} onChange={(e) => setMenuDuo(e.target.value)} style={textareaStyle} placeholder="Ex: 2x Plat 1, 2x Plat 2..."/>
+                            </div>
                         </div>
                     </div>
+
                     <button onClick={handleSaveMenus} disabled={isMenuLoading} style={{...buttonStyle, marginTop: '20px'}}>
                         {isMenuLoading ? 'Enregistrement...' : 'Enregistrer les Menus'}
                     </button>
