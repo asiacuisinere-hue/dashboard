@@ -124,27 +124,27 @@ const Particuliers = () => {
                 <h2>{editClient ? 'Modifier le client' : 'Ajouter un nouveau client'}</h2>
                 <div style={formGridStyle}>
                     <div style={formGroupStyle}>
-                        <label>Nom:</label>
+                        <label style={labelStyle}>Nom:</label>
                         <input type="text" name="last_name" value={editClient ? editClient.last_name : newClientData.last_name} onChange={editClient ? handleEditChange : handleInputChange} style={inputStyle} required />
                     </div>
                     <div style={formGroupStyle}>
-                        <label>Prénom:</label>
+                        <label style={labelStyle}>Prénom:</label>
                         <input type="text" name="first_name" value={editClient ? editClient.first_name : newClientData.first_name} onChange={editClient ? handleEditChange : handleInputChange} style={inputStyle} />
                     </div>
                     <div style={formGroupStyle}>
-                        <label>Email:</label>
+                        <label style={labelStyle}>Email:</label>
                         <input type="email" name="email" value={editClient ? editClient.email : newClientData.email} onChange={editClient ? handleEditChange : handleInputChange} style={inputStyle} required />
                     </div>
                     <div style={formGroupStyle}>
-                        <label>Téléphone:</label>
+                        <label style={labelStyle}>Téléphone:</label>
                         <input type="tel" name="phone" value={editClient ? editClient.phone : newClientData.phone} onChange={editClient ? handleEditChange : handleInputChange} style={inputStyle} />
                     </div>
                     <div style={formGroupStyle}>
-                        <label>Adresse:</label>
+                        <label style={labelStyle}>Adresse:</label>
                         <textarea name="address" value={editClient ? editClient.address : newClientData.address} onChange={editClient ? handleEditChange : handleInputChange} style={textareaStyle}></textarea>
                     </div>
                     <div style={formGroupStyle}>
-                        <label>Notes:</label>
+                        <label style={labelStyle}>Notes:</label>
                         <textarea name="notes" value={editClient ? editClient.notes : newClientData.notes} onChange={editClient ? handleEditChange : handleInputChange} style={textareaStyle}></textarea>
                     </div>
                 </div>
@@ -234,12 +234,18 @@ const formGroupStyle = {
     flexDirection: 'column',
 };
 
+const labelStyle = { // Nouveau style pour les labels
+    fontWeight: 'bold',
+    marginBottom: '5px',
+    color: '#333',
+};
+
 const inputStyle = {
     padding: '10px',
     borderRadius: '4px',
     border: '1px solid #ddd',
     boxSizing: 'border-box',
-    marginTop: '5px',
+    marginTop: '5px', // Ajusté car le label a déjà une marge
     width: '100%',
 };
 

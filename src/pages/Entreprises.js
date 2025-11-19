@@ -123,23 +123,23 @@ const Entreprises = () => {
                 <h2>{editEntreprise ? "Modifier l'entreprise" : "Ajouter une nouvelle entreprise"}</h2>
                 <div style={formGridStyle}>
                     <div style={formGroupStyle}>
-                        <label>Nom de l'entreprise:</label>
+                        <label style={labelStyle}>Nom de l'entreprise:</label>
                         <input type="text" name="nom_entreprise" value={editEntreprise ? editEntreprise.nom_entreprise : newEntrepriseData.nom_entreprise} onChange={editEntreprise ? handleEditChange : handleInputChange} style={inputStyle} required />
                     </div>
                     <div style={formGroupStyle}>
-                        <label>SIRET:</label>
+                        <label style={labelStyle}>SIRET:</label>
                         <input type="text" name="siret" value={editEntreprise ? editEntreprise.siret : newEntrepriseData.siret} onChange={editEntreprise ? handleEditChange : handleInputChange} style={inputStyle} />
                     </div>
                     <div style={formGroupStyle}>
-                        <label>Nom du contact:</label>
+                        <label style={labelStyle}>Nom du contact:</label>
                         <input type="text" name="contact_name" value={editEntreprise ? editEntreprise.contact_name : newEntrepriseData.contact_name} onChange={editEntreprise ? handleEditChange : handleInputChange} style={inputStyle} />
                     </div>
                     <div style={formGroupStyle}>
-                        <label>Email de contact:</label>
+                        <label style={labelStyle}>Email de contact:</label>
                         <input type="email" name="contact_email" value={editEntreprise ? editEntreprise.contact_email : newEntrepriseData.contact_email} onChange={editEntreprise ? handleEditChange : handleInputChange} style={inputStyle} required />
                     </div>
                     <div style={formGroupStyle}>
-                        <label>Téléphone de contact:</label>
+                        <label style={labelStyle}>Téléphone de contact:</label>
                         <input type="tel" name="contact_phone" value={editEntreprise ? editEntreprise.contact_phone : newEntrepriseData.contact_phone} onChange={editEntreprise ? handleEditChange : handleInputChange} style={inputStyle} />
                     </div>
                 </div>
@@ -231,13 +231,25 @@ const formGroupStyle = {
     flexDirection: 'column',
 };
 
+const labelStyle = { // Nouveau style pour les labels
+    fontWeight: 'bold',
+    marginBottom: '5px',
+    color: '#333',
+};
+
 const inputStyle = {
     padding: '10px',
     borderRadius: '4px',
     border: '1px solid #ddd',
     boxSizing: 'border-box',
-    marginTop: '5px',
+    marginTop: '5px', // Ajusté car le label a déjà une marge
     width: '100%',
+};
+
+const textareaStyle = { // Pour compatibilité, bien qu'il n'y en ait pas ici
+    ...inputStyle,
+    minHeight: '80px',
+    resize: 'vertical',
 };
 
 const formActionsStyle = {
