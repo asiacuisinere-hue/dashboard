@@ -715,4 +715,23 @@ const modalActionsStyle = {
     flexWrap: 'wrap',
 };
 
+const tableContainerStyle = {
+    marginTop: '2rem',
+    boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+    borderRadius: '8px',
+    overflowX: 'auto',
+    background: 'white'
+};
+
+const detailsButtonStyle = {
+    padding: '8px 12px',
+    background: '#d4af37',
+    color: 'white',
+    border: 'none',
+    borderRadius: '5px',
+    cursor: 'pointer',
+    marginRight: '5px',
+};
+
+
 export default Devis;
