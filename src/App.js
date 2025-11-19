@@ -69,11 +69,11 @@ const Login = () => {
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
-                fontSize: '14px',
+                fontSize: '18px', // Augmenter la taille pour l'icône
                 color: '#666',
               }}
             >
-              {showPassword ? 'Cacher' : 'Montrer'}
+              {showPassword ? '👁️' : '🔒'} {/* Icône d'œil ouvert / Icône de cadenas */}
             </button>
           </div>
           <button type="submit" disabled={loading} style={{ width: '100%', padding: '12px', backgroundColor: '#d4af37', color: 'white', border: 'none', borderRadius: '4px', fontSize: '16px', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
