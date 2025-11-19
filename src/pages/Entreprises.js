@@ -49,16 +49,16 @@ const Entreprises = () => {
 
     const handleAddEntreprise = async () => {
         if (!newEntrepriseData.nom_entreprise || !newEntrepriseData.contact_email) {
-            alert('Le nom de l\'entreprise et l\'email de contact sont obligatoires.');
+            alert("Le nom de l'entreprise et l'email de contact sont obligatoires.");
             return;
         }
 
         const { error } = await supabase.from('entreprises').insert([newEntrepriseData]);
 
         if (error) {
-            alert(`Erreur lors de l\'ajout de l\'entreprise : ${error.message}`);
+            alert(`Erreur lors de l'ajout de l'entreprise : ${error.message}`);
         } else {
-            alert("L'entreprise a été ajoutée."); // Correction ici
+            alert("L'entreprise a été ajoutée.");
             setNewEntrepriseData({ nom_entreprise: '', siret: '', contact_name: '', contact_email: '', contact_phone: '' });
             fetchEntreprises();
         }
@@ -66,7 +66,7 @@ const Entreprises = () => {
 
     const handleUpdateEntreprise = async () => {
         if (!editEntreprise.nom_entreprise || !editEntreprise.contact_email) {
-            alert('Le nom de l\'entreprise et l\'email de contact sont obligatoires.');
+            alert("Le nom de l'entreprise et l'email de contact sont obligatoires.");
             return;
         }
 
@@ -76,23 +76,23 @@ const Entreprises = () => {
             .eq('id', editEntreprise.id);
 
         if (error) {
-            alert(`Erreur lors de la mise à jour de l\'entreprise : ${error.message}`);
+            alert(`Erreur lors de la mise à jour de l'entreprise : ${error.message}`);
         } else {
-            alert("L'entreprise a été mise à jour."); // Correction ici
+            alert("L'entreprise a été mise à jour.");
             setEditEntreprise(null);
             fetchEntreprises();
         }
     };
 
     const handleDeleteEntreprise = async (id) => {
-        if (window.confirm("Êtes-vous sûr de vouloir supprimer cette entreprise ?")) { // Correction ici
+        if (window.confirm("Êtes-vous sûr de vouloir supprimer cette entreprise ?")) {
             const { error } = await supabase
                 .from('entreprises')
                 .delete()
                 .eq('id', id);
 
             if (error) {
-                alert(`Erreur lors de la suppression de l\'entreprise : ${error.message}`);
+                alert(`Erreur lors de la suppression de l'entreprise : ${error.message}`);
             } else {
                 fetchEntreprises();
             }
@@ -111,19 +111,19 @@ const Entreprises = () => {
             <div style={filterContainerStyle}>
                 <input
                     type="text"
-                    placeholder="Rechercher par nom d\'entreprise ou email de contact..."
+                    placeholder="Rechercher par nom d'entreprise ou email de contact..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     style={filterInputStyle}
                 />
             </div>
 
-            {/* Formulaire d\'ajout/édition d\'entreprise */}
+            {/* Formulaire d'ajout/édition d'entreprise */}
             <div style={formContainerStyle}>
-                <h2>{editEntreprise ? 'Modifier l\'entreprise' : 'Ajouter une nouvelle entreprise'}</h2>
+                <h2>{editEntreprise ? "Modifier l'entreprise" : "Ajouter une nouvelle entreprise"}</h2>
                 <div style={formGridStyle}>
                     <div style={formGroupStyle}>
-                        <label>Nom de l\'entreprise:</label>
+                        <label>Nom de l'entreprise:</label>
                         <input type="text" name="nom_entreprise" value={editEntreprise ? editEntreprise.nom_entreprise : newEntrepriseData.nom_entreprise} onChange={editEntreprise ? handleEditChange : handleInputChange} style={inputStyle} required />
                     </div>
                     <div style={formGroupStyle}>
@@ -145,7 +145,7 @@ const Entreprises = () => {
                 </div>
                 <div style={formActionsStyle}>
                     <button onClick={editEntreprise ? handleUpdateEntreprise : handleAddEntreprise} style={buttonStyle}>
-                        {editEntreprise ? 'Mettre à jour l\'entreprise' : 'Ajouter l\'entreprise'}
+                        {editEntreprise ? "Mettre à jour l'entreprise" : "Ajouter l'entreprise"}
                     </button>
                     {editEntreprise && (
                         <button onClick={() => setEditEntreprise(null)} style={{ ...buttonStyle, backgroundColor: '#6c757d', marginLeft: '10px' }}>Annuler</button>

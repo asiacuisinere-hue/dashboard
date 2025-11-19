@@ -50,16 +50,16 @@ const Particuliers = () => {
 
     const handleAddClient = async () => {
         if (!newClientData.last_name || !newClientData.email) {
-            alert('Le nom de famille et l\'email sont obligatoires.');
+            alert("Le nom de famille et l'email sont obligatoires.");
             return;
         }
 
         const { error } = await supabase.from('clients').insert([newClientData]);
 
         if (error) {
-            alert(`Erreur lors de l\'ajout du client : ${error.message}`);
+            alert(`Erreur lors de l'ajout du client : ${error.message}`);
         } else {
-            alert("Le client a été ajouté."); // Correction ici
+            alert("Le client a été ajouté.");
             setNewClientData({ first_name: '', last_name: '', email: '', phone: '', address: '', notes: '' });
             fetchClients();
         }
@@ -67,7 +67,7 @@ const Particuliers = () => {
 
     const handleUpdateClient = async () => {
         if (!editClient.last_name || !editClient.email) {
-            alert('Le nom de famille et l\'email sont obligatoires.');
+            alert("Le nom de famille et l'email sont obligatoires.");
             return;
         }
 
@@ -79,14 +79,14 @@ const Particuliers = () => {
         if (error) {
             alert(`Erreur lors de la mise à jour du client : ${error.message}`);
         } else {
-            alert("Le client a été mis à jour."); // Correction ici
+            alert("Le client a été mis à jour.");
             setEditClient(null);
             fetchClients();
         }
     };
 
     const handleDeleteClient = async (id) => {
-        if (window.confirm("Êtes-vous sûr de vouloir supprimer ce client ?")) { // Correction ici
+        if (window.confirm("Êtes-vous sûr de vouloir supprimer ce client ?")) {
             const { error } = await supabase
                 .from('clients')
                 .delete()
