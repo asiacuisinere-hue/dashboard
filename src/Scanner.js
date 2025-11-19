@@ -6,34 +6,18 @@ import DemandeDetail from './DemandeDetail'; // Réutilisation de la modale de d
 const qrcodeRegionId = 'html5qrcode-scanner';
 
 const Scanner = () => {
-    const [decodedResult, setDecodedResult] = useState('');
     const [scanError, setScanError] = useState('');
     const [scannedDemande, setScannedDemande] = useState(null);
     const [scanAttempted, setScanAttempted] = useState(false);
     const html5QrcodeScannerRef = useRef(null);
 
-    const onScanSuccess = useCallback((decodedText, decodedResult) => {
-        // Stop scanning to prevent multiple scans
-        if (html5QrcodeScannerRef.current) {
-            html5QrcodeScannerRef.current.clear().catch(error => {
-                console.error('Failed to clear html5QrcodeScanner', error);
-            });
-            html5QrcodeScannerRef.current = null; // Mark as cleared
-        }
-        
-        setDecodedResult(decodedText);
-        setScanError('');
-        setScanAttempted(true);
-        console.log(`Scan result: ${decodedText}`, decodedResult);
-        fetchDemandeDetails(decodedText);
-    }, []);
-
-    const onScanFailure = (error) => {
+    // Définir onScanFailure en tant que callback
+    const onScanFailure = useCallback((error) => {
         if (!scanAttempted) { // Only log if no successful scan has been attempted
             console.warn(`QR Code scan error = ${error}`);
             setScanError('Impossible de lire le code QR. Assurez-vous qu\'il est bien éclairé et visible.');
         }
-    };
+    }, [scanAttempted]); // scanAttempted est une dépendance
 
     const fetchDemandeDetails = useCallback(async (qrCodeData) => {
         setScanError('');
@@ -61,11 +45,11 @@ const Scanner = () => {
 
         const { data, error } = await supabase
             .from('demandes')
-            .select(
-                `*,
+            .select(`
+                *,
                 clients (*),
-                entreprises (*)`
-            )
+                entreprises (*)
+            `)
             .eq('id', demandeId)
             .single();
 
@@ -78,7 +62,23 @@ const Scanner = () => {
             setScannedDemande(data);
             setScanError('');
         }
-    }, []);
+    }, []); // fetchDemandeDetails ne dépend pas de valeurs changeantes, seulement de supabase
+
+    const onScanSuccess = useCallback((decodedText, decodedResult) => {
+        // Stop scanning to prevent multiple scans
+        if (html5QrcodeScannerRef.current) {
+            html5QrcodeScannerRef.current.clear().catch(error => {
+                console.error('Failed to clear html5QrcodeScanner', error);
+            });
+            html5QrcodeScannerRef.current = null; // Mark as cleared
+        }
+        
+        // setDecodedResult(decodedText); // decodedResult n'est plus utilisé
+        setScanError('');
+        setScanAttempted(true);
+        console.log(`Scan result: ${decodedText}`, decodedResult);
+        fetchDemandeDetails(decodedText);
+    }, [fetchDemandeDetails]); // Ajout de fetchDemandeDetails comme dépendance
 
     const updateDemandeStatus = async (newStatus) => {
         if (!scannedDemande) return;
@@ -102,7 +102,7 @@ const Scanner = () => {
     };
 
     const startScanner = useCallback(() => {
-        setDecodedResult('');
+        // setDecodedResult(''); // decodedResult n'est plus utilisé
         setScanError('');
         setScannedDemande(null);
         setScanAttempted(false); // Reset scan attempted flag
@@ -190,9 +190,9 @@ const scannerSectionStyle = {
 };
 
 const scannerAreaStyle = {
-    width: '100%',
-    maxWidth: '500px',
-    margin: '0 auto',
+    width: '100%', // Assure que le scanner prend toute la largeur disponible
+    maxWidth: '500px', // Limite la largeur du scanner
+    margin: '0 auto', // Centre le scanner
     marginBottom: '20px',
 };
 
@@ -225,7 +225,7 @@ const actionButtonsStyle = {
     justifyContent: 'flex-end',
     gap: '10px',
     marginTop: '20px',
-    flexWrap: 'wrap',
+    flexWrap: 'wrap', // Permet aux boutons de passer à la ligne
 };
 
 const actionButtonStyle = {

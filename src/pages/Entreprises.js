@@ -143,7 +143,7 @@ const Entreprises = () => {
                 </div>
                 <div style={formActionsStyle}>
                     <button onClick={editEntreprise ? handleUpdateEntreprise : handleAddEntreprise} style={buttonStyle}>
-                        {editEntreprise ? 'Mettre à jour l\'entreprise' : 'Ajouter une entreprise'}
+                        {editEntreprise ? 'Mettre à jour l\'entreprise' : 'Ajouter l\'entreprise'}
                     </button>
                     {editEntreprise && (
                         <button onClick={() => setEditEntreprise(null)} style={{ ...buttonStyle, backgroundColor: '#6c757d', marginLeft: '10px' }}>Annuler</button>
@@ -236,12 +236,6 @@ const inputStyle = {
     boxSizing: 'border-box',
     marginTop: '5px',
     width: '100%',
-};
-
-const textareaStyle = { // Pour compatibilité, bien qu'il n'y en ait pas ici
-    ...inputStyle,
-    minHeight: '80px',
-    resize: 'vertical',
 };
 
 const formActionsStyle = {

@@ -64,7 +64,7 @@ const DemandeModal = ({ demande, onClose, onUpdate }) => {
             if (!response.ok) throw new Error((await response.json()).error || 'Erreur inconnue lors de l\'envoi de l\'e-mail de refus.');
             alert('E-mail de refus envoyé au client.');
         } catch (error) {
-            alert(`Erreur lors de l\'envoi de l\'e-mail de refus : ${error.message}`);
+            alert(`Erreur lors de l'envoi de l'e-mail de refus : ${error.message}`);
         }
     };
 
