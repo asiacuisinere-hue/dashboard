@@ -1,5 +1,4 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 
 // --- Helper Components ---
@@ -30,7 +29,6 @@ const DetailsRenderer = ({ details }) => {
 // --- Main Component ---
 
 const DemandeDetail = ({ demande, onClose, onUpdate }) => {
-    const navigate = useNavigate();
     if (!demande) return null;
 
     const handleUpdateStatus = async (newStatus) => {
@@ -43,15 +41,6 @@ const DemandeDetail = ({ demande, onClose, onUpdate }) => {
     };
 
     const handleGenerateDocument = async (documentType, shouldUpdateStatus = true) => {
-        // Si c'est une RESERVATION_SERVICE, on redirige vers la page Devis
-        if (demande.type === 'RESERVATION_SERVICE' && documentType === 'Devis') {
-            const customerName = demande.clients ? `${demande.clients.last_name} ${demande.clients.first_name}`.trim() : demande.entreprises.nom_entreprise;
-            navigate('/devis', { state: { prefillSearch: customerName } });
-            onClose(); // Ferme la modale actuelle
-            return;
-        }
-
-        // Comportement existant pour les autres cas (ex: COMMANDE_MENU)
         const shouldSendEmail = window.confirm(`Voulez-vous envoyer ce ${documentType} par e-mail au client ?`);
         
         try {
@@ -216,7 +205,7 @@ const DemandeDetail = ({ demande, onClose, onUpdate }) => {
                     <DetailsRenderer details={demande.details_json} />
                 </div>
 
-                <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <div style={modalActionsStyle}>
                     {renderActions()}
                 </div>
             </div>
@@ -226,23 +215,75 @@ const DemandeDetail = ({ demande, onClose, onUpdate }) => {
 
 // --- Styles ---
 
-const modalOverlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 };
-const modalContentStyle = { background: 'white', padding: '30px', borderRadius: '8px', width: '90%', maxWidth: '700px', maxHeight: '90vh', overflowY: 'auto', position: 'relative' };
-const closeButtonStyle = { position: 'absolute', top: '15px', right: '15px', background: 'transparent', border: 'none', fontSize: '24px', cursor: 'pointer' };
-const detailSectionStyle = { marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px solid #f0f0f0' };
-const detailTitleStyle = { fontSize: '18px', color: '#d4af37', marginBottom: '10px' };
-const actionButtonStyle = { padding: '10px 15px', border: 'none', borderRadius: '5px', cursor: 'pointer', color: 'white', fontWeight: 'bold' };
+const modalOverlayStyle = { 
+    position: 'fixed', 
+    top: 0, 
+    left: 0, 
+    right: 0, 
+    bottom: 0, 
+    backgroundColor: 'rgba(0, 0, 0, 0.6)', 
+    display: 'flex', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    zIndex: 1000 
+};
+const modalContentStyle = { 
+    background: 'white', 
+    padding: '30px', 
+    borderRadius: '8px', 
+    width: '90%', 
+    maxWidth: '700px', 
+    maxHeight: '90vh', 
+    overflowY: 'auto', 
+    position: 'relative',
+    boxSizing: 'border-box', // Ajout pour le responsif
+};
+const closeButtonStyle = { 
+    position: 'absolute', 
+    top: '15px', 
+    right: '15px', 
+    background: 'transparent', 
+    border: 'none', 
+    fontSize: '24px', 
+    cursor: 'pointer' 
+};
+const detailSectionStyle = { 
+    marginBottom: '20px', 
+    paddingBottom: '20px', 
+    borderBottom: '1px solid #f0f0f0' 
+};
+const detailTitleStyle = { 
+    fontSize: '18px', 
+    color: '#d4af37', 
+    marginBottom: '10px' 
+};
+const actionButtonStyle = { 
+    padding: '10px 15px', 
+    border: 'none', 
+    borderRadius: '5px', 
+    cursor: 'pointer', 
+    color: 'white', 
+    fontWeight: 'bold' 
+};
 const statusBadgeStyle = (status) => {
     const colors = {
         'Nouvelle': '#007bff', 'En attente de traitement': '#ffc107', 'En attente de validation de devis': '#fd7e14',
         'En attente de paiement': '#17a2b8', 'En attente de préparation': '#6f42c1', 'Préparation en cours': '#20c997',
-        'Confirmée': '#28a745', 'Refusée': '#6c757d', 'Annulée': '#dc3545'
+        'Confirmée': '#28a745', 'Refusée': '#6c757d', 'Annulée': '#dc3545', 'Payée': '#6f42c1'
     };
     return {
         padding: '4px 8px', borderRadius: '12px',
         color: ['En attente de traitement', 'Préparation en cours'].includes(status) ? 'black' : 'white',
         fontWeight: 'bold', fontSize: '12px', backgroundColor: colors[status] || '#6c757d'
     };
+};
+
+const modalActionsStyle = {
+    marginTop: '30px',
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: '10px',
+    flexWrap: 'wrap', // Permet aux boutons de passer à la ligne
 };
 
 export default DemandeDetail;

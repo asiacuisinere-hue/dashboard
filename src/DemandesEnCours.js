@@ -63,7 +63,7 @@ const DemandesEnCours = () => {
     }
 
     return (
-        <div>
+        <div style={containerStyle}>
             <h1>Demandes en cours</h1>
             <p>Suivi de toutes les demandes actives.</p>
 
@@ -134,25 +134,33 @@ const DemandesEnCours = () => {
 
 
 // --- Styles ---
+const containerStyle = {
+    padding: '20px',
+    maxWidth: '1200px',
+    margin: '0 auto',
+};
 
 const filterContainerStyle = {
     display: 'flex',
     gap: '1rem',
     marginBottom: '2rem',
-    alignItems: 'center'
+    alignItems: 'center',
+    flexWrap: 'wrap', // Permet aux filtres de passer à la ligne
 };
 
 const filterInputStyle = {
     padding: '8px',
     borderRadius: '5px',
-    border: '1px solid #ccc'
+    border: '1px solid #ccc',
+    flex: '1 1 auto', // Permet aux inputs de s'étirer mais aussi de se réduire
+    minWidth: '150px', // Largeur minimale pour les inputs
 };
 
 const tableContainerStyle = {
     marginTop: '2rem',
     boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
     borderRadius: '8px',
-    overflowX: 'auto',
+    overflowX: 'auto', // Permet le défilement horizontal sur les petits écrans
     background: 'white'
 };
 
@@ -167,13 +175,15 @@ const thStyle = {
     textAlign: 'left',
     fontWeight: 'bold',
     color: '#333',
-    borderBottom: '2px solid #ddd'
+    borderBottom: '2px solid #ddd',
+    whiteSpace: 'nowrap', // Empêche le retour à la ligne pour les en-têtes
 };
 
 const tdStyle = {
     padding: '12px 15px',
     borderBottom: '1px solid #eee',
-    color: '#555'
+    color: '#555',
+    whiteSpace: 'nowrap', // Empêche le retour à la ligne pour les cellules
 };
 
 const detailsButtonStyle = {

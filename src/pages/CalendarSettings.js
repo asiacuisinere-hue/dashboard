@@ -6,8 +6,8 @@ import 'react-calendar/dist/Calendar.css'; // Default calendar styles
 // Custom CSS for blocked dates
 const customCalendarStyle = `
   .blocked-date {
-    background-color: #ffcdd2;
-    color: #c62828;
+    background-color: #ffcdd2 !important; /* !important pour override le style par défaut */
+    color: #c62828 !important;
     border-radius: 50%;
     text-decoration: line-through;
   }
@@ -174,7 +174,7 @@ const CalendarSettings = () => {
 
             <div style={sectionStyle}>
                 <h2>Bloquer des dates spécifiques</h2>
-                <div style={calendarContainerStyle}>
+                <div style={calendarWrapperStyle}> {/* Ajout d'un wrapper pour le calendrier */}
                     <Calendar
                         onChange={handleDateClick}
                         value={selectedDate}
@@ -186,8 +186,8 @@ const CalendarSettings = () => {
                         }}
                     />
                 </div>
-                <p style={{ marginTop: '20px' }}>Cliquez sur une date pour la bloquer ou la débloquer.</p>
-                <p>Les dates bloquées sont affichées en rouge.</p>
+                <p style={{ marginTop: '20px', textAlign: 'center' }}>Cliquez sur une date pour la bloquer ou la débloquer.</p>
+                <p style={{ textAlign: 'center' }}>Les dates bloquées sont affichées en rouge.</p>
             </div>
 
             <div style={sectionStyle}>
@@ -234,6 +234,7 @@ const recurringDaysContainerStyle = {
     flexWrap: 'wrap',
     gap: '10px',
     marginTop: '10px',
+    justifyContent: 'center', // Centre les boutons
 };
 
 const dayButtonStyle = {
@@ -243,6 +244,8 @@ const dayButtonStyle = {
     borderRadius: '5px',
     cursor: 'pointer',
     transition: 'background-color 0.2s ease',
+    flex: '1 1 auto', // Permet aux boutons de s'adapter
+    minWidth: '90px', // Largeur minimale pour les boutons de jour
 };
 
 const blockedDayButtonStyle = {
@@ -252,10 +255,13 @@ const blockedDayButtonStyle = {
     borderColor: '#dc3545',
 };
 
-const calendarContainerStyle = {
+const calendarWrapperStyle = { // Nouveau style pour envelopper le calendrier
     display: 'flex',
     justifyContent: 'center',
     marginTop: '20px',
+    // Le composant Calendar de 'react-calendar' a des largeurs fixes,
+    // on peut le laisser centré et il sera responsif jusqu'à un certain point.
+    // Pour une meilleure responsivité, il faudrait ajuster ses styles internes via CSS.
 };
 
 const indisponibilitesListStyle = {
@@ -271,8 +277,10 @@ const indisponibiliteItemStyle = {
     padding: '10px',
     marginBottom: '10px',
     display: 'flex',
+    flexWrap: 'wrap', // Permet aux éléments de passer à la ligne
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: '10px', // Espacement entre les éléments
 };
 
 const deleteButtonStyle = {

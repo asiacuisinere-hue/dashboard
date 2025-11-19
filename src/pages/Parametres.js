@@ -115,6 +115,15 @@ const Parametres = () => {
             setTimeout(() => setMenuStatus({ message: '', isError: false }), 3000);
         }
     };
+    
+    // Ajout d'un style pour la grille responsive
+    const menuGridStyle = {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', // Passe à 1 colonne sur les petits écrans
+        gap: '20px',
+        marginTop: '15px'
+    };
+
 
     return (
         <div style={containerStyle}>
@@ -139,8 +148,8 @@ const Parametres = () => {
                     {welcomeStatus.message && <p style={{ color: welcomeStatus.isError ? '#d9534f' : '#5cb85c', marginTop: '10px', fontSize: '14px' }}>{welcomeStatus.message}</p>}
                 </div>
 
-                {/* Card for Weekly Menus */}
-                <div style={{...cardStyle, gridColumn: 'span 2'}}>
+                {/* Card for Weekly Menus - now responsive */}
+                <div style={{...cardStyle, gridColumn: '1 / -1'}}> {/* Prend toute la largeur de la grille */}
                     <h2>Gestion des Menus de la Semaine</h2>
                     
                     <div style={{ border: '1px solid #eee', borderRadius: '8px', padding: '15px', marginTop: '15px' }}>
@@ -199,11 +208,10 @@ const Parametres = () => {
 
 // --- Styles ---
 const containerStyle = { padding: '20px', maxWidth: '1200px', margin: '0 auto' };
-const gridStyle = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '20px', marginTop: '30px' };
+const gridStyle = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '20px', marginTop: '30px' }; // Grille principale responsive
 const cardStyle = { background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 4px 8px rgba(0,0,0,0.1)', textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column' };
 const textareaStyle = { width: '100%', minHeight: '80px', marginTop: '10px', padding: '10px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box', resize: 'vertical' };
 const buttonStyle = { marginTop: '15px', padding: '10px 15px', border: 'none', borderRadius: '4px', backgroundColor: '#d4af37', color: 'white', cursor: 'pointer', fontSize: '14px', alignSelf: 'flex-start' };
-const menuGridStyle = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '15px' };
 const labelStyle = { fontWeight: 'bold', color: '#333' };
 
 export default Parametres;

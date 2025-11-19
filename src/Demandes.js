@@ -64,7 +64,7 @@ const DemandeModal = ({ demande, onClose, onUpdate }) => {
             if (!response.ok) throw new Error((await response.json()).error || 'Erreur inconnue lors de l\'envoi de l\'e-mail de refus.');
             alert('E-mail de refus envoyé au client.');
         } catch (error) {
-            alert(`Erreur lors de l'envoi de l'e-mail de refus : ${error.message}`);
+            alert(`Erreur lors de l\'envoi de l\'e-mail de refus : ${error.message}`);
         }
     };
 
@@ -115,7 +115,7 @@ const DemandeModal = ({ demande, onClose, onUpdate }) => {
                     <DetailsRenderer details={demande.details_json} />
                 </div>
 
-                <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <div style={modalActionsStyle}>
                     <button onClick={handleRefuseDemande} style={{...actionButtonStyle, backgroundColor: '#dc3545'}}>Refuser & Envoyer E-mail</button>
                     <button onClick={() => handleUpdateStatus('En attente de traitement')} style={actionButtonStyle}>Accepter</button>
                 </div>
@@ -160,7 +160,7 @@ const Demandes = () => {
     }
 
     return (
-        <div>
+        <div style={containerStyle}>
             <h1>Nouvelles Demandes</h1>
             <p>Voici la liste des nouvelles demandes en attente de traitement.</p>
             
@@ -177,7 +177,7 @@ const Demandes = () => {
                     </thead>
                     <tbody>
                         {demandes.map(demande => (
-                            <tr key={demande.id} style={trStyle}>
+                            <tr key={demande.id}>
                                 <td style={tdStyle}>{new Date(demande.created_at).toLocaleDateString('fr-FR')}</td>
                                 <td style={tdStyle}>{demande.clients?.last_name || demande.entreprises?.nom_entreprise || 'N/A'}</td>
                                 <td style={tdStyle}>{demande.type}</td>
@@ -205,12 +205,17 @@ const Demandes = () => {
 };
 
 // --- Styles ---
+const containerStyle = {
+    padding: '20px',
+    maxWidth: '1200px',
+    margin: '0 auto',
+};
 
 const tableContainerStyle = {
     marginTop: '2rem',
     boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
     borderRadius: '8px',
-    overflow: 'hidden',
+    overflowX: 'auto', // Permet le défilement horizontal sur les petits écrans
     background: 'white'
 };
 
@@ -225,17 +230,15 @@ const thStyle = {
     textAlign: 'left',
     fontWeight: 'bold',
     color: '#333',
-    borderBottom: '2px solid #ddd'
+    borderBottom: '2px solid #ddd',
+    whiteSpace: 'nowrap', // Empêche le retour à la ligne pour les en-têtes
 };
 
 const tdStyle = {
     padding: '12px 15px',
     borderBottom: '1px solid #eee',
-    color: '#555'
-};
-
-const trStyle = {
-    transition: 'background-color 0.2s ease'
+    color: '#555',
+    whiteSpace: 'nowrap', // Empêche le retour à la ligne pour les cellules
 };
 
 const detailsButtonStyle = {
@@ -269,7 +272,8 @@ const modalContentStyle = {
     maxWidth: '700px',
     maxHeight: '90vh',
     overflowY: 'auto',
-    position: 'relative'
+    position: 'relative',
+    boxSizing: 'border-box', // Ajout pour le responsif
 };
 
 const closeButtonStyle = {
@@ -311,6 +315,14 @@ const actionButtonStyle = {
     color: 'white',
     backgroundColor: '#28a745',
     fontWeight: 'bold'
+};
+
+const modalActionsStyle = {
+    marginTop: '30px',
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: '10px',
+    flexWrap: 'wrap', // Permet aux boutons de passer à la ligne
 };
 
 export default Demandes;

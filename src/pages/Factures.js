@@ -4,208 +4,209 @@ import { supabase } from '../supabaseClient';
 const Factures = () => {
     const [invoices, setInvoices] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [selectedInvoice, setSelectedInvoice] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedInvoice, setSelectedInvoice] = useState(null); // Facture sélectionnée pour la modale
 
     const fetchInvoices = useCallback(async () => {
         setLoading(true);
-        setError(null);
-        try {
-            const response = await fetch('https://www.asiacuisine.re/api/get-invoices', {
-                method: 'GET',
-                headers: { 'Content-Type': 'application/json' },
-            });
+        let query = supabase
+            .from('invoices')
+            .select(`
+                *,
+                clients (first_name, last_name, email),
+                entreprises (nom_entreprise, contact_name, contact_email)
+            `);
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.details || 'Erreur lors de la récupération des factures.');
-            }
-
-            const data = await response.json();
-            setInvoices(data);
-        } catch (err) {
-            console.error('Error fetching invoices:', err);
-            setError(err.message);
-        } finally {
-            setLoading(false);
+        if (searchTerm) {
+            query = query.or(`
+                clients.last_name.ilike.%${searchTerm}%,
+                clients.first_name.ilike.%${searchTerm}%,
+                entreprises.nom_entreprise.ilike.%${searchTerm}%
+            `);
         }
-    }, []);
+
+        const { data, error } = await query.order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('Erreur de chargement des factures:', error);
+            alert(`Erreur de chargement des factures: ${error.message}`);
+        } else {
+            setInvoices(data);
+        }
+        setLoading(false);
+    }, [searchTerm]);
 
     useEffect(() => {
         fetchInvoices();
     }, [fetchInvoices]);
 
+    const handleUpdateStatus = async (invoiceId, newStatus) => {
+        if (!window.confirm(`Confirmer le changement de statut de la facture ${invoiceId.substring(0, 8)} à "${newStatus}" ?`)) {
+            return;
+        }
+
+        console.log(`--- [DEBUG] handleUpdateStatus: Tentative de mise à jour du statut de la facture ${invoiceId.substring(0, 8)} à "${newStatus}"`);
+        
+        const { error } = await supabase
+            .from('invoices')
+            .update({ status: newStatus, updated_at: new Date().toISOString() })
+            .eq('id', invoiceId);
+
+        if (error) {
+            console.error('Erreur lors de la mise à jour du statut:', error);
+            alert(`Erreur lors de la mise à jour du statut : ${error.message}`);
+        } else {
+            console.log(`--- [DEBUG] handleUpdateStatus: Statut mis à jour avec succès à "${newStatus}" (selon Supabase client)`);
+            // Pour recharger et vérifier le statut réel après mise à jour
+            const { data: updatedInvoice, error: refetchError } = await supabase
+                .from('invoices')
+                .select('status')
+                .eq('id', invoiceId)
+                .single();
+            
+            if (refetchError) {
+                console.error('--- [ERROR] handleUpdateStatus: Erreur lors de la relecture de la facture après mise à jour:', refetchError);
+                alert(`Erreur lors de la relecture de la facture : ${refetchError.message}`);
+            } else {
+                console.log(`--- [DEBUG] handleUpdateStatus: Statut réel de la facture ${invoiceId.substring(0, 8)} après relecture: "${updatedInvoice.status}"`);
+            }
+            alert(`Statut de la facture ${invoiceId.substring(0, 8)} mis à jour à "${newStatus}".`);
+            fetchInvoices(); // Rafraîchir la liste des factures
+            setSelectedInvoice(null); // Fermer la modale si ouverte
+        }
+    };
+
     const renderCustomerName = (invoice) => {
         if (invoice.clients) {
-            return `${invoice.clients.prenom} ${invoice.clients.nom}`;
+            return `${invoice.clients.last_name} ${invoice.clients.first_name}`;
         } else if (invoice.entreprises) {
             return invoice.entreprises.nom_entreprise;
         }
         return 'N/A';
     };
 
-    const statusBadgeStyle = (status) => {
-        const colors = {
-            'draft': '#6c757d', // Gris
-            'Brouillon': '#6c757d', // Gris (pour compatibilité si jamais)
-            'En attente de paiement': '#ffc107', // Jaune
-            'Acompte versé': '#17a2b8', // Bleu clair
-            'Payée': '#28a745', // Vert
-            'Annulée': '#dc3545', // Rouge
-        };
-        return {
-            padding: '4px 8px',
-            borderRadius: '12px',
-            color: (status === 'En attente de paiement' || status === 'draft') ? 'black' : 'white', // Texte noir pour jaune et gris clair
-            fontWeight: 'bold',
-            fontSize: '12px',
-            backgroundColor: colors[status] || '#6c757d'
-        };
-    };
-
-    if (loading) return <p>Chargement des factures...</p>;
-    if (error) return <p style={{ color: 'red' }}>Erreur: {error}</p>;
+    if (loading) {
+        return <div>Chargement des factures...</div>;
+    }
 
     return (
         <div style={containerStyle}>
             <h1>Gestion des Factures</h1>
 
-            <div style={sectionStyle}>
-                <h2>Factures existantes</h2>
-                {invoices.length === 0 ? (
-                    <p>Aucune facture existante.</p>
-                ) : (
-                    <table style={tableStyle}>
-                        <thead>
-                            <tr>
-                                <th style={thStyle}>ID Facture</th>
-                                <th style={thStyle}>Client / Entreprise</th>
-                                <th style={thStyle}>Date</th>
-                                <th style={thStyle}>Total</th>
-                                <th style={thStyle}>Statut</th>
-                                <th style={thStyle}>Actions</th>
+            {/* Section de recherche */}
+            <div style={filterContainerStyle}>
+                <input
+                    type="text"
+                    placeholder="Rechercher par nom client/entreprise..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    style={filterInputStyle}
+                />
+                <button onClick={() => setSearchTerm('')} style={resetFilterButtonStyle}>Réinitialiser</button>
+            </div>
+
+            {/* Liste des factures */}
+            <div style={tableContainerStyle}>
+                <table style={tableStyle}>
+                    <thead>
+                        <tr>
+                            <th style={thStyle}>ID Facture</th>
+                            <th style={thStyle}>Client / Entreprise</th>
+                            <th style={thStyle}>Date Facture</th>
+                            <th style={thStyle}>Montant Total</th>
+                            <th style={thStyle}>Statut</th>
+                            <th style={thStyle}>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {invoices.map(invoice => (
+                            <tr key={invoice.id}>
+                                <td style={tdStyle}>{invoice.id.substring(0, 8)}</td>
+                                <td style={tdStyle}>{renderCustomerName(invoice)}</td>
+                                <td style={tdStyle}>{new Date(invoice.invoice_date).toLocaleDateString('fr-FR')}</td>
+                                <td style={tdStyle}>{invoice.total_amount.toFixed(2)} €</td>
+                                <td style={tdStyle}><span style={statusBadgeStyle(invoice.status)}>{invoice.status}</span></td>
+                                <td style={tdStyle}>
+                                    <button onClick={() => setSelectedInvoice(invoice)} style={detailsButtonStyle}>Voir Détails</button>
+                                    {invoice.status === 'pending' && (
+                                        <>
+                                            <button onClick={() => handleUpdateStatus(invoice.id, 'deposit_paid')} style={{ ...actionButtonStyle, backgroundColor: '#007bff', marginLeft: '5px' }}>Acompte versé</button>
+                                            <button onClick={() => handleUpdateStatus(invoice.id, 'paid')} style={{ ...actionButtonStyle, backgroundColor: '#28a745', marginLeft: '5px' }}>Payée</button>
+                                        </>
+                                    )}
+                                    {invoice.status === 'deposit_paid' && (
+                                        <button onClick={() => handleUpdateStatus(invoice.id, 'paid')} style={{ ...actionButtonStyle, backgroundColor: '#28a745', marginLeft: '5px' }}>Marquer comme Payée</button>
+                                    )}
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            {invoices.map(invoice => (
-                                <tr key={invoice.id}>
-                                    <td style={tdStyle}>{invoice.id.substring(0, 8)}</td>
-                                    <td style={tdStyle}>{renderCustomerName(invoice)}</td>
-                                    <td style={tdStyle}>{new Date(invoice.created_at).toLocaleDateString('fr-FR')}</td>
-                                    <td style={tdStyle}>{invoice.total_amount.toFixed(2)} €</td>
-                                    <td style={tdStyle}><span style={statusBadgeStyle(invoice.status)}>{invoice.status}</span></td>
-                                    <td style={tdStyle}>
-                                        <button onClick={() => setSelectedInvoice(invoice)} style={detailsButtonStyle}>Voir Détails</button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
+                        ))}
+                    </tbody>
+                </table>
             </div>
 
             {selectedInvoice && (
                 <InvoiceDetailModal
                     invoice={selectedInvoice}
                     onClose={() => setSelectedInvoice(null)}
-                    onUpdate={fetchInvoices} // To refresh the list after an update
+                    onUpdateStatus={handleUpdateStatus}
                 />
             )}
         </div>
     );
 };
 
-// --- Invoice Detail Modal Component (Placeholder for now) ---
-const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
-    const [isSending, setIsSending] = useState(false);
-
-    const handleSendInvoice = async () => {
-        if (!window.confirm('Êtes-vous sûr de vouloir envoyer cette facture par e-mail au client ?')) return;
-        setIsSending(true);
-        try {
-            const response = await fetch('https://www.asiacuisine.re/api/send-invoice', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ invoiceId: invoice.id }),
-            });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.details || 'Erreur lors de l\'envoi de la facture.');
-            }
-            alert('Facture envoyée avec succès !');
-            onUpdate(); // Refresh the list
-            onClose(); // Close the modal
-        } catch (err) {
-            alert(`Erreur: ${err.message}`);
-        } finally {
-            setIsSending(false);
+// --- Invoice Detail Modal Component (À adapter si nécessaire) ---
+const InvoiceDetailModal = ({ invoice, onClose, onUpdateStatus }) => {
+    // Supposons que les détails des items de la facture proviennent d'une table invoice_items
+    // Pour l'instant, on va juste afficher les infos de base
+    const renderCustomerInfo = () => {
+        if (invoice.clients) {
+            return (
+                <>
+                    <p><strong>Nom:</strong> {invoice.clients.last_name} {invoice.clients.first_name}</p>
+                    <p><strong>Email:</strong> {invoice.clients.email}</p>
+                </>
+            );
+        } else if (invoice.entreprises) {
+            return (
+                <>
+                    <p><strong>Nom de l'entreprise:</strong> {invoice.entreprises.nom_entreprise}</p>
+                    <p><strong>Contact:</strong> {invoice.entreprises.contact_name}</p>
+                    <p><strong>Email du contact:</strong> {invoice.entreprises.contact_email}</p>
+                </>
+            );
         }
-    };
-
-    const handleUpdateStatus = async (newStatus) => {
-        if (!window.confirm(`Confirmer le passage au statut "${newStatus}" ?`)) return;
-        console.log(`--- [DEBUG] handleUpdateStatus: Tentative de mise à jour du statut de la facture ${invoice.id.substring(0, 8)} à "${newStatus}"`);
-        try {
-            const { error } = await supabase
-                .from('invoices')
-                .update({ status: newStatus })
-                .eq('id', invoice.id);
-            if (error) {
-                console.error('--- [ERROR] handleUpdateStatus: Erreur Supabase lors de la mise à jour:', error);
-                throw error;
-            }
-            console.log(`--- [DEBUG] handleUpdateStatus: Statut mis à jour avec succès à "${newStatus}" (selon Supabase client)`);
-
-            // --- Vérification immédiate après la mise à jour ---
-            const { data: updatedInvoiceData, error: fetchError } = await supabase
-                .from('invoices')
-                .select('status')
-                .eq('id', invoice.id)
-                .single();
-
-            if (fetchError) {
-                console.error('--- [ERROR] handleUpdateStatus: Erreur lors de la relecture de la facture après mise à jour:', fetchError);
-            } else {
-                console.log(`--- [DEBUG] handleUpdateStatus: Statut réel de la facture ${invoice.id.substring(0, 8)} après relecture: "${updatedInvoiceData.status}"`);
-            }
-            // --- Fin de la vérification ---
-
-            alert('Statut mis à jour avec succès !');
-            onUpdate();
-            onClose();
-        } catch (err) {
-            console.error('--- [ERROR] handleUpdateStatus: Erreur capturée:', err);
-            alert(`Erreur lors de la mise à jour du statut: ${err.message}`);
-        }
+        return <p>Informations client non disponibles.</p>;
     };
 
     return (
         <div style={modalOverlayStyle}>
             <div style={modalContentStyle}>
                 <button onClick={onClose} style={closeButtonStyle}>&times;</button>
-                <h2>Détails de la Facture #{invoice.id.substring(0, 8)}</h2>
-                <p><strong>Statut:</strong> {invoice.status}</p>
-                <p><strong>Total:</strong> {invoice.total_amount.toFixed(2)} €</p>
-                {/* Action buttons */}
-                <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
-                    {(invoice.status === 'Brouillon' || invoice.status === 'draft') && (
-                        <button onClick={handleSendInvoice} disabled={isSending} style={{...actionButtonStyle, backgroundColor: '#007bff'}}>
-                            {isSending ? 'Envoi en cours...' : 'Envoyer la facture'}
-                        </button>
+                <h2 style={{ borderBottom: '2px solid #eee', paddingBottom: '10px', marginBottom: '20px' }}>Détails de la Facture #{invoice.id.substring(0, 8)}</h2>
+                
+                <div style={detailSectionStyle}>
+                    <h3 style={detailTitleStyle}>Client / Entreprise</h3>
+                    {renderCustomerInfo()}
+                </div>
+
+                <div style={detailSectionStyle}>
+                    <h3 style={detailTitleStyle}>Informations de la Facture</h3>
+                    <p><strong>Date de la facture:</strong> {new Date(invoice.invoice_date).toLocaleDateString('fr-FR')}</p>
+                    <p><strong>Montant Total:</strong> {invoice.total_amount.toFixed(2)} €</p>
+                    <p><strong>Statut:</strong> <span style={statusBadgeStyle(invoice.status)}>{invoice.status}</span></p>
+                </div>
+
+                <div style={modalActionsStyle}>
+                    {invoice.status === 'pending' && (
+                        <>
+                            <button onClick={() => onUpdateStatus(invoice.id, 'deposit_paid')} style={{ ...actionButtonStyle, backgroundColor: '#007bff' }}>Acompte versé</button>
+                            <button onClick={() => onUpdateStatus(invoice.id, 'paid')} style={{ ...actionButtonStyle, backgroundColor: '#28a745' }}>Marquer comme Payée</button>
+                        </>
                     )}
-                    {invoice.status === 'En attente de paiement' && (
-                        <button onClick={() => handleUpdateStatus('Acompte versé')} style={{...actionButtonStyle, backgroundColor: '#17a2b8'}}>
-                            Enregistrer un acompte
-                        </button>
+                    {invoice.status === 'deposit_paid' && (
+                        <button onClick={() => onUpdateStatus(invoice.id, 'paid')} style={{ ...actionButtonStyle, backgroundColor: '#28a745' }}>Marquer comme Payée</button>
                     )}
-                    {(invoice.status === 'En attente de paiement' || invoice.status === 'Acompte versé') && (
-                        <button onClick={() => handleUpdateStatus('Payée')} style={{...actionButtonStyle, backgroundColor: '#28a745'}}>
-                            Marquer comme Payée
-                        </button>
-                    )}
-                    <button onClick={() => handleUpdateStatus('Annulée')} style={{...actionButtonStyle, backgroundColor: '#dc3545'}}>
-                        Annuler
-                    </button>
                 </div>
             </div>
         </div>
@@ -213,25 +214,49 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
 };
 
 
-// --- Styles (Copied from Devis.js for consistency) ---
+// --- Styles ---
 const containerStyle = {
     padding: '20px',
     maxWidth: '1200px',
     margin: '0 auto',
 };
 
-const sectionStyle = {
-    background: 'white',
-    padding: '20px',
-    borderRadius: '8px',
+const filterContainerStyle = {
+    display: 'flex',
+    gap: '1rem',
+    marginBottom: '2rem',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+};
+
+const filterInputStyle = {
+    padding: '8px',
+    borderRadius: '5px',
+    border: '1px solid #ccc',
+    flex: '1 1 auto',
+    minWidth: '200px',
+};
+
+const resetFilterButtonStyle = {
+    padding: '8px 12px',
+    background: '#6c757d',
+    color: 'white',
+    border: 'none',
+    borderRadius: '5px',
+    cursor: 'pointer',
+};
+
+const tableContainerStyle = {
+    marginTop: '2rem',
     boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-    marginBottom: '30px',
+    borderRadius: '8px',
+    overflowX: 'auto',
+    background: 'white'
 };
 
 const tableStyle = {
     width: '100%',
     borderCollapse: 'collapse',
-    marginTop: '20px',
 };
 
 const thStyle = {
@@ -241,12 +266,14 @@ const thStyle = {
     fontWeight: 'bold',
     color: '#333',
     borderBottom: '2px solid #ddd',
+    whiteSpace: 'nowrap',
 };
 
 const tdStyle = {
     padding: '12px 15px',
     borderBottom: '1px solid #eee',
     color: '#555',
+    whiteSpace: 'nowrap',
 };
 
 const detailsButtonStyle = {
@@ -256,69 +283,84 @@ const detailsButtonStyle = {
     border: 'none',
     borderRadius: '5px',
     cursor: 'pointer',
-    transition: 'background-color 0.2s ease'
+    marginRight: '5px',
 };
-
-const modalOverlayStyle = {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000
-};
-
-const modalContentStyle = {
-    background: 'white',
-    padding: '30px',
-    borderRadius: '8px',
-    width: '90%',
-    maxWidth: '700px',
-    maxHeight: '90vh',
-    overflowY: 'auto',
-    position: 'relative'
-};
-
-const closeButtonStyle = {
-
-    position: 'absolute',
-
-    top: '15px',
-
-    right: '15px',
-
-    background: 'transparent',
-
-    border: 'none',
-
-    fontSize: '24px',
-
-    cursor: 'pointer'
-
-};
-
-
 
 const actionButtonStyle = {
-
-    padding: '10px 15px',
-
-    border: 'none',
-
-    borderRadius: '5px',
-
-    cursor: 'pointer',
-
+    padding: '8px 12px',
+    background: '#d4af37',
     color: 'white',
-
-    fontWeight: 'bold'
-
+    border: 'none',
+    borderRadius: '5px',
+    cursor: 'pointer',
 };
 
+const statusBadgeStyle = (status) => {
+    const colors = {
+        'pending': '#ffc107',
+        'deposit_paid': '#007bff',
+        'paid': '#28a745',
+        'cancelled': '#dc3545',
+    };
+    return {
+        padding: '4px 8px',
+        borderRadius: '12px',
+        color: 'white',
+        fontWeight: 'bold',
+        fontSize: '12px',
+        backgroundColor: colors[status] || '#6c757d'
+    };
+};
 
+const modalOverlayStyle = { 
+    position: 'fixed', 
+    top: 0, 
+    left: 0, 
+    right: 0, 
+    bottom: 0, 
+    backgroundColor: 'rgba(0, 0, 0, 0.6)', 
+    display: 'flex', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    zIndex: 1000 
+};
+const modalContentStyle = { 
+    background: 'white', 
+    padding: '30px', 
+    borderRadius: '8px', 
+    width: '90%', 
+    maxWidth: '700px', 
+    maxHeight: '90vh', 
+    overflowY: 'auto', 
+    position: 'relative',
+    boxSizing: 'border-box',
+};
+const closeButtonStyle = { 
+    position: 'absolute', 
+    top: '15px', 
+    right: '15px', 
+    background: 'transparent', 
+    border: 'none', 
+    fontSize: '24px', 
+    cursor: 'pointer' 
+};
+const detailSectionStyle = { 
+    marginBottom: '20px', 
+    paddingBottom: '20px', 
+    borderBottom: '1px solid #f0f0f0' 
+};
+const detailTitleStyle = { 
+    fontSize: '18px', 
+    color: '#d4af37', 
+    marginBottom: '10px' 
+};
+
+const modalActionsStyle = {
+    marginTop: '30px',
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: '10px',
+    flexWrap: 'wrap',
+};
 
 export default Factures;

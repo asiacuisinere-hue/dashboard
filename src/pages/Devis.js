@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 
 const Devis = () => {
-    const location = useLocation();
     const [clients, setClients] = useState([]);
     const [entreprises, setEntreprises] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -30,8 +28,8 @@ const Devis = () => {
             .from('quotes')
             .select(`
                 *,
-                clients!client_id(*),
-                entreprises!entreprise_id(*) 
+                clients (first_name, last_name, email),
+                entreprises (nom_entreprise, contact_name, contact_email)
             `)
             .order('created_at', { ascending: false });
 
@@ -42,24 +40,28 @@ const Devis = () => {
         }
     }, []);
 
-    // Search clients and entreprises
-    const handleSearch = useCallback(async (term) => {
-        const currentSearchTerm = term || searchTerm;
-        if (currentSearchTerm.length < 3) {
-            setIsSearching(false);
-            return;
-        }
+    useEffect(() => {
+        fetchServices();
+        fetchExistingQuotes();
+    }, [fetchServices, fetchExistingQuotes]);
 
+    // Search clients and entreprises
+    const handleSearch = useCallback(async () => {
         setIsSearching(true);
         setClients([]);
         setEntreprises([]);
         setSelectedCustomer(null);
 
+        if (searchTerm.length < 3) {
+            setIsSearching(false);
+            return;
+        }
+
         // Search clients
         const { data: clientsData, error: clientsError } = await supabase
             .from('clients')
             .select('*')
-            .ilike('last_name', `%${currentSearchTerm}%`);
+            .ilike('last_name', `%${searchTerm}%`);
         if (clientsError) console.error('Error searching clients:', clientsError);
         else setClients(clientsData);
 
@@ -67,25 +69,12 @@ const Devis = () => {
         const { data: entreprisesData, error: entreprisesError } = await supabase
             .from('entreprises')
             .select('*')
-            .ilike('nom_entreprise', `%${currentSearchTerm}%`);
+            .ilike('nom_entreprise', `%${searchTerm}%`);
         if (entreprisesError) console.error('Error searching entreprises:', entreprisesError);
         else setEntreprises(entreprisesData);
 
         setIsSearching(false);
     }, [searchTerm]);
-
-    useEffect(() => {
-        fetchServices();
-        fetchExistingQuotes();
-        
-        const prefillSearch = location.state?.prefillSearch;
-        if (prefillSearch) {
-            setSearchTerm(prefillSearch);
-            // We need to trigger the search. Since handleSearch uses the state which updates asynchronously,
-            // we pass the term directly to it.
-            handleSearch(prefillSearch);
-        }
-    }, [fetchServices, fetchExistingQuotes, location.state, handleSearch]);
 
     const handleSelectCustomer = (customer, type) => {
         setSelectedCustomer({ ...customer, type });
@@ -146,7 +135,7 @@ const Devis = () => {
             };
             console.log('--- [DEBUG] handleGenerateQuote: Payload envoyé:', JSON.stringify(payload, null, 2));
 
-            const response = await fetch('https://www.asiacuisine.re/api/create-quote', {
+            const response = await fetch('/api/create-quote', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -173,31 +162,6 @@ const Devis = () => {
         } catch (error) {
             console.error('--- [ERREUR] handleGenerateQuote: Erreur capturée dans le catch', error);
             alert(`Erreur lors de la génération du devis : ${error.message}`);
-        }
-    };
-
-    const handleCreateInvoice = async (quoteId) => {
-        if (!window.confirm(`Confirmer la création d'une facture pour le devis ${quoteId.substring(0, 8)} ?`)) {
-            return;
-        }
-        try {
-            const response = await fetch('https://www.asiacuisine.re/api/create-invoice-from-quote', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ quoteId: quoteId }) // Correction de quote_id en quoteId
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.details || 'Erreur inconnue lors de la création de la facture.');
-            }
-
-            const result = await response.json();
-            alert(`Facture ${result.invoiceId.substring(0, 8)} créée avec succès !`);
-            fetchExistingQuotes(); // Refresh the list to show the new 'invoiced' status
-
-        } catch (error) {
-            alert(`Erreur lors de la création de la facture : ${error.message}`);
         }
     };
 
@@ -238,7 +202,7 @@ const Devis = () => {
                 {/* Section de recherche de client */}
                 <div style={subSectionStyle}>
                     <h3>1. Sélectionner un client / une entreprise</h3>
-                    <div style={{ display: 'flex', gap: '10px' }}>
+                    <div style={searchCustomerContainerStyle}>
                         <input
                             type="text"
                             placeholder="Rechercher par nom ou nom d'entreprise..."
@@ -297,53 +261,55 @@ const Devis = () => {
                     {quoteItems.length === 0 ? (
                         <p>Aucun service ajouté au devis.</p>
                     ) : (
-                        <table style={tableStyle}>
-                            <thead>
-                                <tr>
-                                    <th style={thStyle}>Service</th>
-                                    <th style={thStyle}>Description</th>
-                                    <th style={thStyle}>Qté</th>
-                                    <th style={thStyle}>Prix U. (€)</th>
-                                    <th style={thStyle}>Total (€)</th>
-                                    <th style={thStyle}>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {quoteItems.map(item => (
-                                    <tr key={item.id}>
-                                        <td style={tdStyle}>{item.name}</td>
-                                        <td style={tdStyle}>{item.description}</td>
-                                        <td style={tdStyle}>
-                                            <input
-                                                type="number"
-                                                value={item.quantity}
-                                                onChange={(e) => handleUpdateQuoteItem(item.id, 'quantity', parseInt(e.target.value) || 0)}
-                                                style={smallInputStyle}
-                                            />
-                                        </td>
-                                        <td style={tdStyle}>
-                                            <input
-                                                type="number"
-                                                value={item.price}
-                                                onChange={(e) => handleUpdateQuoteItem(item.id, 'price', parseFloat(e.target.value) || 0)}
-                                                style={smallInputStyle}
-                                            />
-                                        </td>
-                                        <td style={tdStyle}>{(item.price * item.quantity).toFixed(2)}</td>
-                                        <td style={tdStyle}>
-                                            <button onClick={() => handleRemoveQuoteItem(item.id)} style={removeServiceButtonStyle}>X</button>
-                                        </td>
+                        <div style={quoteItemsTableContainerStyle}>
+                            <table style={tableStyle}>
+                                <thead>
+                                    <tr>
+                                        <th style={thStyle}>Service</th>
+                                        <th style={thStyle}>Description</th>
+                                        <th style={thStyle}>Quantité</th>
+                                        <th style={thStyle}>Prix unitaire (€)</th>
+                                        <th style={thStyle}>Total (€)</th>
+                                        <th style={thStyle}>Actions</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                            <tfoot>
-                                <tr>
-                                    <td colSpan="4" style={{ ...thStyle, textAlign: 'right' }}>Total du devis:</td>
-                                    <td style={thStyle}>{calculateTotal().toFixed(2)} €</td>
-                                    <td style={thStyle}></td>
-                                </tr>
-                            </tfoot>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {quoteItems.map(item => (
+                                        <tr key={item.id}>
+                                            <td style={tdStyle}>{item.name}</td>
+                                            <td style={tdStyle}>{item.description}</td>
+                                            <td style={tdStyle}>
+                                                <input
+                                                    type="number"
+                                                    value={item.quantity}
+                                                    onChange={(e) => handleUpdateQuoteItem(item.id, 'quantity', parseInt(e.target.value) || 0)}
+                                                    style={smallInputStyle}
+                                                />
+                                            </td>
+                                            <td style={tdStyle}>
+                                                <input
+                                                    type="number"
+                                                    value={item.price}
+                                                    onChange={(e) => handleUpdateQuoteItem(item.id, 'price', parseFloat(e.target.value) || 0)}
+                                                    style={smallInputStyle}
+                                                />
+                                            </td>
+                                            <td style={tdStyle}>{(item.price * item.quantity).toFixed(2)}</td>
+                                            <td style={tdStyle}>
+                                                <button onClick={() => handleRemoveQuoteItem(item.id)} style={removeServiceButtonStyle}>X</button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colSpan="4" style={{ ...thStyle, textAlign: 'right' }}>Total du devis:</td>
+                                        <td style={thStyle}>{calculateTotal().toFixed(2)} €</td>
+                                        <td style={thStyle}></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
                     )}
                 </div>
 
@@ -360,41 +326,40 @@ const Devis = () => {
                 {existingQuotes.length === 0 ? (
                     <p>Aucun devis existant.</p>
                 ) : (
-                    <table style={tableStyle}>
-                        <thead>
-                            <tr>
-                                <th style={thStyle}>ID Devis</th>
-                                <th style={thStyle}>Client / Entreprise</th>
-                                <th style={thStyle}>Date</th>
-                                <th style={thStyle}>Total</th>
-                                <th style={thStyle}>Statut</th>
-                                <th style={thStyle}>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {existingQuotes.map(quote => (
-                                <tr key={quote.id}>
-                                    <td style={tdStyle}>{quote.id.substring(0, 8)}</td>
-                                    <td style={tdStyle}>{renderCustomerName(quote)}</td>
-                                    <td style={tdStyle}>{new Date(quote.quote_date).toLocaleDateString('fr-FR')}</td>
-                                    <td style={tdStyle}>{quote.total_amount.toFixed(2)} €</td>
-                                    <td style={tdStyle}><span style={statusBadgeStyle(quote.status)}>{quote.status}</span></td>
-                                    <td style={tdStyle}>
-                                        <button onClick={() => setSelectedQuote(quote)} style={detailsButtonStyle}>Voir Détails</button>
-                                        {quote.status === 'sent' && (
-                                            <>
-                                                <button onClick={() => handleUpdateQuoteStatus(quote.id, 'accepted')} style={{ ...actionButtonStyle, backgroundColor: '#28a745', marginLeft: '5px' }}>Accepter</button>
-                                                <button onClick={() => handleUpdateQuoteStatus(quote.id, 'rejected')} style={{ ...actionButtonStyle, backgroundColor: '#dc3545', marginLeft: '5px' }}>Refuser</button>
-                                            </>
-                                        )}
-                                        {quote.status === 'accepted' && (
-                                            <button onClick={() => handleCreateInvoice(quote.id)} style={{ ...actionButtonStyle, backgroundColor: '#007bff', marginLeft: '5px' }}>Créer la facture</button>
-                                        )}
-                                    </td>
+                    <div style={tableContainerStyle}>
+                        <table style={tableStyle}>
+                            <thead>
+                                <tr>
+                                    <th style={thStyle}>ID Devis</th>
+                                    <th style={thStyle}>Client / Entreprise</th>
+                                    <th style={thStyle}>Date</th>
+                                    <th style={thStyle}>Total</th>
+                                    <th style={thStyle}>Statut</th>
+                                    <th style={thStyle}>Actions</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {existingQuotes.map(quote => (
+                                    <tr key={quote.id}>
+                                        <td style={tdStyle}>{quote.id.substring(0, 8)}</td>
+                                        <td style={tdStyle}>{renderCustomerName(quote)}</td>
+                                        <td style={tdStyle}>{new Date(quote.quote_date).toLocaleDateString('fr-FR')}</td>
+                                        <td style={tdStyle}>{quote.total_amount.toFixed(2)} €</td>
+                                        <td style={tdStyle}><span style={statusBadgeStyle(quote.status)}>{quote.status}</span></td>
+                                        <td style={tdStyle}>
+                                            <button onClick={() => setSelectedQuote(quote)} style={detailsButtonStyle}>Voir Détails</button>
+                                            {quote.status === 'sent' && (
+                                                <>
+                                                    <button onClick={() => handleUpdateQuoteStatus(quote.id, 'accepted')} style={{ ...actionButtonStyle, backgroundColor: '#28a745', marginLeft: '5px' }}>Accepter</button>
+                                                    <button onClick={() => handleUpdateQuoteStatus(quote.id, 'rejected')} style={{ ...actionButtonStyle, backgroundColor: '#dc3545', marginLeft: '5px' }}>Refuser</button>
+                                                </>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 )}
             </div>
 
@@ -404,7 +369,6 @@ const Devis = () => {
                     quote={selectedQuote}
                     onClose={() => setSelectedQuote(null)}
                     onUpdateStatus={handleUpdateQuoteStatus}
-                    onCreateInvoice={handleCreateInvoice} // Pass the function down
                 />
             )}
         </div>
@@ -412,7 +376,7 @@ const Devis = () => {
 };
 
 // --- Quote Detail Modal Component ---
-const QuoteDetailModal = ({ quote, onClose, onUpdateStatus, onCreateInvoice }) => {
+const QuoteDetailModal = ({ quote, onClose, onUpdateStatus }) => {
     const [quoteItems, setQuoteItems] = useState([]);
     const [loadingItems, setLoadingItems] = useState(true);
 
@@ -480,32 +444,34 @@ const QuoteDetailModal = ({ quote, onClose, onUpdateStatus, onCreateInvoice }) =
                     ) : quoteItems.length === 0 ? (
                         <p>Aucun service détaillé.</p>
                     ) : (
-                        <table style={tableStyle}>
-                            <thead>
-                                <tr>
-                                    <th style={thStyle}>Service</th>
-                                    <th style={thStyle}>Description</th>
-                                    <th style={thStyle}>Qté</th>
-                                    <th style={thStyle}>Prix U. (€)</th>
-                                    <th style={thStyle}>Total (€)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {quoteItems.map(item => (
-                                    <tr key={item.id}>
-                                        <td style={tdStyle}>{item.name}</td>
-                                        <td style={tdStyle}>{item.description}</td>
-                                        <td style={tdStyle}>{item.quantity}</td>
-                                        <td style={tdStyle}>{item.unit_price.toFixed(2)}</td>
-                                        <td style={tdStyle}>{(item.quantity * item.unit_price).toFixed(2)}</td>
+                        <div style={tableContainerStyle}>
+                            <table style={tableStyle}>
+                                <thead>
+                                    <tr>
+                                        <th style={thStyle}>Service</th>
+                                        <th style={thStyle}>Description</th>
+                                        <th style={thStyle}>Qté</th>
+                                        <th style={thStyle}>Prix U. (€)</th>
+                                        <th style={thStyle}>Total (€)</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {quoteItems.map(item => (
+                                        <tr key={item.id}>
+                                            <td style={tdStyle}>{item.name}</td>
+                                            <td style={tdStyle}>{item.description}</td>
+                                            <td style={tdStyle}>{item.quantity}</td>
+                                            <td style={tdStyle}>{item.unit_price.toFixed(2)}</td>
+                                            <td style={tdStyle}>{(item.quantity * item.unit_price).toFixed(2)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     )}
                 </div>
 
-                <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <div style={modalActionsStyle}>
                     {quote.status === 'sent' && (
                         <>
                             <button onClick={() => onUpdateStatus(quote.id, 'accepted')} style={{ ...actionButtonStyle, backgroundColor: '#28a745' }}>Accepter</button>
@@ -540,6 +506,12 @@ const subSectionStyle = {
     borderBottom: '1px solid #f0f0f0',
 };
 
+const searchCustomerContainerStyle = {
+    display: 'flex',
+    gap: '10px',
+    flexWrap: 'wrap', // Permet aux éléments de passer à la ligne
+};
+
 const inputStyle = {
     flex: 1,
     padding: '10px',
@@ -547,6 +519,7 @@ const inputStyle = {
     border: '1px solid #ddd',
     boxSizing: 'border-box',
     marginTop: '5px',
+    minWidth: '150px', // Largeur minimale pour l'input de recherche
 };
 
 const searchResultsStyle = {
@@ -572,6 +545,7 @@ const selectedCustomerStyle = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'wrap', // Permet au texte de passer à la ligne
 };
 
 const clearCustomerButtonStyle = {
@@ -610,6 +584,10 @@ const addServiceButtonStyle = {
     cursor: 'pointer',
 };
 
+const quoteItemsTableContainerStyle = {
+    overflowX: 'auto', // Permet le défilement horizontal
+};
+
 const tableStyle = {
     width: '100%',
     borderCollapse: 'collapse',
@@ -623,12 +601,14 @@ const thStyle = {
     fontWeight: 'bold',
     color: '#333',
     borderBottom: '2px solid #ddd',
+    whiteSpace: 'nowrap', // Empêche le retour à la ligne
 };
 
 const tdStyle = {
     padding: '12px 15px',
     borderBottom: '1px solid #eee',
     color: '#555',
+    whiteSpace: 'nowrap', // Empêche le retour à la ligne
 };
 
 const smallInputStyle = {
@@ -660,52 +640,56 @@ const generateQuoteButtonStyle = {
     marginTop: '20px',
 };
 
-const modalOverlayStyle = {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000
+const modalOverlayStyle = { 
+    position: 'fixed', 
+    top: 0, 
+    left: 0, 
+    right: 0, 
+    bottom: 0, 
+    backgroundColor: 'rgba(0, 0, 0, 0.6)', 
+    display: 'flex', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    zIndex: 1000 
 };
-
-const modalContentStyle = {
-    background: 'white',
-    padding: '30px',
-    borderRadius: '8px',
-    width: '90%',
-    maxWidth: '700px',
-    maxHeight: '90vh',
-    overflowY: 'auto',
-    position: 'relative'
+const modalContentStyle = { 
+    background: 'white', 
+    padding: '30px', 
+    borderRadius: '8px', 
+    width: '90%', 
+    maxWidth: '700px', 
+    maxHeight: '90vh', 
+    overflowY: 'auto', 
+    position: 'relative',
+    boxSizing: 'border-box',
 };
-
-const closeButtonStyle = {
-    position: 'absolute',
-    top: '15px',
-    right: '15px',
-    background: 'transparent',
-    border: 'none',
-    fontSize: '24px',
-    cursor: 'pointer'
+const closeButtonStyle = { 
+    position: 'absolute', 
+    top: '15px', 
+    right: '15px', 
+    background: 'transparent', 
+    border: 'none', 
+    fontSize: '24px', 
+    cursor: 'pointer' 
 };
-
-const detailSectionStyle = {
-    marginBottom: '20px',
-    paddingBottom: '20px',
-    borderBottom: '1px solid #f0f0f0'
+const detailSectionStyle = { 
+    marginBottom: '20px', 
+    paddingBottom: '20px', 
+    borderBottom: '1px solid #f0f0f0' 
 };
-
-const detailTitleStyle = {
-    fontSize: '18px',
-    color: '#d4af37',
-    marginBottom: '10px'
+const detailTitleStyle = { 
+    fontSize: '18px', 
+    color: '#d4af37', 
+    marginBottom: '10px' 
 };
-
+const actionButtonStyle = { 
+    padding: '10px 15px', 
+    border: 'none', 
+    borderRadius: '5px', 
+    cursor: 'pointer', 
+    color: 'white', 
+    fontWeight: 'bold' 
+};
 const statusBadgeStyle = (status) => {
     const colors = {
         'pending': '#007bff',
@@ -715,8 +699,7 @@ const statusBadgeStyle = (status) => {
         'expired': '#6c757d',
     };
     return {
-        padding: '4px 8px',
-        borderRadius: '12px',
+        padding: '4px 8px', borderRadius: '12px',
         color: 'white',
         fontWeight: 'bold',
         fontSize: '12px',
@@ -724,24 +707,12 @@ const statusBadgeStyle = (status) => {
     };
 };
 
-const actionButtonStyle = {
-    padding: '10px 15px',
-    border: 'none',
-    borderRadius: '5px',
-    cursor: 'pointer',
-    color: 'white',
-    backgroundColor: '#d4af37',
-    fontWeight: 'bold'
-};
-
-const detailsButtonStyle = {
-    padding: '8px 12px',
-    background: '#d4af37',
-    color: 'white',
-    border: 'none',
-    borderRadius: '5px',
-    cursor: 'pointer',
-    transition: 'background-color 0.2s ease'
+const modalActionsStyle = {
+    marginTop: '30px',
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: '10px',
+    flexWrap: 'wrap',
 };
 
 export default Devis;
