@@ -193,6 +193,7 @@ const containerStyle = {
     padding: '20px',
     maxWidth: '1200px',
     margin: '0 auto',
+    boxSizing: 'border-box',
 };
 
 const filterContainerStyle = {
@@ -209,19 +210,22 @@ const filterInputStyle = {
     border: '1px solid #ccc',
     flex: '1 1 auto',
     minWidth: '200px',
+    maxWidth: '100%',
+    boxSizing: 'border-box',
 };
 
 const formContainerStyle = {
     background: 'white',
-    padding: '20px',
+    padding: '15px',
     borderRadius: '8px',
     boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
     marginBottom: '30px',
+    boxSizing: 'border-box',
 };
 
 const formGridStyle = {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))', // Permet un rétrécissement plus agressif
     gap: '15px',
     marginBottom: '20px',
 };
@@ -229,15 +233,15 @@ const formGridStyle = {
 const formGroupStyle = {
     display: 'flex',
     flexDirection: 'column',
+    minWidth: 0, // Permet au conteneur de se réduire au-delà de sa taille de contenu
 };
 
-const labelStyle = { // Nouveau style pour les labels
+const labelStyle = {
     fontWeight: 'bold',
     marginBottom: '5px',
     color: '#333',
-    whiteSpace: 'nowrap', // Empêche le retour à la ligne
-    overflow: 'hidden', // Cache le texte qui déborde
-    textOverflow: 'ellipsis', // Ajoute des points de suspension
+    fontSize: '14px',
+    wordWrap: 'break-word', // Permet aux mots longs de passer à la ligne
 };
 
 const inputStyle = {
@@ -245,8 +249,9 @@ const inputStyle = {
     borderRadius: '4px',
     border: '1px solid #ddd',
     boxSizing: 'border-box',
-    marginTop: '5px', // Ajusté car le label a déjà une marge
+    marginTop: '5px',
     width: '100%',
+    fontSize: '16px', // Pour éviter le zoom sur iOS
 };
 
 const formActionsStyle = {
@@ -265,6 +270,7 @@ const buttonStyle = {
     borderRadius: '5px',
     cursor: 'pointer',
     fontSize: '16px',
+    whiteSpace: 'nowrap', // Empêche le bouton de passer à la ligne
 };
 
 const tableContainerStyle = {
