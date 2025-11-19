@@ -238,6 +238,9 @@ const labelStyle = { // Nouveau style pour les labels
     fontWeight: 'bold',
     marginBottom: '5px',
     color: '#333',
+    whiteSpace: 'nowrap', // Empêche le retour à la ligne
+    overflow: 'hidden', // Cache le texte qui déborde
+    textOverflow: 'ellipsis', // Ajoute des points de suspension
 };
 
 const inputStyle = {
