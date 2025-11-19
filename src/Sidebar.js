@@ -1,8 +1,17 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
+import { supabase } from './supabaseClient'; // Import supabase
 
 const Sidebar = ({ isMobile, newCount, inProgressCount }) => {
   const [isOpen, setIsOpen] = useState(false);
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+        alert('Erreur lors de la déconnexion: ' + error.message);
+    }
+    // La redirection sera gérée par App.js qui écoute les changements d'état d'authentification
+  };
 
   const badgeStyle = {
     marginLeft: '10px',
@@ -192,6 +201,28 @@ const Sidebar = ({ isMobile, newCount, inProgressCount }) => {
     );
   };
 
+  const logoutButtonStyle = {
+    width: '100%',
+    padding: '10px 15px',
+    backgroundColor: 'rgba(220, 53, 69, 0.8)',
+    color: 'white',
+    border: '1px solid #dc3545',
+    borderRadius: '5px',
+    cursor: 'pointer',
+    fontSize: '16px',
+    fontWeight: 'bold',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'background-color 0.2s ease',
+  };
+
+  const mobileLogoutButtonStyle = {
+      ...logoutButtonStyle,
+      maxWidth: '200px',
+      margin: '0 auto',
+  };
+
   if (isMobile) {
     return (
       <>
@@ -209,6 +240,11 @@ const Sidebar = ({ isMobile, newCount, inProgressCount }) => {
             </div>
             <h2 style={titleStyle}>Menu</h2>
             <NavLinks mobile />
+            <div style={{ marginTop: 'auto', padding: '20px', width: '100%', textAlign: 'center' }}>
+                <button onClick={handleLogout} style={mobileLogoutButtonStyle}>
+                    <span>👋</span> Déconnexion
+                </button>
+            </div>
           </div>
         )}
       </>
@@ -217,10 +253,17 @@ const Sidebar = ({ isMobile, newCount, inProgressCount }) => {
 
   return (
     <aside style={desktopSidebarStyle}>
-      <h2 style={{ textAlign: 'center', marginBottom: '30px' }}>
-        Asiacuisine.re
-      </h2>
-      <NavLinks />
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+            <h2 style={{ textAlign: 'center', marginBottom: '30px' }}>
+                Asiacuisine.re
+            </h2>
+            <NavLinks />
+        </div>
+        <div style={{ marginTop: 'auto', padding: '20px 0' }}>
+            <button onClick={handleLogout} style={logoutButtonStyle}>
+                <span>👋</span> Déconnexion
+            </button>
+        </div>
     </aside>
   );
 };
