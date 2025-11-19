@@ -58,6 +58,7 @@ const Entreprises = () => {
         if (error) {
             alert(`Erreur lors de l\'ajout de l\'entreprise : ${error.message}`);
         } else {
+            alert("L'entreprise a été ajoutée."); // Correction ici
             setNewEntrepriseData({ nom_entreprise: '', siret: '', contact_name: '', contact_email: '', contact_phone: '' });
             fetchEntreprises();
         }
@@ -77,13 +78,14 @@ const Entreprises = () => {
         if (error) {
             alert(`Erreur lors de la mise à jour de l\'entreprise : ${error.message}`);
         } else {
+            alert("L'entreprise a été mise à jour."); // Correction ici
             setEditEntreprise(null);
             fetchEntreprises();
         }
     };
 
     const handleDeleteEntreprise = async (id) => {
-        if (window.confirm('Êtes-vous sûr de vouloir supprimer cette entreprise ?')) {
+        if (window.confirm("Êtes-vous sûr de vouloir supprimer cette entreprise ?")) { // Correction ici
             const { error } = await supabase
                 .from('entreprises')
                 .delete()

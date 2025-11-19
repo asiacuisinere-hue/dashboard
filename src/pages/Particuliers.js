@@ -59,6 +59,7 @@ const Particuliers = () => {
         if (error) {
             alert(`Erreur lors de l\'ajout du client : ${error.message}`);
         } else {
+            alert("Le client a été ajouté."); // Correction ici
             setNewClientData({ first_name: '', last_name: '', email: '', phone: '', address: '', notes: '' });
             fetchClients();
         }
@@ -78,13 +79,14 @@ const Particuliers = () => {
         if (error) {
             alert(`Erreur lors de la mise à jour du client : ${error.message}`);
         } else {
+            alert("Le client a été mis à jour."); // Correction ici
             setEditClient(null);
             fetchClients();
         }
     };
 
     const handleDeleteClient = async (id) => {
-        if (window.confirm('Êtes-vous sûr de vouloir supprimer ce client ?')) {
+        if (window.confirm("Êtes-vous sûr de vouloir supprimer ce client ?")) { // Correction ici
             const { error } = await supabase
                 .from('clients')
                 .delete()
