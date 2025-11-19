@@ -246,12 +246,6 @@ const inputStyle = {
     width: '100%',
 };
 
-const textareaStyle = { // Pour compatibilité, bien qu'il n'y en ait pas ici
-    ...inputStyle,
-    minHeight: '80px',
-    resize: 'vertical',
-};
-
 const formActionsStyle = {
     display: 'flex',
     justifyContent: 'flex-end',
