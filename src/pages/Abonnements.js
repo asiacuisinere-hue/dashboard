@@ -13,8 +13,8 @@ const Abonnements = () => {
             .from('abonnements')
             .select(`
                 *,
-                clients (first_name, last_name, email, phone),
-                entreprises (nom_entreprise, contact_name, contact_email, contact_phone)
+                clients:client_id (*),
+                entreprises:entreprise_id (*)
             `);
 
         if (filter.status) {
