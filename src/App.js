@@ -13,6 +13,7 @@ import Factures from './pages/Factures';
 import Parametres from './pages/Parametres';
 import Services from './pages/Services'; // Importation de la page Services
 import CalendarSettings from './pages/CalendarSettings'; // Importation de la page CalendarSettings
+import Abonnements from './pages/Abonnements'; // Importation de la page Abonnements
 
 // --- Composants ---
 
@@ -144,6 +145,7 @@ const DashboardLayout = () => {
                     <Route path="/parametres" element={<Parametres />} />
                     <Route path="/services" element={<Services />} /> {/* Route pour la page Services */}
                     <Route path="/calendrier" element={<CalendarSettings />} /> {/* Route pour la page Calendrier */}
+                    <Route path="/abonnements" element={<Abonnements />} /> {/* Route pour la page Abonnements */}
                 </Routes>
             </main>
         </div>
