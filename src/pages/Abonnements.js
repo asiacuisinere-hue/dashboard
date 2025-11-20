@@ -13,8 +13,8 @@ const Abonnements = () => {
             .from('abonnements')
             .select(`
                 *,
-                clients:client_id (*),
-                entreprises:entreprise_id (*)
+                clients (first_name, last_name, email, phone),
+                entreprises (nom_entreprise, contact_name, contact_email, contact_phone)
             `);
 
         if (filter.status) {
@@ -41,24 +41,21 @@ const Abonnements = () => {
         setFilter(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleUpdateAbonnementStatus = async (abonnementId, newStatus) => {
-        if (!window.confirm(`Confirmer le changement de statut de l'abonnement ${abonnementId.substring(0, 8)} à "${newStatus}" ?`)) {
-            return;
-        }
-
+    const handleUpdateAbonnement = async (abonnementId, updates) => {
         const { error } = await supabase
             .from('abonnements')
-            .update({ status: newStatus, updated_at: new Date().toISOString() })
+            .update({ ...updates, updated_at: new Date() })
             .eq('id', abonnementId);
 
         if (error) {
-            alert(`Erreur lors de la mise à jour du statut : ${error.message}`);
+            alert(`Erreur lors de la mise à jour : ${error.message}`);
         } else {
-            alert(`Statut de l'abonnement ${abonnementId.substring(0, 8)} mis à jour à "${newStatus}".`);
+            alert(`Abonnement ${abonnementId.substring(0, 8)} mis à jour.`);
             fetchAbonnements(); // Rafraîchir la liste
             setSelectedAbonnement(null); // Fermer les détails si ouverts
         }
     };
+
 
     const renderCustomerName = (abonnement) => {
         if (abonnement.clients) {
@@ -101,7 +98,7 @@ const Abonnements = () => {
                             <th style={thStyle}>Client / Entreprise</th>
                             <th style={thStyle}>Formule de base</th>
                             <th style={thStyle}>Statut</th>
-                            <th style={thStyle}>Date de création</th>
+                            <th style={thStyle}>Date de début</th>
                             <th style={thStyle}>Actions</th>
                         </tr>
                     </thead>
@@ -112,7 +109,7 @@ const Abonnements = () => {
                                 <td style={tdStyle}>{renderCustomerName(abonnement)}</td>
                                 <td style={tdStyle}>{abonnement.formule_base}</td>
                                 <td style={tdStyle}><span style={statusBadgeStyle(abonnement.status)}>{abonnement.status}</span></td>
-                                <td style={tdStyle}>{new Date(abonnement.created_at).toLocaleDateString('fr-FR')}</td>
+                                <td style={tdStyle}>{abonnement.start_date ? new Date(abonnement.start_date).toLocaleDateString('fr-FR') : 'N/A'}</td>
                                 <td style={tdStyle}>
                                     <button onClick={() => setSelectedAbonnement(abonnement)} style={detailsButtonStyle}>Voir Détails</button>
                                 </td>
@@ -126,7 +123,7 @@ const Abonnements = () => {
                 <AbonnementDetailModal
                     abonnement={selectedAbonnement}
                     onClose={() => setSelectedAbonnement(null)}
-                    onUpdateStatus={handleUpdateAbonnementStatus}
+                    onUpdate={handleUpdateAbonnement}
                 />
             )}
         </div>
@@ -134,7 +131,27 @@ const Abonnements = () => {
 };
 
 // --- Abonnement Detail Modal Component ---
-const AbonnementDetailModal = ({ abonnement, onClose, onUpdateStatus }) => {
+const AbonnementDetailModal = ({ abonnement, onClose, onUpdate }) => {
+    const [editedAbonnement, setEditedAbonnement] = useState(abonnement);
+
+    const handleFieldChange = (e) => {
+        const { name, value } = e.target;
+        setEditedAbonnement(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleSave = () => {
+        const updates = {
+            notes: editedAbonnement.notes,
+            start_date: editedAbonnement.start_date,
+            end_date: editedAbonnement.end_date,
+        };
+        onUpdate(abonnement.id, updates);
+    };
+
+    const handleUpdateStatus = (newStatus) => {
+        onUpdate(abonnement.id, { status: newStatus });
+    };
+
     const renderCustomerInfo = () => {
         if (abonnement.clients) {
             return (
@@ -172,23 +189,35 @@ const AbonnementDetailModal = ({ abonnement, onClose, onUpdateStatus }) => {
                     <h3 style={detailTitleStyle}>Informations de l'Abonnement</h3>
                     <p><strong>Formule:</strong> {abonnement.formule_base}</p>
                     <p><strong>Statut:</strong> <span style={statusBadgeStyle(abonnement.status)}>{abonnement.status}</span></p>
-                    <p><strong>Notes:</strong> {abonnement.notes || 'N/A'}</p>
-                    <p><strong>Date de début:</strong> {abonnement.start_date ? new Date(abonnement.start_date).toLocaleDateString('fr-FR') : 'N/A'}</p>
-                    <p><strong>Date de fin:</strong> {abonnement.end_date ? new Date(abonnement.end_date).toLocaleDateString('fr-FR') : 'N/A'}</p>
+
+                    <div style={formGroupStyle}>
+                        <label style={labelStyle}>Date de début:</label>
+                        <input type="date" name="start_date" value={editedAbonnement.start_date || ''} onChange={handleFieldChange} style={inputStyle} />
+                    </div>
+                    <div style={formGroupStyle}>
+                        <label style={labelStyle}>Date de fin:</label>
+                        <input type="date" name="end_date" value={editedAbonnement.end_date || ''} onChange={handleFieldChange} style={inputStyle} />
+                    </div>
+                    <div style={formGroupStyle}>
+                        <label style={labelStyle}>Notes:</label>
+                        <textarea name="notes" value={editedAbonnement.notes || ''} onChange={handleFieldChange} style={{...inputStyle, minHeight: '80px'}}></textarea>
+                    </div>
+                    <button onClick={handleSave} style={{...actionButtonStyle, backgroundColor: '#007bff', marginTop: '10px' }}>Enregistrer les modifications</button>
                 </div>
 
                 <div style={modalActionsStyle}>
+                    <h3 style={detailTitleStyle}>Changer le statut</h3>
                     {abonnement.status === 'en_attente' && (
-                        <button onClick={() => onUpdateStatus(abonnement.id, 'actif')} style={{ ...actionButtonStyle, backgroundColor: '#28a745' }}>Marquer comme Actif</button>
+                        <button onClick={() => handleUpdateStatus('actif')} style={{ ...actionButtonStyle, backgroundColor: '#28a745' }}>Marquer comme Actif</button>
                     )}
                     {abonnement.status === 'actif' && (
-                        <button onClick={() => onUpdateStatus(abonnement.id, 'en_pause')} style={{ ...actionButtonStyle, backgroundColor: '#ffc107' }}>Mettre en pause</button>
+                        <button onClick={() => handleUpdateStatus('en_pause')} style={{ ...actionButtonStyle, backgroundColor: '#ffc107' }}>Mettre en pause</button>
                     )}
                     {abonnement.status === 'en_pause' && (
-                        <button onClick={() => onUpdateStatus(abonnement.id, 'actif')} style={{ ...actionButtonStyle, backgroundColor: '#28a745' }}>Réactiver</button>
+                        <button onClick={() => handleUpdateStatus('actif')} style={{ ...actionButtonStyle, backgroundColor: '#28a745' }}>Réactiver</button>
                     )}
                     {['en_attente', 'actif', 'en_pause'].includes(abonnement.status) && (
-                        <button onClick={() => onUpdateStatus(abonnement.id, 'termine')} style={{ ...actionButtonStyle, backgroundColor: '#dc3545' }}>Terminer</button>
+                        <button onClick={() => handleUpdateStatus('termine')} style={{ ...actionButtonStyle, backgroundColor: '#dc3545' }}>Terminer</button>
                     )}
                 </div>
             </div>
@@ -335,6 +364,26 @@ const modalActionsStyle = {
     justifyContent: 'flex-end',
     gap: '10px',
     flexWrap: 'wrap',
+};
+
+const formGroupStyle = {
+    display: 'flex',
+    flexDirection: 'column',
+    marginBottom: '15px',
+};
+
+const labelStyle = {
+    fontWeight: 'bold',
+    marginBottom: '5px',
+    color: '#333',
+};
+
+const inputStyle = {
+    padding: '10px',
+    borderRadius: '4px',
+    border: '1px solid #ddd',
+    boxSizing: 'border-box',
+    width: '100%',
 };
 
 export default Abonnements;
