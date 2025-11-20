@@ -44,7 +44,7 @@ const Abonnements = () => {
     const handleUpdateAbonnement = async (abonnementId, updates) => {
         const { error } = await supabase
             .from('abonnements')
-            .update({ ...updates, updated_at: new Date() })
+            .update({ ...updates, updated_at: new Date().toISOString() }) // Utiliser new Date().toISOString()
             .eq('id', abonnementId);
 
         if (error) {
