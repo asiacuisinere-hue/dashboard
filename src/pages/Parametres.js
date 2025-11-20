@@ -136,6 +136,10 @@ const Parametres = () => {
                     <h2>Gestion du Calendrier</h2>
                     <p>Bloquer des dates et des jours de la semaine récurrents.</p>
                 </Link>
+                <Link to="/abonnements" style={cardStyle}>
+                    <h2>Gestion des Abonnements</h2>
+                    <p>Gérer les demandes et les statuts des abonnements.</p>
+                </Link>
 
                 {/* Card for Welcome Popup Message */}
                 <div style={cardStyle}>

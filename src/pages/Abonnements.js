@@ -1,0 +1,340 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { supabase } from '../supabaseClient';
+
+const Abonnements = () => {
+    const [abonnements, setAbonnements] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [selectedAbonnement, setSelectedAbonnement] = useState(null);
+    const [filter, setFilter] = useState({ status: '' });
+
+    const fetchAbonnements = useCallback(async () => {
+        setLoading(true);
+        let query = supabase
+            .from('abonnements')
+            .select(`
+                *,
+                clients (first_name, last_name, email, phone),
+                entreprises (nom_entreprise, contact_name, contact_email, contact_phone)
+            `);
+
+        if (filter.status) {
+            query = query.eq('status', filter.status);
+        }
+
+        const { data, error } = await query.order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('Erreur de chargement des abonnements:', error);
+            alert(`Une erreur est survenue lors du chargement des abonnements : ${error.message}`);
+        } else {
+            setAbonnements(data);
+        }
+        setLoading(false);
+    }, [filter]);
+
+    useEffect(() => {
+        fetchAbonnements();
+    }, [fetchAbonnements]);
+
+    const handleFilterChange = (e) => {
+        const { name, value } = e.target;
+        setFilter(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleUpdateAbonnementStatus = async (abonnementId, newStatus) => {
+        if (!window.confirm(`Confirmer le changement de statut de l'abonnement ${abonnementId.substring(0, 8)} à "${newStatus}" ?`)) {
+            return;
+        }
+
+        const { error } = await supabase
+            .from('abonnements')
+            .update({ status: newStatus, updated_at: new Date().toISOString() })
+            .eq('id', abonnementId);
+
+        if (error) {
+            alert(`Erreur lors de la mise à jour du statut : ${error.message}`);
+        } else {
+            alert(`Statut de l'abonnement ${abonnementId.substring(0, 8)} mis à jour à "${newStatus}".`);
+            fetchAbonnements(); // Rafraîchir la liste
+            setSelectedAbonnement(null); // Fermer les détails si ouverts
+        }
+    };
+
+    const renderCustomerName = (abonnement) => {
+        if (abonnement.clients) {
+            return `${abonnement.clients.last_name} ${abonnement.clients.first_name}`;
+        } else if (abonnement.entreprises) {
+            return abonnement.entreprises.nom_entreprise;
+        }
+        return 'N/A';
+    };
+
+    if (loading) {
+        return <div>Chargement des abonnements...</div>;
+    }
+
+    return (
+        <div style={containerStyle}>
+            <h1>Gestion des Abonnements</h1>
+            <p>Liste et gestion des demandes d'abonnement.</p>
+
+            <div style={filterContainerStyle}>
+                <select
+                    name="status"
+                    value={filter.status}
+                    onChange={handleFilterChange}
+                    style={filterInputStyle}
+                >
+                    <option value="">Tous les statuts</option>
+                    <option value="en_attente">En attente</option>
+                    <option value="actif">Actif</option>
+                    <option value="en_pause">En pause</option>
+                    <option value="termine">Terminé</option>
+                </select>
+            </div>
+
+            <div style={tableContainerStyle}>
+                <table style={tableStyle}>
+                    <thead>
+                        <tr>
+                            <th style={thStyle}>ID Abonnement</th>
+                            <th style={thStyle}>Client / Entreprise</th>
+                            <th style={thStyle}>Formule de base</th>
+                            <th style={thStyle}>Statut</th>
+                            <th style={thStyle}>Date de création</th>
+                            <th style={thStyle}>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {abonnements.map(abonnement => (
+                            <tr key={abonnement.id}>
+                                <td style={tdStyle}>{abonnement.id.substring(0, 8)}</td>
+                                <td style={tdStyle}>{renderCustomerName(abonnement)}</td>
+                                <td style={tdStyle}>{abonnement.formule_base}</td>
+                                <td style={tdStyle}><span style={statusBadgeStyle(abonnement.status)}>{abonnement.status}</span></td>
+                                <td style={tdStyle}>{new Date(abonnement.created_at).toLocaleDateString('fr-FR')}</td>
+                                <td style={tdStyle}>
+                                    <button onClick={() => setSelectedAbonnement(abonnement)} style={detailsButtonStyle}>Voir Détails</button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            {selectedAbonnement && (
+                <AbonnementDetailModal
+                    abonnement={selectedAbonnement}
+                    onClose={() => setSelectedAbonnement(null)}
+                    onUpdateStatus={handleUpdateAbonnementStatus}
+                />
+            )}
+        </div>
+    );
+};
+
+// --- Abonnement Detail Modal Component ---
+const AbonnementDetailModal = ({ abonnement, onClose, onUpdateStatus }) => {
+    const renderCustomerInfo = () => {
+        if (abonnement.clients) {
+            return (
+                <>
+                    <p><strong>Nom:</strong> {abonnement.clients.last_name} {abonnement.clients.first_name}</p>
+                    <p><strong>Email:</strong> {abonnement.clients.email}</p>
+                    <p><strong>Téléphone:</strong> {abonnement.clients.phone}</p>
+                </>
+            );
+        } else if (abonnement.entreprises) {
+            return (
+                <>
+                    <p><strong>Nom de l'entreprise:</strong> {abonnement.entreprises.nom_entreprise}</p>
+                    <p><strong>Contact:</strong> {abonnement.entreprises.contact_name}</p>
+                    <p><strong>Email du contact:</strong> {abonnement.entreprises.contact_email}</p>
+                    <p><strong>Téléphone du contact:</strong> {abonnement.entreprises.contact_phone}</p>
+                </>
+            );
+        }
+        return <p>Informations client non disponibles.</p>;
+    };
+
+    return (
+        <div style={modalOverlayStyle}>
+            <div style={modalContentStyle}>
+                <button onClick={onClose} style={closeButtonStyle}>&times;</button>
+                <h2 style={{ borderBottom: '2px solid #eee', paddingBottom: '10px', marginBottom: '20px' }}>Détails Abonnement #{abonnement.id.substring(0, 8)}</h2>
+                
+                <div style={detailSectionStyle}>
+                    <h3 style={detailTitleStyle}>Client / Entreprise</h3>
+                    {renderCustomerInfo()}
+                </div>
+
+                <div style={detailSectionStyle}>
+                    <h3 style={detailTitleStyle}>Informations de l'Abonnement</h3>
+                    <p><strong>Formule:</strong> {abonnement.formule_base}</p>
+                    <p><strong>Statut:</strong> <span style={statusBadgeStyle(abonnement.status)}>{abonnement.status}</span></p>
+                    <p><strong>Notes:</strong> {abonnement.notes || 'N/A'}</p>
+                    <p><strong>Date de début:</strong> {abonnement.start_date ? new Date(abonnement.start_date).toLocaleDateString('fr-FR') : 'N/A'}</p>
+                    <p><strong>Date de fin:</strong> {abonnement.end_date ? new Date(abonnement.end_date).toLocaleDateString('fr-FR') : 'N/A'}</p>
+                </div>
+
+                <div style={modalActionsStyle}>
+                    {abonnement.status === 'en_attente' && (
+                        <button onClick={() => onUpdateStatus(abonnement.id, 'actif')} style={{ ...actionButtonStyle, backgroundColor: '#28a745' }}>Marquer comme Actif</button>
+                    )}
+                    {abonnement.status === 'actif' && (
+                        <button onClick={() => onUpdateStatus(abonnement.id, 'en_pause')} style={{ ...actionButtonStyle, backgroundColor: '#ffc107' }}>Mettre en pause</button>
+                    )}
+                    {abonnement.status === 'en_pause' && (
+                        <button onClick={() => onUpdateStatus(abonnement.id, 'actif')} style={{ ...actionButtonStyle, backgroundColor: '#28a745' }}>Réactiver</button>
+                    )}
+                    {['en_attente', 'actif', 'en_pause'].includes(abonnement.status) && (
+                        <button onClick={() => onUpdateStatus(abonnement.id, 'termine')} style={{ ...actionButtonStyle, backgroundColor: '#dc3545' }}>Terminer</button>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
+// --- Styles ---
+const containerStyle = {
+    padding: '20px',
+    maxWidth: '1200px',
+    margin: '0 auto',
+};
+
+const filterContainerStyle = {
+    display: 'flex',
+    gap: '1rem',
+    marginBottom: '2rem',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+};
+
+const filterInputStyle = {
+    padding: '8px',
+    borderRadius: '5px',
+    border: '1px solid #ccc',
+    flex: '1 1 auto',
+    minWidth: '150px',
+};
+
+const tableContainerStyle = {
+    marginTop: '2rem',
+    boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+    borderRadius: '8px',
+    overflowX: 'auto',
+    background: 'white'
+};
+
+const tableStyle = {
+    width: '100%',
+    borderCollapse: 'collapse',
+};
+
+const thStyle = {
+    background: '#f4f7fa',
+    padding: '12px 15px',
+    textAlign: 'left',
+    fontWeight: 'bold',
+    color: '#333',
+    borderBottom: '2px solid #ddd',
+    whiteSpace: 'nowrap',
+};
+
+const tdStyle = {
+    padding: '12px 15px',
+    borderBottom: '1px solid #eee',
+    color: '#555',
+    whiteSpace: 'nowrap',
+};
+
+const detailsButtonStyle = {
+    padding: '8px 12px',
+    background: '#d4af37',
+    color: 'white',
+    border: 'none',
+    borderRadius: '5px',
+    cursor: 'pointer',
+    marginRight: '5px',
+};
+
+const actionButtonStyle = {
+    padding: '10px 15px',
+    border: 'none',
+    borderRadius: '5px',
+    cursor: 'pointer',
+    color: 'white',
+    fontWeight: 'bold',
+};
+
+const statusBadgeStyle = (status) => {
+    const colors = {
+        'en_attente': '#007bff',
+        'actif': '#28a745',
+        'en_pause': '#ffc107',
+        'termine': '#6c757d',
+    };
+    return {
+        padding: '4px 8px',
+        borderRadius: '12px',
+        color: 'white',
+        fontWeight: 'bold',
+        fontSize: '12px',
+        backgroundColor: colors[status] || '#6c757d'
+    };
+};
+
+const modalOverlayStyle = { 
+    position: 'fixed', 
+    top: 0, 
+    left: 0, 
+    right: 0, 
+    bottom: 0, 
+    backgroundColor: 'rgba(0, 0, 0, 0.6)', 
+    display: 'flex', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    zIndex: 1000 
+};
+const modalContentStyle = { 
+    background: 'white', 
+    padding: '30px', 
+    borderRadius: '8px', 
+    width: '90%', 
+    maxWidth: '700px', 
+    maxHeight: '90vh', 
+    overflowY: 'auto', 
+    position: 'relative',
+    boxSizing: 'border-box',
+};
+const closeButtonStyle = { 
+    position: 'absolute', 
+    top: '15px', 
+    right: '15px', 
+    background: 'transparent', 
+    border: 'none', 
+    fontSize: '24px', 
+    cursor: 'pointer' 
+};
+const detailSectionStyle = { 
+    marginBottom: '20px', 
+    paddingBottom: '20px', 
+    borderBottom: '1px solid #f0f0f0' 
+};
+const detailTitleStyle = { 
+    fontSize: '18px', 
+    color: '#d4af37', 
+    marginBottom: '10px' 
+};
+
+const modalActionsStyle = {
+    marginTop: '30px',
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: '10px',
+    flexWrap: 'wrap',
+};
+
+export default Abonnements;
