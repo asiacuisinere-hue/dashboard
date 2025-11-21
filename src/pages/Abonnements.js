@@ -59,7 +59,7 @@ const Abonnements = () => {
 
     const renderCustomerName = (abonnement) => {
         if (abonnement.clients) {
-            return `${abonnement.clients.last_name} ${abonnement.clients.first_name}`;
+            return `${abonnement.clients.last_name}${abonnement.clients.first_name ? ` ${abonnement.clients.first_name}` : ''}`;
         } else if (abonnement.entreprises) {
             return abonnement.entreprises.nom_entreprise;
         }
