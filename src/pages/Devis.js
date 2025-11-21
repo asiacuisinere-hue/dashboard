@@ -112,67 +112,80 @@ const Devis = () => {
     };
 
     const handleGenerateQuote = async () => {
+        setIsLoading(true);
+        setErrorMessage('');
+        setSuccessMessage('');
         console.log('--- [DEBUG] handleGenerateQuote: Démarrage');
+
+        if (!selectedCustomer || !selectedCustomer.id) {
+            setErrorMessage('Veuillez sélectionner un client.');
+            setIsLoading(false);
+            return;
+        }
+        if (items.length === 0) {
+            setErrorMessage('Veuillez ajouter au moins un service au devis.');
+            setIsLoading(false);
+            return;
+        }
+
+        const total = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
         console.log('--- [DEBUG] handleGenerateQuote: Valeur de selectedCustomer:', selectedCustomer);
 
-        if (!selectedCustomer) {
-            console.log('--- [DEBUG] handleGenerateQuote: Pas de client sélectionné');
-            alert('Veuillez sélectionner un client ou une entreprise.');
-            return;
-        }
-        if (quoteItems.length === 0) {
-            console.log('--- [DEBUG] handleGenerateQuote: Pas de services dans le devis');
-            alert('Veuillez ajouter au moins un service au devis.');
-            return;
-        }
 
-        console.log('--- [DEBUG] handleGenerateQuote: Début du try/catch');
         try {
             console.log('--- [DEBUG] handleGenerateQuote: Début du try/catch');
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) {
-                throw new Error("Utilisateur non authentifié.");
-            }
-
             const payload = {
-                customer: selectedCustomer,
-                items: quoteItems, // Correction ici
-                total: calculateTotal(), // Correction ici
+                customer: {
+                    id: selectedCustomer.id,
+                    last_name: selectedCustomer.last_name,
+                    email: selectedCustomer.email,
+                    phone: selectedCustomer.phone
+                },
+                items: items,
+                total: total,
                 type: 'service_reservation' // ou tout autre type pertinent
             };
-
+            
             console.log('--- [DEBUG] handleGenerateQuote: Payload envoyé:', payload);
 
-            const response = await fetch('/api/create-quote/', {
+            // Fetch from the API endpoint
+            const response = await fetch('/api/create-quote', {  // ✅ Sans slash final
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session.access_token}`,
+                    'Authorization': `Bearer ${localStorage.getItem('admin_password')}`  // ✅ IMPORTANT : Assurez-vous que la clé est correcte
                 },
                 body: JSON.stringify(payload)
             });
-
-            console.log('--- [DEBUG] handleGenerateQuote: Réponse reçue du serveur, statut:', response.status);
-
+            
+            console.log('--- [DEBUG] Response status:', response.status);
+            console.log('--- [DEBUG] Response headers:', [...response.headers.entries()]);
+            
             if (!response.ok) {
-                const errorData = await response.json();
-                console.error('--- [ERREUR] handleGenerateQuote: Réponse non-OK', errorData);
-                throw new Error(errorData.details || 'Erreur inconnue lors de la création du devis.');
+                const errorText = await response.text();
+                console.error('--- [ERROR] Server error:', errorText);
+                throw new Error(`Le serveur a retourné une erreur ${response.status}: ${errorText}`);
             }
-
-            const result = await response.json();
-            console.log('--- [DEBUG] handleGenerateQuote: Réponse OK, résultat:', result);
-            alert(`Devis ${result.quoteId.substring(0, 8)} créé et envoyé avec succès !`);
-
-            // Reset form
-            setSelectedCustomer(null);
-            setQuoteItems([]);
-            setSearchTerm('');
-            fetchExistingQuotes(); // Refresh the list of existing quotes
-
+            
+            // Télécharger le PDF
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `devis-${selectedCustomer.id}-${Date.now()}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            console.log('✅ PDF téléchargé avec succès');
+            setSuccessMessage('Devis PDF téléchargé avec succès.');
+            
         } catch (error) {
-            console.error('--- [ERREUR] handleGenerateQuote: Erreur capturée dans le catch', error);
-            alert(`Erreur lors de la génération du devis : ${error.message}`);
+            console.error('--- [ERROR] handleGenerateQuote:', error);
+            setErrorMessage(error.message);
+        } finally {
+            setIsLoading(false);
         }
     };
 
