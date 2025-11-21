@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
 
 const AdminAccountSettings = () => {
-    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [message, setMessage] = useState('');
@@ -46,16 +45,6 @@ const AdminAccountSettings = () => {
         } finally {
             setLoading(false);
         }
-    };
-
-    // Pour l'email, Supabase ne permet pas de changer directement l'email via `updateUser`
-    // sans un workflow de vérification par email. Pour un admin, l'email est souvent fixé.
-    // Si la modification de l'email est nécessaire, un workflow plus complexe doit être mis en place.
-    // Pour l'instant, on se concentre sur le mot de passe.
-    const handleEmailUpdate = (e) => {
-        e.preventDefault();
-        setMessage('La modification de l\'email n\'est pas supportée directement via cette interface pour des raisons de sécurité.');
-        setIsError(true);
     };
 
     return (
