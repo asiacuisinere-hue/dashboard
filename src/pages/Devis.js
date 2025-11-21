@@ -118,73 +118,80 @@ const Devis = () => {
         setIsLoading(true);
         setErrorMessage('');
         setSuccessMessage('');
-        console.log('--- [DEBUG] handleGenerateQuote: Démarrage');
 
-        if (!selectedCustomer || !selectedCustomer.id) {
-            setErrorMessage('Veuillez sélectionner un client.');
-            setIsLoading(false);
-            return;
-        }
-        if (quoteItems.length === 0) {
-            setErrorMessage('Veuillez ajouter au moins un service au devis.');
+        if (!selectedCustomer || !selectedCustomer.id || quoteItems.length === 0) {
+            setErrorMessage('Veuillez sélectionner un client et ajouter au moins un service.');
             setIsLoading(false);
             return;
         }
 
         const total = calculateTotal();
-        console.log('--- [DEBUG] handleGenerateQuote: Valeur de selectedCustomer:', selectedCustomer);
+        const initialPayload = {
+            customer: selectedCustomer,
+            items: quoteItems.map(item => ({
+                service_id: item.service_id,
+                description: item.description,
+                quantity: item.quantity,
+                price: item.price
+            })),
+            total: total,
+            type: 'service_reservation'
+        };
 
         try {
-            console.log('--- [DEBUG] handleGenerateQuote: Début du try/catch');
-            const payload = {
-                customer: {
-                    id: selectedCustomer.id,
-                    last_name: selectedCustomer.last_name,
-                    first_name: selectedCustomer.first_name,
-                    email: selectedCustomer.email,
-                    phone: selectedCustomer.phone
-                },
-                items: quoteItems.map(item => ({
-                    service_id: item.service_id,
-                    description: item.description,
-                    quantity: item.quantity,
-                    price: item.price
-                })),
-                total: total,
-                type: 'service_reservation' // ou tout autre type pertinent
-            };
-            
-            console.log('--- [DEBUG] handleGenerateQuote: Payload envoyé:', payload);
-
-            const response = await fetch('https://asiacuisine.re/create-booking-quote', {
+            // --- Step 1: Save Quote to Database ---
+            setSuccessMessage('Étape 1/2 : Enregistrement du devis dans la base de données...');
+            const saveResponse = await fetch('https://asiacuisine.re/save-quote-to-db', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('admin_password')}`
                 },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(initialPayload)
             });
-            
-            console.log('--- [DEBUG] Response status:', response.status);
-            
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('--- [ERROR] Server error:', errorText);
-                throw new Error(`Le serveur a retourné une erreur ${response.status}: ${errorText}`);
+
+            if (!saveResponse.ok) {
+                const errorResult = await saveResponse.json();
+                throw new Error(`Erreur lors de la sauvegarde : ${errorResult.details || saveResponse.statusText}`);
             }
+
+            const saveData = await saveResponse.json();
             
-            const blob = await response.blob();
+            // --- Step 2: Generate PDF from Data ---
+            setSuccessMessage('Étape 2/2 : Génération du PDF...');
+            const pdfPayload = {
+                quote: {
+                    id: saveData.quote_id,
+                    created_at: saveData.created_at
+                },
+                ...initialPayload
+            };
+
+            const pdfResponse = await fetch('https://asiacuisine.re/generate-pdf-from-data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('admin_password')}`
+                },
+                body: JSON.stringify(pdfPayload)
+            });
+
+            if (!pdfResponse.ok) {
+                const errorResult = await pdfResponse.json();
+                throw new Error(`Erreur lors de la génération du PDF : ${errorResult.details || pdfResponse.statusText}`);
+            }
+
+            const blob = await pdfResponse.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `devis-${selectedCustomer.id}-${Date.now()}.pdf`;
+            a.download = `devis-${saveData.quote_id.substring(0, 8)}.pdf`;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
             
-            console.log('✅ PDF téléchargé avec succès');
-            setSuccessMessage('Devis PDF téléchargé avec succès.');
+            setSuccessMessage('Devis généré et téléchargé avec succès !');
             // Reset form
             setSelectedCustomer(null);
             setQuoteItems([]);
