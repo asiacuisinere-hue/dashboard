@@ -1,15 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'; // Ajout de useEffect
 import { supabase } from '../supabaseClient';
 
 const AdminAccountSettings = () => {
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [message, setMessage] = useState('');
     const [isError, setIsError] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [user, setUser] = useState(null);
+
+    useEffect(() => {
+        console.log('--- [DEBUG] AdminAccountSettings: Component mounted ---');
+        const fetchUser = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            setUser(user);
+            if (user) {
+                setEmail(user.email);
+            }
+            console.log('--- [DEBUG] AdminAccountSettings: User fetched ---', user);
+        };
+        fetchUser();
+    }, []);
 
     const handlePasswordUpdate = async (e) => {
         e.preventDefault();
+        console.log('--- [DEBUG] AdminAccountSettings: handlePasswordUpdate called ---');
         setMessage('');
         setIsError(false);
 
@@ -46,6 +62,10 @@ const AdminAccountSettings = () => {
             setLoading(false);
         }
     };
+
+    if (!user && loading) {
+        return <div style={containerStyle}>Chargement des informations du compte...</div>;
+    }
 
     return (
         <div style={containerStyle}>
@@ -87,7 +107,7 @@ const AdminAccountSettings = () => {
             {/* Section de gestion de l'email (lecture seule ou information) */}
             <div style={sectionStyle}>
                 <h2>Email du compte</h2>
-                <p>L'email du compte est actuellement : <strong>{supabase.auth.getUser()?.email || 'Chargement...'}</strong></p>
+                <p>L'email du compte est actuellement : <strong>{user ? user.email : 'Chargement...'}</strong></p>
                 <p style={{ fontSize: '0.9em', color: '#666' }}>
                     La modification de l'adresse e-mail n'est pas gérée directement ici pour des raisons de sécurité.
                     Veuillez contacter le support si vous avez besoin de la modifier.
