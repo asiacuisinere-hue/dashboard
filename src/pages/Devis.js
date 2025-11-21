@@ -128,17 +128,20 @@ const Devis = () => {
 
         console.log('--- [DEBUG] handleGenerateQuote: Début du try/catch');
         try {
-            // Determine quote type based on items
-            const isMenuOrder = quoteItems.some(item => item.name.toLowerCase().includes('formule'));
-            const quoteType = isMenuOrder ? 'commande_menu' : 'service_reservation';
+            console.log('--- [DEBUG] handleGenerateQuote: Début du try/catch');
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                throw new Error("Utilisateur non authentifié.");
+            }
 
             const payload = {
                 customer: selectedCustomer,
-                items: quoteItems,
-                total: calculateTotal(),
-                type: quoteType, // Ajout du type
+                items: quoteItems, // Correction ici
+                total: calculateTotal(), // Correction ici
+                type: 'service_reservation' // ou tout autre type pertinent
             };
-            console.log('--- [DEBUG] handleGenerateQuote: Payload envoyé:', JSON.stringify(payload, null, 2));
+
+            console.log('--- [DEBUG] handleGenerateQuote: Payload envoyé:', payload);
 
             const response = await fetch('/api/create-quote', {
                 method: 'POST',
