@@ -156,7 +156,7 @@ const Devis = () => {
             
             console.log('--- [DEBUG] handleGenerateQuote: Payload envoyé:', payload);
 
-            const response = await fetch('https://asiacuisine.re/api/create-booking-quote', {
+            const response = await fetch('https://asiacuisine.re/create-booking-quote', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
