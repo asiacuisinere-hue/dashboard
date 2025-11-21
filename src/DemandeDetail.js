@@ -1,5 +1,6 @@
 import React from 'react';
 import { supabase } from './supabaseClient';
+import { useNavigate } from 'react-router-dom'; // Importer useNavigate
 
 // --- Helper Components ---
 
@@ -29,6 +30,8 @@ const DetailsRenderer = ({ details }) => {
 // --- Main Component ---
 
 const DemandeDetail = ({ demande, onClose, onUpdate }) => {
+    const navigate = useNavigate(); // Utiliser useNavigate
+
     if (!demande) return null;
 
     const handleUpdateStatus = async (newStatus) => {
@@ -118,6 +121,18 @@ const DemandeDetail = ({ demande, onClose, onUpdate }) => {
         }
     };
 
+    const handleRedirectToCreateQuote = () => {
+        if (demande.client_id) {
+            navigate(`/devis?clientId=${demande.client_id}&clientType=client`);
+        } else if (demande.entreprise_id) {
+            navigate(`/devis?clientId=${demande.entreprise_id}&clientType=entreprise`);
+        } else {
+            alert('Impossible de rediriger : aucune information client trouvée pour cette demande.');
+        }
+        onClose(); // Fermer la modale
+    };
+
+
     const renderCustomerDetails = () => {
         if (demande.clients) { // C'est un particulier
             return (
@@ -141,7 +156,11 @@ const DemandeDetail = ({ demande, onClose, onUpdate }) => {
         const statusActions = {
             'En attente de traitement': (
                 <>
-                    <button onClick={() => handleGenerateDocument('Devis')} style={{...actionButtonStyle, backgroundColor: '#fd7e14'}}>Générer Devis</button>
+                    {demande.type === 'RESERVATION_SERVICE' ? (
+                        <button onClick={handleRedirectToCreateQuote} style={{...actionButtonStyle, backgroundColor: '#fd7e14'}}>Créer Devis</button>
+                    ) : (
+                        <button onClick={() => handleGenerateDocument('Devis')} style={{...actionButtonStyle, backgroundColor: '#fd7e14'}}>Générer Devis</button>
+                    )}
                     {demande.type !== 'RESERVATION_SERVICE' && (
                         <button onClick={() => handleGenerateDocument('Facture')} style={{...actionButtonStyle, backgroundColor: '#17a2b8'}}>Générer Facture</button>
                     )}
@@ -236,7 +255,7 @@ const modalContentStyle = {
     maxHeight: '90vh', 
     overflowY: 'auto', 
     position: 'relative',
-    boxSizing: 'border-box', // Ajout pour le responsif
+    boxSizing: 'border-box',
 };
 const closeButtonStyle = { 
     position: 'absolute', 
@@ -283,7 +302,7 @@ const modalActionsStyle = {
     display: 'flex',
     justifyContent: 'flex-end',
     gap: '10px',
-    flexWrap: 'wrap', // Permet aux boutons de passer à la ligne
+    flexWrap: 'wrap',
 };
 
 export default DemandeDetail;
