@@ -128,10 +128,15 @@ const Devis = () => {
 
         console.log('--- [DEBUG] handleGenerateQuote: Début du try/catch');
         try {
+            // Determine quote type based on items
+            const isMenuOrder = quoteItems.some(item => item.name.toLowerCase().includes('formule'));
+            const quoteType = isMenuOrder ? 'commande_menu' : 'service_reservation';
+
             const payload = {
                 customer: selectedCustomer,
                 items: quoteItems,
-                total: calculateTotal()
+                total: calculateTotal(),
+                type: quoteType, // Ajout du type
             };
             console.log('--- [DEBUG] handleGenerateQuote: Payload envoyé:', JSON.stringify(payload, null, 2));
 
