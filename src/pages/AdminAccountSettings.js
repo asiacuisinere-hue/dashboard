@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react'; // Ajout de useEffect
 import { supabase } from '../supabaseClient';
 
 const AdminAccountSettings = () => {
-    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [message, setMessage] = useState('');
@@ -15,9 +14,6 @@ const AdminAccountSettings = () => {
         const fetchUser = async () => {
             const { data: { user } } = await supabase.auth.getUser();
             setUser(user);
-            if (user) {
-                setEmail(user.email);
-            }
             console.log('--- [DEBUG] AdminAccountSettings: User fetched ---', user);
         };
         fetchUser();
