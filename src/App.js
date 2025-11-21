@@ -14,6 +14,7 @@ import Parametres from './pages/Parametres';
 import Services from './pages/Services'; // Importation de la page Services
 import CalendarSettings from './pages/CalendarSettings'; // Importation de la page CalendarSettings
 import Abonnements from './pages/Abonnements'; // Importation de la page Abonnements
+import AdminAccountSettings from './pages/AdminAccountSettings'; // Importation de la page Compte Administrateur
 
 // --- Composants ---
 
@@ -146,6 +147,7 @@ const DashboardLayout = () => {
                     <Route path="/services" element={<Services />} /> {/* Route pour la page Services */}
                     <Route path="/calendrier" element={<CalendarSettings />} /> {/* Route pour la page Calendrier */}
                     <Route path="/abonnements" element={<Abonnements />} /> {/* Route pour la page Abonnements */}
+                    <Route path="/admin-account" element={<AdminAccountSettings />} /> {/* Route pour la page Compte Administrateur */}
                 </Routes>
             </main>
         </div>
