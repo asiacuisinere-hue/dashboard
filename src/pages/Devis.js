@@ -1,11 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
+import { useLocation } from 'react-router-dom';
 
 const Devis = () => {
     const [clients, setClients] = useState([]);
     const [entreprises, setEntreprises] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCustomer, setSelectedCustomer] = useState(null); // Peut être un client ou une entreprise
+
+    const location = useLocation();
+    const { customer: prefilledCustomer } = location.state || {};
     const [services, setServices] = useState([]); // Services disponibles
     const [quoteItems, setQuoteItems] = useState([]); // Lignes du devis pour le nouveau devis
     const [isSearching, setIsSearching] = useState(false);
@@ -24,6 +28,17 @@ const Devis = () => {
             setServices(data);
         }
     }, []);
+
+    useEffect(() => {
+        if (prefilledCustomer && !selectedCustomer) { // Only pre-fill if customer hasn't been selected yet
+            setSelectedCustomer(prefilledCustomer);
+            if (prefilledCustomer.type === 'client') {
+                setSearchTerm(`${prefilledCustomer.last_name} ${prefilledCustomer.first_name || ''}`.trim());
+            } else if (prefilledCustomer.type === 'entreprise') {
+                setSearchTerm(prefilledCustomer.nom_entreprise);
+            }
+        }
+    }, [prefilledCustomer, selectedCustomer, setSearchTerm, setSelectedCustomer]);
 
     // Fetch existing quotes
     const fetchExistingQuotes = useCallback(async () => {

@@ -32,6 +32,13 @@ const DetailsRenderer = ({ details }) => {
 const DemandeDetail = ({ demande, onClose, onUpdate }) => {
     const navigate = useNavigate(); // Utiliser useNavigate
 
+    // Construire l'objet client avec son type pour la redirection
+    const clientInfoWithTag = demande.client_id
+        ? { ...demande.clients, type: 'client' }
+        : demande.entreprise_id
+            ? { ...demande.entreprises, type: 'entreprise' }
+            : null;
+
     if (!demande) return null;
 
     const handleUpdateStatus = async (newStatus) => {
@@ -122,10 +129,8 @@ const DemandeDetail = ({ demande, onClose, onUpdate }) => {
     };
 
     const handleRedirectToCreateQuote = () => {
-        if (demande.client_id) {
-            navigate(`/devis?clientId=${demande.client_id}&clientType=client`);
-        } else if (demande.entreprise_id) {
-            navigate(`/devis?clientId=${demande.entreprise_id}&clientType=entreprise`);
+        if (clientInfoWithTag) {
+            navigate('/devis', { state: { customer: clientInfoWithTag } });
         } else {
             alert('Impossible de rediriger : aucune information client trouvée pour cette demande.');
         }
