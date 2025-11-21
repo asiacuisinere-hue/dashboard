@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'; // Ajout de useEffect
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 
 const AdminAccountSettings = () => {
@@ -8,20 +8,19 @@ const AdminAccountSettings = () => {
     const [isError, setIsError] = useState(false);
     const [loading, setLoading] = useState(false);
     const [user, setUser] = useState(null);
+    const [showPassword, setShowPassword] = useState(false); // État pour le nouveau mot de passe
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false); // État pour la confirmation
 
     useEffect(() => {
-        console.log('--- [DEBUG] AdminAccountSettings: Component mounted ---');
         const fetchUser = async () => {
             const { data: { user } } = await supabase.auth.getUser();
             setUser(user);
-            console.log('--- [DEBUG] AdminAccountSettings: User fetched ---', user);
         };
         fetchUser();
     }, []);
 
     const handlePasswordUpdate = async (e) => {
         e.preventDefault();
-        console.log('--- [DEBUG] AdminAccountSettings: handlePasswordUpdate called ---');
         setMessage('');
         setIsError(false);
 
@@ -59,10 +58,6 @@ const AdminAccountSettings = () => {
         }
     };
 
-    if (!user && loading) {
-        return <div style={containerStyle}>Chargement des informations du compte...</div>;
-    }
-
     return (
         <div style={containerStyle}>
             <h1>Gestion du Compte Administrateur</h1>
@@ -71,25 +66,39 @@ const AdminAccountSettings = () => {
             <div style={sectionStyle}>
                 <h2>Changer le mot de passe</h2>
                 <form onSubmit={handlePasswordUpdate}>
-                    <div style={formGroupStyle}>
+                    <div style={{...formGroupStyle, position: 'relative'}}>
                         <label style={labelStyle}>Nouveau mot de passe:</label>
                         <input
-                            type="password"
+                            type={showPassword ? 'text' : 'password'}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             style={inputStyle}
                             required
                         />
+                         <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            style={togglePasswordButtonStyle}
+                        >
+                            {showPassword ? '👁️' : '🔒'}
+                        </button>
                     </div>
-                    <div style={formGroupStyle}>
+                    <div style={{...formGroupStyle, position: 'relative'}}>
                         <label style={labelStyle}>Confirmer le nouveau mot de passe:</label>
                         <input
-                            type="password"
+                            type={showConfirmPassword ? 'text' : 'password'}
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             style={inputStyle}
                             required
                         />
+                        <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            style={togglePasswordButtonStyle}
+                        >
+                            {showConfirmPassword ? '👁️' : '🔒'}
+                        </button>
                     </div>
                     <button type="submit" disabled={loading} style={buttonStyle}>
                         {loading ? 'Mise à jour...' : 'Mettre à jour le mot de passe'}
@@ -146,6 +155,19 @@ const inputStyle = {
     boxSizing: 'border-box',
     marginTop: '5px',
     fontSize: '16px',
+    paddingRight: '40px', // Pour faire de la place au bouton
+};
+
+const togglePasswordButtonStyle = {
+    position: 'absolute',
+    right: '10px',
+    top: '50%', // Ajuster la position verticale
+    transform: 'translateY(15%)', // Centrer par rapport au champ
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '18px',
+    color: '#666',
 };
 
 const buttonStyle = {
