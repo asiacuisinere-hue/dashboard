@@ -114,97 +114,80 @@ const Devis = () => {
         return quoteItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     };
 
-    const handleGenerateQuote = async () => {
-        setIsLoading(true);
-        setErrorMessage('');
-        setSuccessMessage('');
+const handleGenerateQuote = async () => {
+    setIsLoading(true);
+    setErrorMessage('');
+    setSuccessMessage('');
 
-        if (!selectedCustomer || !selectedCustomer.id || quoteItems.length === 0) {
-            setErrorMessage('Veuillez sélectionner un client et ajouter au moins un service.');
-            setIsLoading(false);
-            return;
-        }
+    if (!selectedCustomer || !selectedCustomer.id || quoteItems.length === 0) {
+        setErrorMessage('Veuillez sélectionner un client et ajouter au moins un service.');
+        setIsLoading(false);
+        return;
+    }
 
-        const total = calculateTotal();
-        const initialPayload = {
-            customer: selectedCustomer,
-            items: quoteItems.map(item => ({
-                service_id: item.service_id,
-                description: item.description,
-                quantity: item.quantity,
-                price: item.price
-            })),
-            total: total,
-            type: 'service_reservation'
-        };
-
-        try {
-            // --- Step 1: Save Quote to Database ---
-            setSuccessMessage('Étape 1/2 : Enregistrement du devis dans la base de données...');
-            const saveResponse = await fetch('https://asiacuisine.re/save-quote-to-db', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('admin_password')}`
-                },
-                body: JSON.stringify(initialPayload)
-            });
-
-            if (!saveResponse.ok) {
-                const errorResult = await saveResponse.json();
-                throw new Error(`Erreur lors de la sauvegarde : ${errorResult.details || saveResponse.statusText}`);
-            }
-
-            const saveData = await saveResponse.json();
-            
-            // --- Step 2: Generate PDF from Data ---
-            setSuccessMessage('Étape 2/2 : Génération du PDF...');
-            const pdfPayload = {
-                quote: {
-                    id: saveData.quote_id,
-                    created_at: saveData.created_at
-                },
-                ...initialPayload
-            };
-
-            const pdfResponse = await fetch('https://asiacuisine.re/generate-pdf-from-data', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('admin_password')}`
-                },
-                body: JSON.stringify(pdfPayload)
-            });
-
-            if (!pdfResponse.ok) {
-                const errorResult = await pdfResponse.json();
-                throw new Error(`Erreur lors de la génération du PDF : ${errorResult.details || pdfResponse.statusText}`);
-            }
-
-            const blob = await pdfResponse.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `devis-${saveData.quote_id.substring(0, 8)}.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-            
-            setSuccessMessage('Devis généré et téléchargé avec succès !');
-            // Reset form
-            setSelectedCustomer(null);
-            setQuoteItems([]);
-            setSearchTerm('');
-            fetchExistingQuotes();
-            
-        } catch (error) {
-            console.error('--- [ERROR] handleGenerateQuote:', error);
-            setErrorMessage(error.message);
-        } finally {
-            setIsLoading(false);
-        }
+    const total = calculateTotal();
+    const payload = {
+        customer: selectedCustomer,
+        items: quoteItems.map(item => ({
+            service_id: item.service_id,
+            name: item.name,
+            description: item.description,
+            quantity: item.quantity,
+            price: item.price
+        })),
+        total: total,
+        type: 'service_reservation'
     };
+
+    try {
+        setSuccessMessage('Génération du devis en cours...');
+
+        // Appel à la Supabase Edge Function
+        const response = await fetch(
+            `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/generate-quote`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${process.env.REACT_APP_SUPABASE_ANON_KEY}`,
+                },
+                body: JSON.stringify(payload)
+            }
+        );
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Erreur lors de la génération du devis');
+        }
+
+        // Télécharger le PDF
+        const blob = await response.blob();
+        const quoteId = response.headers.get('X-Quote-Id') || 'nouveau';
+        
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `devis-${quoteId.substring(0, 8)}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        setSuccessMessage('Devis généré, envoyé par email et téléchargé avec succès !');
+        
+        // Reset form
+        setSelectedCustomer(null);
+        setQuoteItems([]);
+        setSearchTerm('');
+        fetchExistingQuotes();
+
+    } catch (error) {
+        console.error('--- [ERROR] handleGenerateQuote:', error);
+        setErrorMessage(error.message);
+    } finally {
+        setIsLoading(false);
+    }
+};
 
     const handleUpdateQuoteStatus = async (quoteId, newStatus) => {
         if (!window.confirm(`Confirmer le changement de statut du devis ${quoteId.substring(0, 8)} à "${newStatus}" ?`)) {
