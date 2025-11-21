@@ -111,6 +111,10 @@ const Devis = () => {
         return quoteItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     };
 
+    const [isLoading, setIsLoading] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
+    const [errorMessage, setErrorMessage] = useState('');
+
     const handleGenerateQuote = async () => {
         setIsLoading(true);
         setErrorMessage('');
@@ -122,13 +126,13 @@ const Devis = () => {
             setIsLoading(false);
             return;
         }
-        if (items.length === 0) {
+        if (quoteItems.length === 0) { // Changed 'items' to 'quoteItems'
             setErrorMessage('Veuillez ajouter au moins un service au devis.');
             setIsLoading(false);
             return;
         }
 
-        const total = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
+        const total = calculateTotal(); // Use the existing calculateTotal function
         console.log('--- [DEBUG] handleGenerateQuote: Valeur de selectedCustomer:', selectedCustomer);
 
 
@@ -138,22 +142,28 @@ const Devis = () => {
                 customer: {
                     id: selectedCustomer.id,
                     last_name: selectedCustomer.last_name,
+                    first_name: selectedCustomer.first_name, // Added first_name
                     email: selectedCustomer.email,
                     phone: selectedCustomer.phone
                 },
-                items: items,
+                items: quoteItems.map(item => ({ // Changed 'items' to 'quoteItems' and mapped for API
+                    service_id: item.service_id,
+                    description: item.description,
+                    quantity: item.quantity,
+                    price: item.price,
+                })),
                 total: total,
-                type: 'service_reservation' // ou tout autre type pertinent
+                type: 'service_reservation'
             };
             
             console.log('--- [DEBUG] handleGenerateQuote: Payload envoyé:', payload);
 
             // Fetch from the API endpoint
-            const response = await fetch('/api/create-quote', {  // ✅ Sans slash final
+            const response = await fetch('/api/create-quote', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('admin_password')}`  // ✅ IMPORTANT : Assurez-vous que la clé est correcte
+                    'Authorization': `Bearer ${localStorage.getItem('admin_password')}` 
                 },
                 body: JSON.stringify(payload)
             });
