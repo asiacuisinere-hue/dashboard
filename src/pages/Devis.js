@@ -11,6 +11,9 @@ const Devis = () => {
     const [isSearching, setIsSearching] = useState(false);
     const [existingQuotes, setExistingQuotes] = useState([]); // Liste des devis existants
     const [selectedQuote, setSelectedQuote] = useState(null); // Devis sélectionné pour les détails
+    const [isLoading, setIsLoading] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
+    const [errorMessage, setErrorMessage] = useState('');
 
     // Fetch available services
     const fetchServices = useCallback(async () => {
@@ -78,7 +81,7 @@ const Devis = () => {
 
     const handleSelectCustomer = (customer, type) => {
         setSelectedCustomer({ ...customer, type });
-        setSearchTerm(type === 'client' ? `${customer.last_name} ${customer.first_name}` : customer.nom_entreprise); // Keep name in search bar
+        setSearchTerm(type === 'client' ? `${customer.last_name} ${customer.first_name || ''}`.trim() : customer.nom_entreprise); // Keep name in search bar
         setClients([]);
         setEntreprises([]);
     };
@@ -111,10 +114,6 @@ const Devis = () => {
         return quoteItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     };
 
-    const [isLoading, setIsLoading] = useState(false);
-    const [successMessage, setSuccessMessage] = useState('');
-    const [errorMessage, setErrorMessage] = useState('');
-
     const handleGenerateQuote = async () => {
         setIsLoading(true);
         setErrorMessage('');
@@ -126,15 +125,14 @@ const Devis = () => {
             setIsLoading(false);
             return;
         }
-        if (quoteItems.length === 0) { // Changed 'items' to 'quoteItems'
+        if (quoteItems.length === 0) {
             setErrorMessage('Veuillez ajouter au moins un service au devis.');
             setIsLoading(false);
             return;
         }
 
-        const total = calculateTotal(); // Use the existing calculateTotal function
+        const total = calculateTotal();
         console.log('--- [DEBUG] handleGenerateQuote: Valeur de selectedCustomer:', selectedCustomer);
-
 
         try {
             console.log('--- [DEBUG] handleGenerateQuote: Début du try/catch');
@@ -142,34 +140,32 @@ const Devis = () => {
                 customer: {
                     id: selectedCustomer.id,
                     last_name: selectedCustomer.last_name,
-                    first_name: selectedCustomer.first_name, // Added first_name
+                    first_name: selectedCustomer.first_name,
                     email: selectedCustomer.email,
                     phone: selectedCustomer.phone
                 },
-                items: quoteItems.map(item => ({ // Changed 'items' to 'quoteItems' and mapped for API
+                items: quoteItems.map(item => ({
                     service_id: item.service_id,
                     description: item.description,
                     quantity: item.quantity,
-                    price: item.price,
+                    price: item.price
                 })),
                 total: total,
-                type: 'service_reservation'
+                type: 'service_reservation' // ou tout autre type pertinent
             };
             
             console.log('--- [DEBUG] handleGenerateQuote: Payload envoyé:', payload);
 
-            // Fetch from the API endpoint
             const response = await fetch('/api/create-quote', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('admin_password')}` 
+                    'Authorization': `Bearer ${localStorage.getItem('admin_password')}`
                 },
                 body: JSON.stringify(payload)
             });
             
             console.log('--- [DEBUG] Response status:', response.status);
-            console.log('--- [DEBUG] Response headers:', [...response.headers.entries()]);
             
             if (!response.ok) {
                 const errorText = await response.text();
@@ -177,7 +173,6 @@ const Devis = () => {
                 throw new Error(`Le serveur a retourné une erreur ${response.status}: ${errorText}`);
             }
             
-            // Télécharger le PDF
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -190,6 +185,11 @@ const Devis = () => {
             
             console.log('✅ PDF téléchargé avec succès');
             setSuccessMessage('Devis PDF téléchargé avec succès.');
+            // Reset form
+            setSelectedCustomer(null);
+            setQuoteItems([]);
+            setSearchTerm('');
+            fetchExistingQuotes();
             
         } catch (error) {
             console.error('--- [ERROR] handleGenerateQuote:', error);
@@ -219,7 +219,7 @@ const Devis = () => {
 
     const renderCustomerName = (quote) => {
         if (quote.clients) {
-            return `${quote.clients.last_name} ${quote.clients.first_name}`;
+            return `${quote.clients.last_name} ${quote.clients.first_name || ''}`.trim();
         } else if (quote.entreprises) {
             return quote.entreprises.nom_entreprise;
         }
@@ -233,6 +233,12 @@ const Devis = () => {
             {/* Section de création de nouveau devis */}
             <div style={sectionStyle}>
                 <h2>Créer un nouveau devis</h2>
+
+                {/* Display loading, success, error messages */}
+                {isLoading && <p>Génération du devis en cours...</p>}
+                {successMessage && <p style={{ color: 'green' }}>{successMessage}</p>}
+                {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
+
                 {/* Section de recherche de client */}
                 <div style={subSectionStyle}>
                     <h3>1. Sélectionner un client / une entreprise</h3>
@@ -265,11 +271,11 @@ const Devis = () => {
                         <div style={selectedCustomerStyle}>
                             Client sélectionné: <strong>
                                 {selectedCustomer.type === 'client' ?
-                                    `${selectedCustomer.last_name} ${selectedCustomer.first_name}` :
+                                    `${selectedCustomer.last_name} ${selectedCustomer.first_name || ''}`.trim() :
                                     selectedCustomer.nom_entreprise
                                 }
                             </strong>
-                            <button onClick={() => setSelectedCustomer(null)} style={clearCustomerButtonStyle}>X</button>
+                            <button onClick={() => { setSelectedCustomer(null); setSearchTerm(''); }} style={clearCustomerButtonStyle}>X</button>
                         </div>
                     )}
                 </div>
@@ -350,7 +356,9 @@ const Devis = () => {
                 {/* Section de génération */}
                 <div style={subSectionStyle}>
                     <h3>4. Générer le devis</h3>
-                    <button onClick={handleGenerateQuote} style={generateQuoteButtonStyle}>Générer et Envoyer le Devis</button>
+                    <button onClick={handleGenerateQuote} style={generateQuoteButtonStyle} disabled={isLoading}>
+                        {isLoading ? 'Génération en cours...' : 'Générer et Télécharger le Devis PDF'}
+                    </button>
                 </div>
             </div>
 
@@ -377,7 +385,7 @@ const Devis = () => {
                                     <tr key={quote.id}>
                                         <td style={tdStyle}>{quote.id.substring(0, 8)}</td>
                                         <td style={tdStyle}>{renderCustomerName(quote)}</td>
-                                        <td style={tdStyle}>{new Date(quote.quote_date).toLocaleDateString('fr-FR')}</td>
+                                        <td style={tdStyle}>{new Date(quote.created_at).toLocaleDateString('fr-FR')}</td>
                                         <td style={tdStyle}>{quote.total_amount.toFixed(2)} €</td>
                                         <td style={tdStyle}><span style={statusBadgeStyle(quote.status)}>{quote.status}</span></td>
                                         <td style={tdStyle}>
@@ -466,7 +474,7 @@ const QuoteDetailModal = ({ quote, onClose, onUpdateStatus }) => {
 
                 <div style={detailSectionStyle}>
                     <h3 style={detailTitleStyle}>Informations du Devis</h3>
-                    <p><strong>Date du devis:</strong> {new Date(quote.quote_date).toLocaleDateString('fr-FR')}</p>
+                    <p><strong>Date du devis:</strong> {new Date(quote.created_at).toLocaleDateString('fr-FR')}</p>
                     <p><strong>Statut:</strong> <span style={statusBadgeStyle(quote.status)}>{quote.status}</span></p>
                     <p><strong>Total:</strong> {quote.total_amount.toFixed(2)} €</p>
                 </div>
@@ -492,7 +500,7 @@ const QuoteDetailModal = ({ quote, onClose, onUpdateStatus }) => {
                                 <tbody>
                                     {quoteItems.map(item => (
                                         <tr key={item.id}>
-                                            <td style={tdStyle}>{item.name}</td>
+                                            <td style={tdStyle}>{item.name || 'N/A'}</td>
                                             <td style={tdStyle}>{item.description}</td>
                                             <td style={tdStyle}>{item.quantity}</td>
                                             <td style={tdStyle}>{item.unit_price.toFixed(2)}</td>
@@ -726,11 +734,10 @@ const actionButtonStyle = {
 };
 const statusBadgeStyle = (status) => {
     const colors = {
-        'pending': '#007bff',
-        'sent': '#ffc107',
+        'draft': '#6c757d',
+        'sent': '#17a2b8',
         'accepted': '#28a745',
         'rejected': '#dc3545',
-        'expired': '#6c757d',
     };
     return {
         padding: '4px 8px', borderRadius: '12px',
