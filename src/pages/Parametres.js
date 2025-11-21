@@ -140,6 +140,11 @@ const Parametres = () => {
                     <h2>Gestion des Abonnements</h2>
                     <p>Gérer les demandes et les statuts des abonnements.</p>
                 </Link>
+                <Link to="/admin-account" style={cardStyle}>
+                    <h2>Compte Administrateur</h2>
+                    <p>Gérer les informations de connexion du compte administrateur (changement de mot de passe, etc.).</p>
+                </Link>
+
 
                 {/* Card for Welcome Popup Message */}
                 <div style={cardStyle}>

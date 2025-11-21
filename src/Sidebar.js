@@ -175,6 +175,7 @@ const Sidebar = ({ isMobile, newCount, inProgressCount }) => {
       { to: '/services', label: 'Services' }, // Added Services link
       { to: '/abonnements', label: 'Abonnements' }, // Added Abonnements link
       { to: '/parametres', label: 'Paramètres' },
+      { to: '/admin-account', label: 'Compte Administrateur' }, // Added Admin Account link
     ];
 
     const contentStyle = mobile ? mobileLinkContentStyle : desktopLinkContentStyle;
