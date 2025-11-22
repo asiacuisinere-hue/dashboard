@@ -6,16 +6,17 @@ const Parametres = () => {
     // --- États Généraux ---
     const [status, setStatus] = useState({ message: '', type: 'info' });
 
-    // --- États pour les Informations de l'Entreprise ---
+    // --- États pour les informations de l'entreprise ---
     const [companySettings, setCompanySettings] = useState({
         id: null, name: '', owner: '', address: '', city: '', phone: '', email: '',
         website: '', siret: '', tva_message: '', logo_url: ''
     });
     const [isCompanyLoading, setIsCompanyLoading] = useState(true);
 
-    // --- États pour le Message de Bienvenue ---
+    // --- États pour le Message de Bienvenue et Refusal Template ---
     const [welcomeMessage, setWelcomeMessage] = useState('');
-    const [isWelcomeLoading, setIsWelcomeLoading] = useState(true);
+    const [refusalTemplate, setRefusalTemplate] = useState('');
+    const [isOtherSettingsLoading, setIsOtherSettingsLoading] = useState(true);
 
     // --- États pour la Gestion des Menus ---
     const [menuDecouverte, setMenuDecouverte] = useState('');
@@ -25,6 +26,7 @@ const Parametres = () => {
     const [menuOverrideMessage, setMenuOverrideMessage] = useState('');
     const [menuOverrideEnabled, setMenuOverrideEnabled] = useState(false);
     const [isMenuLoading, setIsMenuLoading] = useState(true);
+
 
     // Fonction générique pour sauvegarder un paramètre unique
     const saveSetting = async (key, value) => {
@@ -42,22 +44,16 @@ const Parametres = () => {
 
     // Fonction pour charger tous les paramètres au montage
     const fetchAllSettings = useCallback(async () => {
-        // 1. Charger les paramètres de l'entreprise (avec contournement pour l'erreur 406)
+        // 1. Charger les paramètres de l'entreprise
         setIsCompanyLoading(true);
         const { data: companyDataArray, error: companyError } = await supabase
-            .from('company_settings')
-            .select('*')
-            .limit(1); // On enlève .single()
+            .from('company_settings').select('*').limit(1);
 
-        if (companyError) {
-            console.error("Erreur chargement infos entreprise:", companyError);
-            setStatus({ message: `Erreur entreprise: ${companyError.message}`, type: 'error' });
-        } else if (companyDataArray && companyDataArray.length > 0) {
-            setCompanySettings(companyDataArray[0]); // On prend le premier élément du tableau
-        }
+        if (companyError) console.error("Erreur chargement infos entreprise:", companyError); 
+        else if (companyDataArray && companyDataArray.length > 0) setCompanySettings(companyDataArray[0]);
         setIsCompanyLoading(false);
 
-        // 2. Charger les autres paramètres (welcome message, etc.)
+        // 2. Charger les autres paramètres (welcome, menus, etc.)
         setIsOtherSettingsLoading(true);
         const { data: settingsData, error: settingsError } = await supabase.from('settings').select('key, value');
         if (settingsError) {
@@ -69,6 +65,7 @@ const Parametres = () => {
                 return acc;
             }, {});
             setWelcomeMessage(settingsMap.welcomePopupMessage || '');
+            setRefusalTemplate(settingsMap.refusalEmailTemplate || '');
             setMenuDecouverte(settingsMap.menu_decouverte || '');
             setMenuStandard(settingsMap.menu_standard || '');
             setMenuConfort(settingsMap.menu_confort || '');
@@ -99,6 +96,7 @@ const Parametres = () => {
     };
 
     const handleSaveMenus = async () => {
+        setStatus({ message: 'Enregistrement...', type: 'info' });
         setIsMenuLoading(true);
         try {
             await Promise.all([
@@ -111,9 +109,10 @@ const Parametres = () => {
             ]);
         } finally {
             setIsMenuLoading(false);
+            setTimeout(() => setStatus({ message: '', type: 'info' }), 3000);
         }
     };
-
+    
     return (
         <div style={containerStyle}>
             <h1>Paramètres</h1>
@@ -122,12 +121,12 @@ const Parametres = () => {
 
             <div style={gridStyle}>
                 <Link to="/calendrier" style={cardStyle}><h2>Gestion du Calendrier</h2><p>Bloquer des dates et des jours.</p></Link>
-                <Link to="/abonnements" style={cardStyle}><h2>Gestion des Abonnements</h2><p>Gérer les demandes d\'abonnements.</p></Link>
+                <Link to="/abonnements" style={cardStyle}><h2>Gestion des Abonnements</h2><p>Gérer les demandes d'abonnements.</p></Link>
                 <Link to="/admin-account" style={cardStyle}><h2>Compte Administrateur</h2><p>Gérer les informations de connexion.</p></Link>
             </div>
 
             <div style={sectionStyle}>
-                <h2>Informations de l\'entreprise</h2>
+                <h2>Informations de l'entreprise</h2>
                 {isCompanyLoading ? <p>Chargement...</p> : (
                     <form onSubmit={handleSaveCompanySettings}>
                         <div style={formGridStyle}>
@@ -148,8 +147,8 @@ const Parametres = () => {
             </div>
 
             <div style={sectionStyle}>
-                <h2>Message d\'accueil (Popup)</h2>
-                {isWelcomeLoading ? <p>Chargement...</p> : (
+                <h2>Message d'accueil (Popup)</h2>
+                {isOtherSettingsLoading ? <p>Chargement...</p> : (
                     <>
                         <textarea value={welcomeMessage} onChange={(e) => setWelcomeMessage(e.target.value)} style={{...inputStyle, height: '100px'}} placeholder="Saisissez le message ici..."/>
                         <button onClick={() => saveSetting('welcomePopupMessage', welcomeMessage)} style={{...saveButtonStyle, alignSelf: 'flex-start', fontSize: '14px'}}>Enregistrer le message</button>
