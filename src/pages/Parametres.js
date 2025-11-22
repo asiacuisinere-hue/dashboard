@@ -89,10 +89,20 @@ const Parametres = () => {
     const handleSaveCompanySettings = async (e) => {
         e.preventDefault();
         setStatus({ message: 'Enregistrement...', type: 'info' });
-        const { id, created_at, ...updateData } = companySettings;
-        const { error } = await supabase.from('company_settings').update(updateData).eq('id', companySettings.id);
-        if (error) setStatus({ message: `Erreur: ${error.message}`, type: 'error' });
-        else setStatus({ message: 'Informations de l\'entreprise enregistrées !', type: 'success' });
+
+        // `upsert` va insérer la ligne si `id` est `null`, 
+        // ou mettre à jour la ligne existante si `id` a une valeur.
+        const { error } = await supabase
+            .from('company_settings')
+            .upsert(companySettings);
+
+        if (error) {
+            setStatus({ message: `Erreur lors de la mise à jour : ${error.message}`, type: 'error' });
+        } else {
+            setStatus({ message: 'Informations de l\'entreprise enregistrées avec succès !', type: 'success' });
+            // Re-fetch les données pour s'assurer que l'UI a le nouvel ID si une création a eu lieu.
+            fetchAllSettings();
+        }
     };
 
     const handleSaveMenus = async () => {
