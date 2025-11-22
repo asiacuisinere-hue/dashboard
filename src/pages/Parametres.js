@@ -42,17 +42,23 @@ const Parametres = () => {
 
     // Fonction pour charger tous les paramètres au montage
     const fetchAllSettings = useCallback(async () => {
-        // 1. Charger les paramètres de l'entreprise
+        // 1. Charger les paramètres de l'entreprise (avec contournement pour l'erreur 406)
         setIsCompanyLoading(true);
-        const { data: companyData, error: companyError } = await supabase
-            .from('company_settings').select('*').limit(1).single();
-        if (companyError && companyError.code !== 'PGRST116') console.error("Erreur chargement infos entreprise:", companyError);
-        else if (companyData) setCompanySettings(companyData);
+        const { data: companyDataArray, error: companyError } = await supabase
+            .from('company_settings')
+            .select('*')
+            .limit(1); // On enlève .single()
+
+        if (companyError) {
+            console.error("Erreur chargement infos entreprise:", companyError);
+            setStatus({ message: `Erreur entreprise: ${companyError.message}`, type: 'error' });
+        } else if (companyDataArray && companyDataArray.length > 0) {
+            setCompanySettings(companyDataArray[0]); // On prend le premier élément du tableau
+        }
         setIsCompanyLoading(false);
 
-        // 2. Charger les autres paramètres (welcome, menus, etc.)
-        setIsWelcomeLoading(true);
-        setIsMenuLoading(true);
+        // 2. Charger les autres paramètres (welcome message, etc.)
+        setIsOtherSettingsLoading(true);
         const { data: settingsData, error: settingsError } = await supabase.from('settings').select('key, value');
         if (settingsError) {
             console.error("Erreur chargement settings:", settingsError);
@@ -70,8 +76,7 @@ const Parametres = () => {
             setMenuOverrideMessage(settingsMap.menu_override_message || '');
             setMenuOverrideEnabled(settingsMap.menu_override_enabled === 'true');
         }
-        setIsWelcomeLoading(false);
-        setIsMenuLoading(false);
+        setIsOtherSettingsLoading(false);
     }, []);
 
     useEffect(() => {
