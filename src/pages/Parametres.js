@@ -29,7 +29,9 @@ const Parametres = () => {
     // Fonction générique pour sauvegarder un paramètre unique
     const saveSetting = async (key, value) => {
         setStatus({ message: 'Enregistrement...', type: 'info' });
-        const { error } = await supabase.from('settings').update({ value }).eq('key', key);
+        // Utilise upsert pour créer la ligne si elle n'existe pas, ou la mettre à jour sinon.
+        // onConflict: 'key' indique à Supabase que la colonne 'key' est l'identifiant unique pour le conflit.
+        const { error } = await supabase.from('settings').upsert({ key, value }, { onConflict: 'key' });
         if (error) {
             setStatus({ message: `Erreur: ${error.message}`, type: 'error' });
         } else {
