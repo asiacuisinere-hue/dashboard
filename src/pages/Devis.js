@@ -177,7 +177,7 @@ const handleGenerateQuote = async () => {
 
         // Télécharger le PDF
         const blob = await response.blob();
-        const quoteId = response.headers.get('X-Quote-Id') || 'nouveau';
+        const quoteId = response.headers.get('X-Document-Number') || 'nouveau';
         
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
