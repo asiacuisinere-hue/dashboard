@@ -3,8 +3,6 @@ import { supabase } from '../supabaseClient'; // Assurez-vous que le chemin est 
 
 const Parametres = () => {
     // State pour les paramètres existants
-    const [welcomeMessage, setWelcomeMessage] = useState('');
-    const [refusalTemplate, setRefusalTemplate] = useState('');
     const [status, setStatus] = useState({ message: '', type: '' });
 
     // State pour les informations de l'entreprise
@@ -40,9 +38,6 @@ const Parametres = () => {
             setCompanySettings(companyData);
         }
         setIsCompanyLoading(false);
-
-        // Charger les autres paramètres (welcome message, etc.)
-        // ... (le code existant pour charger les autres settings peut être ajouté ici si nécessaire)
     }, []);
 
     useEffect(() => {
@@ -75,8 +70,6 @@ const Parametres = () => {
         }
     };
     
-    // ... (Handlers existants pour welcomeMessage et refusalTemplate peuvent être gardés ici)
-
     return (
         <div style={containerStyle}>
             <h1>Paramètres</h1>
@@ -137,7 +130,6 @@ const Parametres = () => {
                 )}
             </div>
 
-            {/* ... (Sections existantes pour Welcome Popup et Refusal Email) ... */}
         </div>
     );
 };
