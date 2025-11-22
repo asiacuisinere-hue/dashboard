@@ -157,6 +157,16 @@ const Parametres = () => {
             </div>
 
             <div style={sectionStyle}>
+                <h2>Modèle e-mail de refus</h2>
+                {isOtherSettingsLoading ? <p>Chargement...</p> : (
+                    <>
+                        <textarea value={refusalTemplate} onChange={(e) => setRefusalTemplate(e.target.value)} style={{...inputStyle, height: '150px'}} placeholder="Saisissez le modèle d'e-mail de refus ici..."/>
+                        <button onClick={() => saveSetting('refusalEmailTemplate', refusalTemplate)} style={{...saveButtonStyle, alignSelf: 'flex-start', fontSize: '14px'}}>Enregistrer le modèle</button>
+                    </>
+                )}
+            </div>
+
+            <div style={sectionStyle}>
                 <h2>Gestion des Menus de la Semaine</h2>
                 {isMenuLoading ? <p>Chargement...</p> : (
                     <>
