@@ -43,39 +43,40 @@ const Parametres = () => {
     };
 
     // Fonction pour charger tous les paramètres au montage
-    const fetchAllSettings = useCallback(async () => {
-        // 1. Charger les paramètres de l'entreprise
-        setIsCompanyLoading(true);
-        const { data: companyDataArray, error: companyError } = await supabase
-            .from('company_settings').select('*').limit(1);
-
-        if (companyError) console.error("Erreur chargement infos entreprise:", companyError); 
-        else if (companyDataArray && companyDataArray.length > 0) setCompanySettings(companyDataArray[0]);
-        setIsCompanyLoading(false);
-
-        // 2. Charger les autres paramètres (welcome, menus, etc.)
-        setIsOtherSettingsLoading(true);
-        const { data: settingsData, error: settingsError } = await supabase.from('settings').select('key, value');
-        if (settingsError) {
-            console.error("Erreur chargement settings:", settingsError);
-            setStatus({ message: `Erreur settings: ${settingsError.message}`, type: 'error' });
-        } else if (settingsData) {
-            const settingsMap = settingsData.reduce((acc, setting) => {
-                acc[setting.key] = setting.value;
-                return acc;
-            }, {});
-            setWelcomeMessage(settingsMap.welcomePopupMessage || '');
-            setRefusalTemplate(settingsMap.refusalEmailTemplate || '');
-            setMenuDecouverte(settingsMap.menu_decouverte || '');
-            setMenuStandard(settingsMap.menu_standard || '');
-            setMenuConfort(settingsMap.menu_confort || '');
-            setMenuDuo(settingsMap.menu_duo || '');
-            setMenuOverrideMessage(settingsMap.menu_override_message || '');
-            setMenuOverrideEnabled(settingsMap.menu_override_enabled === 'true');
-        }
-        setIsOtherSettingsLoading(false);
-    }, []);
-
+        const fetchAllSettings = useCallback(async () => {
+            // 1. Charger les paramètres de l'entreprise
+            setIsCompanyLoading(true);
+            const { data: companyDataArray, error: companyError } = await supabase
+                .from('company_settings').select('*').limit(1);
+    
+            if (companyError) console.error("Erreur chargement infos entreprise:", companyError);
+            else if (companyDataArray && companyDataArray.length > 0) setCompanySettings(companyDataArray[0]);
+            setIsCompanyLoading(false);
+    
+            // 2. Charger les autres paramètres (welcome, menus, etc.)
+            setIsOtherSettingsLoading(true);
+            setIsMenuLoading(true);
+            const { data: settingsData, error: settingsError } = await supabase.from('settings').select('key, value');
+            if (settingsError) {
+                console.error("Erreur chargement settings:", settingsError);
+                setStatus({ message: `Erreur settings: ${settingsError.message}`, type: 'error' });
+            } else if (settingsData) {
+                const settingsMap = settingsData.reduce((acc, setting) => {
+                    acc[setting.key] = setting.value;
+                    return acc;
+                }, {});
+                setWelcomeMessage(settingsMap.welcomePopupMessage || '');
+                setRefusalTemplate(settingsMap.refusalEmailTemplate || '');
+                setMenuDecouverte(settingsMap.menu_decouverte || '');
+                setMenuStandard(settingsMap.menu_standard || '');
+                setMenuConfort(settingsMap.menu_confort || '');
+                setMenuDuo(settingsMap.menu_duo || '');
+                setMenuOverrideMessage(settingsMap.menu_override_message || '');
+                setMenuOverrideEnabled(settingsMap.menu_override_enabled === 'true');
+            }
+            setIsOtherSettingsLoading(false);
+            setIsMenuLoading(false);
+        }, []);
     useEffect(() => {
         fetchAllSettings();
     }, [fetchAllSettings]);
