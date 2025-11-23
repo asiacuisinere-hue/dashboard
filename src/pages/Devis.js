@@ -258,15 +258,17 @@ const handleGenerateQuote = async () => {
 
             if (newStatus === 'accepted') {
                 console.log('--- [DEBUG] handleUpdateQuoteStatus: Le statut est "accepted", tentative de création de la facture...');
-                // Appel de la fonction Cloudflare pour générer la facture
-                const response = await fetch('/create-invoice-from-quote', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${session.access_token}`,
-                    },
-                    body: JSON.stringify({ quoteId: quoteId }),
-                });
+                const response = await fetch(
+                    `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/create-invoice-from-quote`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${session.access_token}`,
+                        },
+                        body: JSON.stringify({ quoteId: quoteId }),
+                    }
+                );
                 console.log('--- [DEBUG] handleUpdateQuoteStatus: Réponse reçue du serveur pour create-invoice-from-quote, statut:', response.status);
 
                 if (!response.ok) {
