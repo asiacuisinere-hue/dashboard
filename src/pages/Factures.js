@@ -11,18 +11,18 @@ const Factures = () => {
         setLoading(true);
         let query = supabase
             .from('invoices')
-            .select(`
-                *,
+            .select(
+                `*,
                 clients (first_name, last_name, email),
-                entreprises (nom_entreprise, contact_name, contact_email)
-            `);
+                entreprises (nom_entreprise, contact_name, contact_email)`
+            );
 
+        // La recherche inter-tables avec .or() est complexe.
+        // Simplifions en ne cherchant que sur un champ qui est dans la table `invoices`
+        // (par exemple, si vous ajoutiez un nom de client en texte brut)
+        // Pour l'instant, la recherche est désactivée si un terme est entré pour éviter les erreurs.
         if (searchTerm) {
-            query = query.or(`
-                clients.last_name.ilike.%${searchTerm}%,
-                clients.first_name.ilike.%${searchTerm}%,
-                entreprises.nom_entreprise.ilike.%${searchTerm}%
-            `);
+             // query = query.ilike('client_name_cache', `%${searchTerm}%`); // Exemple si vous aviez un champ cache
         }
 
         const { data, error } = await query.order('created_at', { ascending: false });
@@ -56,20 +56,7 @@ const Factures = () => {
             console.error('Erreur lors de la mise à jour du statut:', error);
             alert(`Erreur lors de la mise à jour du statut : ${error.message}`);
         } else {
-            console.log(`--- [DEBUG] handleUpdateStatus: Statut mis à jour avec succès à "${newStatus}" (selon Supabase client)`);
-            // Pour recharger et vérifier le statut réel après mise à jour
-            const { data: updatedInvoice, error: refetchError } = await supabase
-                .from('invoices')
-                .select('status')
-                .eq('id', invoiceId)
-                .single();
-            
-            if (refetchError) {
-                console.error('--- [ERROR] handleUpdateStatus: Erreur lors de la relecture de la facture après mise à jour:', refetchError);
-                alert(`Erreur lors de la relecture de la facture : ${refetchError.message}`);
-            } else {
-                console.log(`--- [DEBUG] handleUpdateStatus: Statut réel de la facture ${invoiceId.substring(0, 8)} après relecture: "${updatedInvoice.status}"`);
-            }
+            console.log(`--- [DEBUG] handleUpdateStatus: Statut mis à jour avec succès à "${newStatus}"`);
             alert(`Statut de la facture ${invoiceId.substring(0, 8)} mis à jour à "${newStatus}".`);
             fetchInvoices(); // Rafraîchir la liste des factures
             setSelectedInvoice(null); // Fermer la modale si ouverte
@@ -86,7 +73,7 @@ const Factures = () => {
     };
 
     if (loading) {
-        return <div>Chargement des factures...</div>;
+        return <div style={containerStyle}>Chargement des factures...</div>;
     }
 
     return (
@@ -97,7 +84,7 @@ const Factures = () => {
             <div style={filterContainerStyle}>
                 <input
                     type="text"
-                    placeholder="Rechercher par nom client/entreprise..."
+                    placeholder="Rechercher..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     style={filterInputStyle}
@@ -123,7 +110,7 @@ const Factures = () => {
                             <tr key={invoice.id}>
                                 <td style={tdStyle}>{invoice.id.substring(0, 8)}</td>
                                 <td style={tdStyle}>{renderCustomerName(invoice)}</td>
-                                <td style={tdStyle}>{new Date(invoice.invoice_date).toLocaleDateString('fr-FR')}</td>
+                                <td style={tdStyle}>{new Date(invoice.created_at).toLocaleDateString('fr-FR')}</td>
                                 <td style={tdStyle}>{invoice.total_amount.toFixed(2)} €</td>
                                 <td style={tdStyle}><span style={statusBadgeStyle(invoice.status)}>{invoice.status}</span></td>
                                 <td style={tdStyle}>
@@ -155,10 +142,8 @@ const Factures = () => {
     );
 };
 
-// --- Invoice Detail Modal Component (À adapter si nécessaire) ---
+// --- Invoice Detail Modal Component ---
 const InvoiceDetailModal = ({ invoice, onClose, onUpdateStatus }) => {
-    // Supposons que les détails des items de la facture proviennent d'une table invoice_items
-    // Pour l'instant, on va juste afficher les infos de base
     const renderCustomerInfo = () => {
         if (invoice.clients) {
             return (
@@ -179,6 +164,11 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdateStatus }) => {
         return <p>Informations client non disponibles.</p>;
     };
 
+    const handleSendInvoice = () => {
+        alert('Fonctionnalité d\'envoi par email à implémenter.');
+        // Ici, vous appellerez une future fonction serveur
+    };
+
     return (
         <div style={modalOverlayStyle}>
             <div style={modalContentStyle}>
@@ -192,12 +182,43 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdateStatus }) => {
 
                 <div style={detailSectionStyle}>
                     <h3 style={detailTitleStyle}>Informations de la Facture</h3>
-                    <p><strong>Date de la facture:</strong> {new Date(invoice.invoice_date).toLocaleDateString('fr-FR')}</p>
+                    <p><strong>Date de la facture:</strong> {new Date(invoice.created_at).toLocaleDateString('fr-FR')}</p>
                     <p><strong>Montant Total:</strong> {invoice.total_amount.toFixed(2)} €</p>
                     <p><strong>Statut:</strong> <span style={statusBadgeStyle(invoice.status)}>{invoice.status}</span></p>
                 </div>
 
+                <div style={detailSectionStyle}>
+                    <h3 style={detailTitleStyle}>Services inclus</h3>
+                    {invoice.items && invoice.items.length > 0 ? (
+                        <div style={tableContainerStyle}>
+                            <table style={tableStyle}>
+                                <thead>
+                                    <tr>
+                                        <th style={thStyle}>Description</th>
+                                        <th style={thStyle}>Qté</th>
+                                        <th style={thStyle}>Prix U. (€)</th>
+                                        <th style={thStyle}>Total (€)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {invoice.items.map((item, index) => (
+                                        <tr key={index}>
+                                            <td style={tdStyle}>{item.name || item.description}</td>
+                                            <td style={tdStyle}>{item.quantity}</td>
+                                            <td style={tdStyle}>{item.price.toFixed(2)}</td>
+                                            <td style={tdStyle}>{(item.quantity * item.price).toFixed(2)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                        <p>Aucun service détaillé.</p>
+                    )}
+                </div>
+
                 <div style={modalActionsStyle}>
+                    <button onClick={handleSendInvoice} style={{ ...actionButtonStyle, backgroundColor: '#17a2b8' }}>Envoyer par mail</button>
                     {invoice.status === 'pending' && (
                         <>
                             <button onClick={() => onUpdateStatus(invoice.id, 'deposit_paid')} style={{ ...actionButtonStyle, backgroundColor: '#007bff' }}>Acompte versé</button>
