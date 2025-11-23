@@ -49,7 +49,7 @@ const Factures = () => {
         
         const { error } = await supabase
             .from('invoices')
-            .update({ status: newStatus, updated_at: new Date().toISOString() })
+            .update({ status: newStatus })
             .eq('id', invoiceId);
 
         if (error) {
