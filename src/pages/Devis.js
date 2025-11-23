@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { useLocation } from 'react-router-dom';
 
 const Devis = () => {
     const location = useLocation();
+    const navigate = useNavigate(); // ADDED: Initialize useNavigate
     const prefilledCustomer = location.state?.customer;
+
     const [clients, setClients] = useState([]);
     const [entreprises, setEntreprises] = useState([]);
     const [searchTerm, setSearchTerm] = useState(''); // Search term for customer selection
@@ -46,6 +48,7 @@ const Devis = () => {
     }, [prefilledCustomer, selectedCustomer, setSearchTerm, setSelectedCustomer]);
 
     const fetchExistingQuotes = useCallback(async () => {
+        setIsLoading(true);
         let query = supabase.from('quotes').select(`
             *,
             clients (first_name, last_name),
@@ -73,6 +76,7 @@ const Devis = () => {
         } else {
             setExistingQuotes(data);
         }
+        setIsLoading(false);
     }, [quoteSearchTerm, statusFilter]);
 
     useEffect(() => {
@@ -86,7 +90,7 @@ const Devis = () => {
         }, 500);
 
         return () => clearTimeout(timer);
-    }, [fetchExistingQuotes]);
+    }, [fetchExistingQuotes]); // Removed quoteSearchTerm and statusFilter from deps as fetchExistingQuotes already depends on them.
 
     // Search clients and entreprises
     const handleSearch = useCallback(async () => {
@@ -202,12 +206,12 @@ const handleGenerateQuote = async () => {
 
         // Télécharger le PDF
         const blob = await response.blob();
-        const quoteId = response.headers.get('X-Document-Number') || 'nouveau';
+        const documentNumber = response.headers.get('X-Document-Number') || 'devis-nouveau';
         
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `devis-${quoteId}.pdf`; // Removed .substring(0, 8)
+        a.download = `devis-${documentNumber}.pdf`; // Removed .substring(0, 8)
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
@@ -233,18 +237,45 @@ const handleGenerateQuote = async () => {
         if (!window.confirm(`Confirmer le changement de statut du devis ${quoteId.substring(0, 8)} à "${newStatus}" ?`)) {
             return;
         }
-        const { error } = await supabase
+
+        // 1. Update the quote status
+        const { error: updateError } = await supabase
             .from('quotes')
             .update({ status: newStatus, updated_at: new Date().toISOString() })
             .eq('id', quoteId);
 
-        if (error) {
-            alert(`Erreur lors de la mise à jour du statut : ${error.message}`);
-        } else {
-            alert(`Statut du devis ${quoteId.substring(0, 8)} mis à jour à "${newStatus}".`);
-            fetchExistingQuotes(); // Refresh the list
-            setSelectedQuote(null); // Close details if open
+        if (updateError) {
+            alert(`Erreur lors de la mise à jour du statut : ${updateError.message}`);
+            return;
         }
+
+        alert(`Statut du devis ${quoteId} mis à jour à "${newStatus}".`);
+
+        // 2. If the quote is accepted, create an invoice
+        if (newStatus === 'accepted') {
+            try {
+                const response = await fetch('/api/create-invoice-from-quote', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ quoteId: quoteId }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.details || 'Erreur inconnue lors de la création de la facture.');
+                }
+
+                const result = await response.json();
+                alert(`Facture ${result.invoiceId} créée avec succès à partir du devis.`);
+
+            } catch (error) {
+                alert(`Erreur lors de la création de la facture : ${error.message}`);
+            }
+        }
+
+        // 3. Refresh the list and close modal
+        fetchExistingQuotes();
+        setSelectedQuote(null);
     };
 
     const renderCustomerName = (quote) => {
@@ -260,14 +291,14 @@ const handleGenerateQuote = async () => {
         <div style={containerStyle}>
             <h1>Gestion des Devis</h1>
 
+            {/* Display loading, success, error messages */}
+            {isLoading && <p>Génération du devis en cours...</p>}
+            {successMessage && <p style={{ color: 'green' }}>{successMessage}</p>}
+            {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
+
             {/* Section de création de nouveau devis */}
             <div style={sectionStyle}>
                 <h2>Créer un nouveau devis</h2>
-
-                {/* Display loading, success, error messages */}
-                {isLoading && <p>Génération du devis en cours...</p>}
-                {successMessage && <p style={{ color: 'green' }}>{successMessage}</p>}
-                {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
 
                 {/* Section de recherche de client */}
                 <div style={subSectionStyle}>
@@ -412,7 +443,7 @@ const handleGenerateQuote = async () => {
                     </select>
                 </div>
                                 
-                                {existingQuotes.length === 0 ? (
+                {existingQuotes.length === 0 ? (
                     <p>Aucun devis existant.</p>
                 ) : (
                     <div style={tableContainerStyle}>
@@ -437,12 +468,6 @@ const handleGenerateQuote = async () => {
                                         <td style={tdStyle}><span style={statusBadgeStyle(quote.status)}>{quote.status}</span></td>
                                         <td style={tdStyle}>
                                             <button onClick={() => setSelectedQuote(quote)} style={detailsButtonStyle}>Voir Détails</button>
-                                            {quote.status === 'sent' && (
-                                                <>
-                                                    <button onClick={() => handleUpdateQuoteStatus(quote.id, 'accepted')} style={{ ...actionButtonStyle, backgroundColor: '#28a745', marginLeft: '5px' }}>Accepter</button>
-                                                    <button onClick={() => handleUpdateQuoteStatus(quote.id, 'rejected')} style={{ ...actionButtonStyle, backgroundColor: '#dc3545', marginLeft: '5px' }}>Refuser</button>
-                                                </>
-                                            )}
                                         </td>
                                     </tr>
                                 ))}
@@ -766,8 +791,9 @@ const closeButtonStyle = {
 const detailSectionStyle = { 
     marginBottom: '20px', 
     paddingBottom: '20px', 
-    borderBottom: '1px solid #f0f0f0' 
+    borderBottom: '1px solid #f0f0f0',
 };
+
 const detailTitleStyle = { 
     fontSize: '18px', 
     color: '#d4af37', 
