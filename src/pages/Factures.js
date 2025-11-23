@@ -164,9 +164,32 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdateStatus }) => {
         return <p>Informations client non disponibles.</p>;
     };
 
-    const handleSendInvoice = () => {
-        alert('Fonctionnalité d\'envoi par email à implémenter.');
-        // Ici, vous appellerez une future fonction serveur
+    const handleSendInvoice = async () => {
+        if (!window.confirm('Confirmer l\'envoi de la facture par email ?')) return;
+
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) throw new Error("Utilisateur non authentifié.");
+
+            const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/send-invoice`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify({ invoiceId: invoice.id }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Erreur lors de l\'envoi de la facture.');
+            }
+
+            alert('Facture envoyée avec succès !');
+        } catch (error) {
+            console.error('Error sending invoice:', error);
+            alert(`Erreur: ${error.message}`);
+        }
     };
 
     return (
