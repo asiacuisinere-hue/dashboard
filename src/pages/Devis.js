@@ -261,14 +261,14 @@ const handleGenerateQuote = async () => {
         if (newStatus === 'accepted') {
             console.log('--- [DEBUG] handleUpdateQuoteStatus: Le statut est "accepted", tentative de création de la facture...');
             try {
-                const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/create-invoice-from-quote`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${process.env.REACT_APP_SUPABASE_ANON_KEY}`,
-                    },
-                    body: JSON.stringify({ quoteId: quoteId }),
-                });
+            const response = await fetch('/api/create-invoice-from-quote', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`, // Make sure session is available
+                },
+                body: JSON.stringify({ quoteId: quoteId }),
+            });
 
                 console.log('--- [DEBUG] handleUpdateQuoteStatus: Réponse reçue du serveur, statut:', response.status);
 
