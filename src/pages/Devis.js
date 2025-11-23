@@ -278,6 +278,7 @@ const handleGenerateQuote = async () => {
                 const result = await response.json();
                 console.log('--- [DEBUG] handleUpdateQuoteStatus: Facture créée avec succès, résultat:', result);
                 alert(`Devis ${quoteId.substring(0, 8)} accepté et facture générée !`);
+                navigate('/factures'); // Redirect to invoices page
             } else {
                 alert(`Statut du devis ${quoteId.substring(0, 8)} mis à jour à "${newStatus}".`);
             }
