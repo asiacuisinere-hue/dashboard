@@ -411,23 +411,8 @@ const handleGenerateQuote = async () => {
                         <option value="rejected">Refusé</option>
                     </select>
                 </div>
-                <div style={filterContainerStyle}>
-                    <input
-                        type="text"
-                        placeholder="Rechercher par N° ou client..."
-                        value={quoteSearchTerm}
-                        onChange={(e) => setQuoteSearchTerm(e.target.value)}
-                        style={inputStyle}
-                    />
-                    <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={inputStyle}>
-                        <option value="all">Tous les statuts</option>
-                        <option value="draft">Brouillon</option>
-                        <option value="sent">Envoyé</option>
-                        <option value="accepted">Accepté</option>
-                        <option value="rejected">Refusé</option>
-                    </select>
-                </div>
-                {existingQuotes.length === 0 ? (
+                                
+                                {existingQuotes.length === 0 ? (
                     <p>Aucun devis existant.</p>
                 ) : (
                     <div style={tableContainerStyle}>
