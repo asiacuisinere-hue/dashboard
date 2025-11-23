@@ -552,7 +552,7 @@ const QuoteDetailModal = ({ quote, onClose, onUpdateStatus }) => {
         <div style={modalOverlayStyle}>
             <div style={modalContentStyle}>
                 <button onClick={onClose} style={closeButtonStyle}>&times;</button>
-                <h2 style={{ borderBottom: '2px solid #eee', paddingBottom: '10px', marginBottom: '20px' }}>Détails du Devis #{quote.id.substring(0, 8)}</h2>
+                <h2 style={{ borderBottom: '2px solid #eee', paddingBottom: '10px', marginBottom: '20px' }}>Détails du Devis #{quote.document_number || quote.id.substring(0, 8)}</h2>
                 
                 <div style={detailSectionStyle}>
                     <h3 style={detailTitleStyle}>Client / Entreprise</h3>
