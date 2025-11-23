@@ -5,21 +5,20 @@ import { useLocation } from 'react-router-dom';
 const Devis = () => {
     const [clients, setClients] = useState([]);
     const [entreprises, setEntreprises] = useState([]);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [selectedCustomer, setSelectedCustomer] = useState(null); // Peut être un client ou une entreprise
+    const [searchTerm, setSearchTerm] = useState(''); // Search term for customer selection
+    const [selectedCustomer, setSelectedCustomer] = useState(null); // Selected customer for new quote
+    const [services, setServices] = useState([]); // Available services for new quote
+    const [quoteItems, setQuoteItems] = useState([]); // Items for the new quote
+    const [isSearching, setIsSearching] = useState(false); // Loading state for customer search
+    
+    // --- State for existing quotes list ---
+    const [existingQuotes, setExistingQuotes] = useState([]); // Raw list of existing quotes
+    const [selectedQuote, setSelectedQuote] = useState(null); // Selected quote for detail modal
+    const [quoteSearchTerm, setQuoteSearchTerm] = useState(''); // Search term for existing quotes table
+    const [statusFilter, setStatusFilter] = useState('all'); // Status filter for existing quotes table
 
-    const location = useLocation();
-    const { customer: prefilledCustomer } = location.state || {};
-    const [services, setServices] = useState([]); // Services disponibles
-    const [quoteItems, setQuoteItems] = useState([]); // Lignes du devis pour le nouveau devis
-    const [isSearching, setIsSearching] = useState(false);
-    const [existingQuotes, setExistingQuotes] = useState([]); // Liste des devis existants
-    const [selectedQuote, setSelectedQuote] = useState(null);
-    const [quoteSearchTerm, setQuoteSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState('all'); // Devis sélectionné pour les détails
-    const [quoteSearchTerm, setQuoteSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState('all');
-    const [isLoading, setIsLoading] = useState(false);
+    // --- General component states ---
+    const [isLoading, setIsLoading] = useState(false); // General loading state
     const [successMessage, setSuccessMessage] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
 
