@@ -3,6 +3,8 @@ import { supabase } from '../supabaseClient';
 import { useLocation } from 'react-router-dom';
 
 const Devis = () => {
+    const location = useLocation();
+    const prefilledCustomer = location.state?.customer;
     const [clients, setClients] = useState([]);
     const [entreprises, setEntreprises] = useState([]);
     const [searchTerm, setSearchTerm] = useState(''); // Search term for customer selection
