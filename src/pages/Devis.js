@@ -388,7 +388,7 @@ const handleGenerateQuote = async () => {
                             <tbody>
                                 {existingQuotes.map(quote => (
                                     <tr key={quote.id}>
-                                        <td style={tdStyle}>{quote.id.substring(0, 8)}</td>
+                                        <td style={tdStyle}>{quote.document_number}</td>
                                         <td style={tdStyle}>{renderCustomerName(quote)}</td>
                                         <td style={tdStyle}>{new Date(quote.created_at).toLocaleDateString('fr-FR')}</td>
                                         <td style={tdStyle}>{quote.total_amount.toFixed(2)} €</td>
