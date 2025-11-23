@@ -275,11 +275,19 @@ const handleGenerateQuote = async () => {
                     throw new Error(errorData.details || 'Erreur inconnue lors de la création de la facture.');
                 }
 
-                const result = await response.json();
-                console.log('--- [DEBUG] handleUpdateQuoteStatus: Facture créée avec succès, résultat:', result);
-                alert(`Facture ${result.invoiceId} créée avec succès à partir du devis.`);
+                                const result = await response.json();
 
-            } catch (error) {
+                                console.log('--- [DEBUG] handleUpdateQuoteStatus: Facture créée avec succès, résultat:', result);
+
+                                alert(`Facture ${result.invoiceId} créée avec succès à partir du devis.`);
+
+                                
+
+                                // Rediriger vers la page des factures
+
+                                navigate('/factures');
+
+                            } catch (error) {
                 console.error('--- [ERREUR] handleUpdateQuoteStatus: Erreur capturée dans le catch de création de facture:', error);
                 alert(`Erreur lors de la création de la facture : ${error.message}`);
             }
