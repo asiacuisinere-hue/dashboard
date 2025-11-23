@@ -15,6 +15,8 @@ const Devis = () => {
     const [isSearching, setIsSearching] = useState(false);
     const [existingQuotes, setExistingQuotes] = useState([]); // Liste des devis existants
     const [selectedQuote, setSelectedQuote] = useState(null); // Devis sélectionné pour les détails
+    const [quoteSearchTerm, setQuoteSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
     const [isLoading, setIsLoading] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
@@ -42,26 +44,49 @@ const Devis = () => {
 
     // Fetch existing quotes
     const fetchExistingQuotes = useCallback(async () => {
-        const { data, error } = await supabase
-            .from('quotes')
-            .select(`
-                *,
-                clients (first_name, last_name, email),
-                entreprises (nom_entreprise, contact_name, contact_email)
-            `)
-            .order('created_at', { ascending: false });
+        setIsLoading(true);
+        let query = supabase.from('quotes').select(`
+            *,
+            clients (first_name, last_name),
+            entreprises (nom_entreprise)
+        `).order('created_at', { ascending: false });
+
+        if (statusFilter && statusFilter !== 'all') {
+            query = query.eq('status', statusFilter);
+        }
+
+        if (quoteSearchTerm) {
+            const searchTerm = `%${quoteSearchTerm}%`;
+            query = query.or(
+                `document_number.ilike.${searchTerm}`,
+                `clients.last_name.ilike.${searchTerm}`,
+                `entreprises.nom_entreprise.ilike.${searchTerm}`
+            );
+        }
+
+        const { data, error } = await query;
 
         if (error) {
             console.error('Error fetching existing quotes:', error);
+            setErrorMessage('Erreur lors du chargement des devis.');
         } else {
             setExistingQuotes(data);
         }
-    }, []);
+        setIsLoading(false);
+    }, [quoteSearchTerm, statusFilter]);
 
     useEffect(() => {
         fetchServices();
-        fetchExistingQuotes();
-    }, [fetchServices, fetchExistingQuotes]);
+    }, [fetchServices]);
+
+    useEffect(() => {
+        // Debounce search input to avoid excessive API calls
+        const timer = setTimeout(() => {
+            fetchExistingQuotes();
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [quoteSearchTerm, statusFilter, fetchExistingQuotes]);
 
     // Search clients and entreprises
     const handleSearch = useCallback(async () => {
@@ -370,6 +395,22 @@ const handleGenerateQuote = async () => {
             {/* Section des devis existants */}
             <div style={sectionStyle}>
                 <h2>Devis existants</h2>
+                <div style={filterContainerStyle}>
+                    <input
+                        type="text"
+                        placeholder="Rechercher par N° ou client..."
+                        value={quoteSearchTerm}
+                        onChange={(e) => setQuoteSearchTerm(e.target.value)}
+                        style={inputStyle}
+                    />
+                    <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={inputStyle}>
+                        <option value="all">Tous les statuts</option>
+                        <option value="draft">Brouillon</option>
+                        <option value="sent">Envoyé</option>
+                        <option value="accepted">Accepté</option>
+                        <option value="rejected">Refusé</option>
+                    </select>
+                </div>
                 {existingQuotes.length === 0 ? (
                     <p>Aucun devis existant.</p>
                 ) : (
