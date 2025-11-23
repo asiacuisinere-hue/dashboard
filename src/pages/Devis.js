@@ -234,72 +234,60 @@ const handleGenerateQuote = async () => {
 };
 
     const handleUpdateQuoteStatus = async (quoteId, newStatus) => {
-        console.log(`--- [DEBUG] handleUpdateQuoteStatus: Démarrage pour devis ${quoteId} avec statut ${newStatus}`);
-
+        console.log('--- [DEBUG] handleUpdateQuoteStatus: Démarrage pour devis', quoteId, 'avec statut', newStatus);
         if (!window.confirm(`Confirmer le changement de statut du devis ${quoteId.substring(0, 8)} à "${newStatus}" ?`)) {
-            console.log('--- [DEBUG] handleUpdateQuoteStatus: Annulé par l\'utilisateur.');
             return;
         }
 
-        // 1. Update the quote status
-        console.log('--- [DEBUG] handleUpdateQuoteStatus: Mise à jour du statut dans Supabase...');
-        const { error: updateError } = await supabase
-            .from('quotes')
-            .update({ status: newStatus, updated_at: new Date().toISOString() })
-            .eq('id', quoteId);
-
-        if (updateError) {
-            console.error('--- [ERREUR] handleUpdateQuoteStatus: Erreur lors de la mise à jour du statut:', updateError);
-            alert(`Erreur lors de la mise à jour du statut : ${updateError.message}`);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+            alert("Utilisateur non authentifié.");
             return;
         }
+        console.log('--- [DEBUG] handleUpdateQuoteStatus: Session authentifiée.');
 
-        console.log('--- [DEBUG] handleUpdateQuoteStatus: Statut mis à jour avec succès.');
-        alert(`Statut du devis ${quoteId} mis à jour à "${newStatus}".`);
+        try {
+            console.log('--- [DEBUG] handleUpdateQuoteStatus: Mise à jour du statut dans Supabase...');
+            const { error: updateError } = await supabase
+                .from('quotes')
+                .update({ status: newStatus, updated_at: new Date().toISOString() })
+                .eq('id', quoteId);
 
-        // 2. If the quote is accepted, create an invoice
-        if (newStatus === 'accepted') {
-            console.log('--- [DEBUG] handleUpdateQuoteStatus: Le statut est "accepted", tentative de création de la facture...');
-            try {
-            const response = await fetch('/api/create-invoice-from-quote', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session.access_token}`, // Make sure session is available
-                },
-                body: JSON.stringify({ quoteId: quoteId }),
-            });
+            if (updateError) throw updateError;
+            console.log('--- [DEBUG] handleUpdateQuoteStatus: Statut mis à jour avec succès.');
 
-                console.log('--- [DEBUG] handleUpdateQuoteStatus: Réponse reçue du serveur, statut:', response.status);
+            if (newStatus === 'accepted') {
+                console.log('--- [DEBUG] handleUpdateQuoteStatus: Le statut est "accepted", tentative de création de la facture...');
+                // Appel de la fonction Cloudflare pour générer la facture
+                const response = await fetch('/api/create-invoice-from-quote', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session.access_token}`,
+                    },
+                    body: JSON.stringify({ quoteId: quoteId }),
+                });
+                console.log('--- [DEBUG] handleUpdateQuoteStatus: Réponse reçue du serveur pour create-invoice-from-quote, statut:', response.status);
 
                 if (!response.ok) {
                     const errorData = await response.json();
-                    console.error('--- [ERREUR] handleUpdateQuoteStatus: Réponse non-OK de create-invoice-from-quote:', errorData);
+                    console.error('--- [ERREUR] handleUpdateQuoteStatus: Réponse non-OK de create-invoice-from-quote', errorData);
                     throw new Error(errorData.details || 'Erreur inconnue lors de la création de la facture.');
                 }
 
-                                const result = await response.json();
-
-                                console.log('--- [DEBUG] handleUpdateQuoteStatus: Facture créée avec succès, résultat:', result);
-
-                                alert(`Facture ${result.invoiceId} créée avec succès à partir du devis.`);
-
-                                
-
-                                // Rediriger vers la page des factures
-
-                                navigate('/factures');
-
-                            } catch (error) {
-                console.error('--- [ERREUR] handleUpdateQuoteStatus: Erreur capturée dans le catch de création de facture:', error);
-                alert(`Erreur lors de la création de la facture : ${error.message}`);
+                const result = await response.json();
+                console.log('--- [DEBUG] handleUpdateQuoteStatus: Facture créée avec succès, résultat:', result);
+                alert(`Devis ${quoteId.substring(0, 8)} accepté et facture générée !`);
+            } else {
+                alert(`Statut du devis ${quoteId.substring(0, 8)} mis à jour à "${newStatus}".`);
             }
-        }
+            fetchExistingQuotes(); // Refresh the list
+            setSelectedQuote(null); // Close details if open
 
-        // 3. Refresh the list and close modal
-        console.log('--- [DEBUG] handleUpdateQuoteStatus: Rafraîchissement de la liste des devis.');
-        fetchExistingQuotes();
-        setSelectedQuote(null);
+        } catch (error) {
+            console.error('--- [ERREUR] handleUpdateQuoteStatus: Erreur capturée dans le catch de création de facture:', error);
+            alert(`Erreur lors de la mise à jour du statut ou de la génération de facture : ${error.message}`);
+        }
     };
 
     const renderCustomerName = (quote) => {
