@@ -171,7 +171,7 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdateStatus }) => {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) throw new Error("Utilisateur non authentifié.");
 
-            const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/send-invoice`, {
+            const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/send-invoice-by-email`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
