@@ -182,7 +182,7 @@ const handleGenerateQuote = async () => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `devis-${quoteId.substring(0, 8)}.pdf`;
+        a.download = `devis-${quoteId}.pdf`; // Removed .substring(0, 8)
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
