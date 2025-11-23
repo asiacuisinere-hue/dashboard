@@ -14,7 +14,9 @@ const Devis = () => {
     const [quoteItems, setQuoteItems] = useState([]); // Lignes du devis pour le nouveau devis
     const [isSearching, setIsSearching] = useState(false);
     const [existingQuotes, setExistingQuotes] = useState([]); // Liste des devis existants
-    const [selectedQuote, setSelectedQuote] = useState(null); // Devis sélectionné pour les détails
+    const [selectedQuote, setSelectedQuote] = useState(null);
+    const [quoteSearchTerm, setQuoteSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all'); // Devis sélectionné pour les détails
     const [quoteSearchTerm, setQuoteSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [isLoading, setIsLoading] = useState(false);
@@ -42,9 +44,7 @@ const Devis = () => {
         }
     }, [prefilledCustomer, selectedCustomer, setSearchTerm, setSelectedCustomer]);
 
-    // Fetch existing quotes
     const fetchExistingQuotes = useCallback(async () => {
-        setIsLoading(true);
         let query = supabase.from('quotes').select(`
             *,
             clients (first_name, last_name),
@@ -72,7 +72,6 @@ const Devis = () => {
         } else {
             setExistingQuotes(data);
         }
-        setIsLoading(false);
     }, [quoteSearchTerm, statusFilter]);
 
     useEffect(() => {
@@ -86,7 +85,7 @@ const Devis = () => {
         }, 500);
 
         return () => clearTimeout(timer);
-    }, [quoteSearchTerm, statusFilter, fetchExistingQuotes]);
+    }, [fetchExistingQuotes]);
 
     // Search clients and entreprises
     const handleSearch = useCallback(async () => {
@@ -411,6 +410,22 @@ const handleGenerateQuote = async () => {
                         <option value="rejected">Refusé</option>
                     </select>
                 </div>
+                <div style={filterContainerStyle}>
+                    <input
+                        type="text"
+                        placeholder="Rechercher par N° ou client..."
+                        value={quoteSearchTerm}
+                        onChange={(e) => setQuoteSearchTerm(e.target.value)}
+                        style={inputStyle}
+                    />
+                    <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={inputStyle}>
+                        <option value="all">Tous les statuts</option>
+                        <option value="draft">Brouillon</option>
+                        <option value="sent">Envoyé</option>
+                        <option value="accepted">Accepté</option>
+                        <option value="rejected">Refusé</option>
+                    </select>
+                </div>
                 {existingQuotes.length === 0 ? (
                     <p>Aucun devis existant.</p>
                 ) : (
@@ -587,6 +602,8 @@ const sectionStyle = {
     boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
     marginBottom: '30px',
 };
+
+const filterContainerStyle = { display: 'flex', gap: '15px', marginBottom: '20px' };
 
 const subSectionStyle = {
     marginBottom: '20px',
