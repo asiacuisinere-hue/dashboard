@@ -39,7 +39,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
     const clientInfoWithTag = clientInfo ? { ...clientInfo, type: demande.clients ? 'client' : 'entreprise' } : null;
 
     const handleRedirectToCreateQuote = async () => {
-        console.log('--- [DEBUG] Type de demande au clic sur "Créer Devis":', demande.type); // Ligne de débogage
+        console.log('--- [DEBUG] Type de demande au clic sur "Créer Devis":', demande.type);
 
         if (!clientInfoWithTag) {
             alert('Impossible de continuer : aucune information client trouvée.');
@@ -52,25 +52,50 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
             if (!window.confirm("Cette action va générer la facture pour cette commande. Continuer ?")) return;
 
             try {
-                // Note: You might want a loading state here
-                const response = await fetch('/functions/generate-document', {
+                console.log('[DEBUG] Calling API with demande ID:', demande.id);
+                
+                const response = await fetch('https://gestion.asiacuisine.re/functions/generate-document', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ demandeId: demande.id, documentType: 'Facture', sendEmail: false })
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/pdf'
+                    },
+                    body: JSON.stringify({ 
+                        demandeId: demande.id, 
+                        documentType: 'Facture', 
+                        sendEmail: false 
+                    })
                 });
 
+                console.log('[DEBUG] Response status:', response.status);
+                console.log('[DEBUG] Response headers:', [...response.headers.entries()]);
+
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Erreur lors de la génération du document.');
+                    // Try to get error message
+                    let errorMessage = 'Erreur lors de la génération du document.';
+                    const contentType = response.headers.get('content-type');
+                    
+                    if (contentType && contentType.includes('application/json')) {
+                        const errorData = await response.json();
+                        errorMessage = errorData.error || errorData.details || errorMessage;
+                    } else {
+                        const errorText = await response.text();
+                        console.error('[DEBUG] Error response text:', errorText);
+                        errorMessage = `Erreur ${response.status}: ${response.statusText}`;
+                    }
+                    
+                    throw new Error(errorMessage);
                 }
                 
                 const blob = await response.blob();
                 const contentDisposition = response.headers.get('Content-Disposition');
-                let filename = `facture-commande.pdf`;
+                let filename = `facture-commande-${demande.id.substring(0, 8)}.pdf`;
+                
                 if (contentDisposition) {
-                    const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
-                    if (filenameMatch && filenameMatch.length === 2)
-                        filename = filenameMatch[1];
+                    const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                    if (filenameMatch && filenameMatch[1]) {
+                        filename = filenameMatch[1].replace(/['"]/g, '');
+                    }
                 }
 
                 const url = window.URL.createObjectURL(blob);
@@ -82,15 +107,16 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
 
-                alert('Document généré et téléchargé.');
+                alert('Document généré et téléchargé avec succès.');
                 onClose();
 
             } catch (error) {
-                console.error('Erreur auto-génération document:', error);
-                alert(`Erreur: ${error.message}`);
+                console.error('[ERROR] Auto-génération document:', error);
+                alert(`Erreur: ${error.message}\n\nVérifiez que la fonction Cloudflare est déployée correctement.`);
             }
 
-        } else { // Pour les autres types (ex: RESERVATION_SERVICE), rediriger vers la page de devis
+        } else {
+            // Pour les autres types (ex: RESERVATION_SERVICE), rediriger vers la page de devis
             navigate('/devis', { state: { customer: clientInfoWithTag, demandeId: demande.id } });
             onClose();
         }
