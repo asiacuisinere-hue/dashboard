@@ -43,20 +43,18 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                     body: JSON.stringify({ demandeId: demande.id })
                 });
 
-                if (!response.ok) throw new Error('Erreur de génération du PDF.');
-
-                const blob = await response.blob();
-                const contentDisposition = response.headers.get('Content-Disposition');
-                let filename = `facture-commande.pdf`;
-                if (contentDisposition) {
-                    const filenameMatch = contentDisposition.match(/filename="(.+)"/);
-                    if (filenameMatch && filenameMatch[1]) filename = filenameMatch[1];
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Erreur de génération du PDF.');
                 }
 
+                const blob = await response.blob();
+                const documentNumber = response.headers.get('X-Document-Number') || `facture-commande-${demande.id.substring(0,8)}`;
+                
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = filename;
+                a.download = `${documentNumber}.pdf`;
                 document.body.appendChild(a);
                 a.click();
                 window.URL.revokeObjectURL(url);
