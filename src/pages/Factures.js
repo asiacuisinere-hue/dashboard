@@ -138,6 +138,34 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdateStatus }) => {
         return <p>Informations client non disponibles.</p>;
     };
 
+    const handleSendInvoice = async () => {
+        if (!window.confirm('Confirmer l\'envoi de la facture par email ?')) return;
+
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) throw new Error("Utilisateur non authentifié.");
+
+            const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/send-invoice-by-email`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify({ invoiceId: invoice.id }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Erreur lors de l\'envoi de la facture.');
+            }
+
+            alert('Facture envoyée avec succès !');
+        } catch (error) {
+            console.error('Error sending invoice:', error);
+            alert(`Erreur: ${error.message}`);
+        }
+    };
+
     return (
         <div style={modalOverlayStyle}>
             <div style={modalContentStyle}>
@@ -187,12 +215,16 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdateStatus }) => {
                 </div>
 
                 <div style={modalActionsStyle}>
-                     {invoice.status === 'pending' && (
-                         <button onClick={() => onUpdateStatus(invoice.id, 'paid')} style={{...actionButtonStyle, backgroundColor: '#28a745'}}>Marquer comme Payée</button>
-                     )}
-                     {invoice.status === 'deposit_paid' && (
-                         <button onClick={() => onUpdateStatus(invoice.id, 'paid')} style={{...actionButtonStyle, backgroundColor: '#28a745'}}>Marquer comme Payée</button>
-                     )}
+                    <button onClick={handleSendInvoice} style={{ ...actionButtonStyle, backgroundColor: '#17a2b8', marginRight: 'auto' }}>Envoyer par mail</button>
+                    {invoice.status === 'pending' && (
+                        <>
+                            <button onClick={() => onUpdateStatus(invoice.id, 'deposit_paid')} style={{ ...actionButtonStyle, backgroundColor: '#007bff' }}>Acompte versé</button>
+                            <button onClick={() => onUpdateStatus(invoice.id, 'paid')} style={{ ...actionButtonStyle, backgroundColor: '#28a745' }}>Marquer comme Payée</button>
+                        </>
+                    )}
+                    {invoice.status === 'deposit_paid' && (
+                        <button onClick={() => onUpdateStatus(invoice.id, 'paid')} style={{ ...actionButtonStyle, backgroundColor: '#28a745' }}>Marquer comme Payée</button>
+                    )}
                 </div>
             </div>
         </div>
