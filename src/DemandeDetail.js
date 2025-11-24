@@ -1,11 +1,39 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from './supabaseClient';
 
-
-const DemandeDetail = ({ demande, onClose, onUpdateStatus }) => {
+const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
     const navigate = useNavigate();
+    
+    // State for the editable form, initialized with existing details
+    const [details, setDetails] = useState(demande.details_json || {});
+
+    useEffect(() => {
+        // Ensure form is updated if a new demande is selected while modal is open
+        setDetails(demande.details_json || {});
+    }, [demande]);
 
     if (!demande) return null;
+
+    const handleDetailChange = (e) => {
+        const { name, value } = e.target;
+        setDetails(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleUpdateDetails = async () => {
+        const { error } = await supabase
+            .from('demandes')
+            .update({ details_json: details })
+            .eq('id', demande.id);
+        
+        if (error) {
+            alert(`Erreur lors de la sauvegarde: ${error.message}`);
+        } else {
+            alert('Détails sauvegardés avec succès !');
+            onRefresh(); // Refresh the list to show updated data
+            onClose();
+        }
+    };
 
     const clientInfo = demande.clients || demande.entreprises;
     const clientInfoWithTag = clientInfo ? { ...clientInfo, type: demande.clients ? 'client' : 'entreprise' } : null;
@@ -14,46 +42,48 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus }) => {
         if (clientInfoWithTag) {
             navigate('/devis', { state: { customer: clientInfoWithTag, demandeId: demande.id } });
         } else {
-            alert('Impossible de rediriger : aucune information client trouvée pour cette demande.');
+            alert('Impossible de rediriger : aucune information client trouvée.');
         }
         onClose();
     };
 
-    const renderSpecificDetails = () => {
-        const details = demande.details_json || {};
-        switch (demande.type) {
-            case 'RESERVATION_SERVICE':
-                return (
-                    <>
-                        <p><strong>Nombre d'invités:</strong> {details.numberOfGuests || 'Non spécifié'}</p>
-                        <p><strong>Lieu de la prestation:</strong> {details.lieu || 'Non spécifié'}</p>
-                        <p><strong>Formules souhaitées:</strong> {details.selectedFormulas ? details.selectedFormulas.join(', ') : 'Non spécifié'}</p>
-                        <p><strong>Allergies/Restrictions:</strong> {details.allergies || 'Aucune'}</p>
-                        <p><strong>Équipement sur place:</strong> {details.equipement || 'Non spécifié'}</p>
-                        <p><strong>Détails supplémentaires:</strong> {details.extraInfo || 'Aucun'}</p>
-                    </>
-                );
-            case 'COMMANDE_MENU':
-                 return (
-                    <>
-                        <p><strong>Formule choisie:</strong> {details.formulaName || 'Non spécifié'}</p>
-                        <p><strong>Nombre de personnes:</strong> {details.numberOfPeople || 'Non spécifié'}</p>
-                        <p><strong>Détails de livraison:</strong> {details.deliveryDetails || 'Non spécifié'}</p>
-                    </>
-                 );
-            case 'COURS_CUISINE':
-                 return (
-                    <>
-                        <p><strong>Thème du cours:</strong> {details.theme || 'Non spécifié'}</p>
-                        <p><strong>Nombre de participants:</strong> {details.participants || 'Non spécifié'}</p>
-                        <p><strong>Niveau:</strong> {details.level || 'Non spécifié'}</p>
-                    </>
-                 );
-            default:
-                return <p>Aucun détail spécifique pour ce type de demande.</p>;
-        }
-    };
-    
+    const renderReservationServiceForm = () => (
+        <>
+            <div style={formGroupStyle}>
+                <label style={labelStyle}>Nombre d'invités</label>
+                <input style={inputStyle} type="number" name="numberOfGuests" value={details.numberOfGuests || ''} onChange={handleDetailChange} />
+            </div>
+            <div style={formGroupStyle}>
+                <label style={labelStyle}>Lieu de la prestation</label>
+                <input style={inputStyle} type="text" name="lieu" value={details.lieu || ''} onChange={handleDetailChange} />
+            </div>
+            <div style={formGroupStyle}>
+                <label style={labelStyle}>Formules souhaitées (séparées par des virgules)</label>
+                <input style={inputStyle} type="text" name="selectedFormulas" value={Array.isArray(details.selectedFormulas) ? details.selectedFormulas.join(', ') : details.selectedFormulas || ''} onChange={(e) => setDetails(prev => ({...prev, selectedFormulas: e.target.value.split(',').map(s => s.trim())}))} />
+            </div>
+            <div style={formGroupStyle}>
+                <label style={labelStyle}>Allergies / Restrictions</label>
+                <textarea style={textareaStyle} name="allergies" value={details.allergies || ''} onChange={handleDetailChange}></textarea>
+            </div>
+            <div style={formGroupStyle}>
+                <label style={labelStyle}>Équipement sur place</label>
+                <textarea style={textareaStyle} name="equipement" value={details.equipement || ''} onChange={handleDetailChange}></textarea>
+            </div>
+             <div style={formGroupStyle}>
+                <label style={labelStyle}>Détails supplémentaires</label>
+                <textarea style={textareaStyle} name="extraInfo" value={details.extraInfo || ''} onChange={handleDetailChange}></textarea>
+            </div>
+        </>
+    );
+
+    const renderReadOnlyDetails = () => (
+        <>
+            {Object.entries(details).map(([key, value]) => (
+                <p key={key}><strong>{key}:</strong> {Array.isArray(value) ? value.join(', ') : value}</p>
+            ))}
+        </>
+    );
+
     return (
         <div style={modalOverlayStyle}>
             <div style={modalContentStyle}>
@@ -64,22 +94,23 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus }) => {
                     <h3 style={detailTitleStyle}>Client / Entreprise</h3>
                     {demande.clients && <p><strong>Nom:</strong> {demande.clients.last_name} {demande.clients.first_name}</p>}
                     {demande.entreprises && <p><strong>Entreprise:</strong> {demande.entreprises.nom_entreprise}</p>}
-                    <p><strong>Email:</strong> {demande.clients?.email || demande.entreprises?.contact_email}</p>
-                    <p><strong>Téléphone:</strong> {demande.clients?.phone || demande.entreprises?.contact_phone}</p>
                 </div>
 
                 <div style={detailSectionStyle}>
                     <h3 style={detailTitleStyle}>Détails de la Prestation</h3>
-                    <p><strong>Date de la demande:</strong> {new Date(demande.created_at).toLocaleDateString('fr-FR')}</p>
                     <p><strong>Date de l'événement:</strong> {new Date(demande.request_date).toLocaleDateString('fr-FR')}</p>
                     <p><strong>Type:</strong> {demande.type}</p>
                     <p><strong>Statut:</strong> <span style={statusBadgeStyle(demande.status)}>{demande.status}</span></p>
-                    {renderSpecificDetails()}
+
+                    {demande.type === 'RESERVATION_SERVICE' ? renderReservationServiceForm() : renderReadOnlyDetails()}
                 </div>
 
                 <div style={modalActionsStyle}>
+                    {demande.type === 'RESERVATION_SERVICE' && (
+                        <button onClick={handleUpdateDetails} style={{ ...actionButtonStyle, backgroundColor: '#5a6268', marginRight: 'auto' }}>Sauvegarder les détails</button>
+                    )}
                     {demande.status === 'pending' && (
-                         <button onClick={() => onUpdateStatus(demande.id, 'confirmed')} style={{ ...actionButtonStyle, backgroundColor: '#28a745' }}>Confirmer la demande</button>
+                         <button onClick={() => onUpdateStatus(demande.id, 'confirmed')} style={{ ...actionButtonStyle, backgroundColor: '#28a745' }}>Confirmer Demande</button>
                     )}
                     {demande.status === 'confirmed' && (
                         <button onClick={handleRedirectToCreateQuote} style={{ ...actionButtonStyle, backgroundColor: '#007bff' }}>Créer Devis</button>
@@ -91,17 +122,21 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus }) => {
     );
 };
 
-// --- Styles (similar to Factures.js for consistency) ---
-const modalOverlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 };
+// --- Styles ---
+const modalOverlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 };
 const modalContentStyle = { background: 'white', padding: '30px', borderRadius: '8px', width: '90%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto', position: 'relative' };
 const closeButtonStyle = { position: 'absolute', top: '15px', right: '15px', background: 'transparent', border: 'none', fontSize: '24px', cursor: 'pointer' };
 const detailSectionStyle = { marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px solid #f0f0f0' };
-const detailTitleStyle = { fontSize: '18px', color: '#d4af37', marginBottom: '10px' };
+const detailTitleStyle = { fontSize: '18px', color: '#d4af37', marginBottom: '15px' };
 const actionButtonStyle = { padding: '10px 15px', border: 'none', borderRadius: '5px', cursor: 'pointer', color: 'white', fontWeight: 'bold' };
 const modalActionsStyle = { marginTop: '30px', display: 'flex', justifyContent: 'flex-end', gap: '10px' };
 const statusBadgeStyle = (status) => {
     const colors = { 'pending': '#ffc107', 'confirmed': '#007bff', 'in_progress': '#17a2b8', 'completed': '#28a745', 'cancelled': '#dc3545' };
     return { padding: '4px 8px', borderRadius: '12px', color: 'white', fontWeight: 'bold', fontSize: '12px', backgroundColor: colors[status] || '#6c757d' };
 };
+const formGroupStyle = { marginBottom: '15px' };
+const labelStyle = { display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#333' };
+const inputStyle = { width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' };
+const textareaStyle = { ...inputStyle, height: '100px', resize: 'vertical' };
 
 export default DemandeDetail;
