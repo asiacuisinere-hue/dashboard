@@ -239,32 +239,34 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
                 </div>
 
                 <div style={modalActionsStyle}>
-                    <button onClick={handleSendInvoice} style={{ ...actionButtonStyle, backgroundColor: '#17a2b8', marginRight: 'auto' }}>Envoyer par mail</button>
-                    {!isEnteringDeposit && (
-                        <>
-                            {invoice.status === 'pending' && (
-                                <button onClick={() => setIsEnteringDeposit(true)} style={{...actionButtonStyle, backgroundColor: '#007bff'}}>Enregistrer un acompte</button>
-                            )}
-                            {(invoice.status === 'pending' || invoice.status === 'deposit_paid') && (
-                                <button onClick={handleMarkAsPaid} style={{...actionButtonStyle, backgroundColor: '#28a745'}}>Marquer comme Payée</button>
-                            )}
-                        </>
-                    )}
+                    <>
+                        <button onClick={handleSendInvoice} style={{ ...actionButtonStyle, backgroundColor: '#17a2b8', marginRight: 'auto' }}>Envoyer par mail</button>
+                        {!isEnteringDeposit && (
+                            <>
+                                {invoice.status === 'pending' && (
+                                    <button onClick={() => setIsEnteringDeposit(true)} style={{...actionButtonStyle, backgroundColor: '#007bff'}}>Enregistrer un acompte</button>
+                                )}
+                                {(invoice.status === 'pending' || invoice.status === 'deposit_paid') && (
+                                    <button onClick={handleMarkAsPaid} style={{...actionButtonStyle, backgroundColor: '#28a745'}}>Marquer comme Payée</button>
+                                )}
+                            </>
+                        )}
 
-                    {isEnteringDeposit && (
-                        <div style={{width: '100%', display: 'flex', gap: '10px', alignItems: 'center'}}>
-                            <input
-                                type="number"
-                                placeholder="Montant de l\'acompte"
-                                value={depositAmount}
-                                onChange={(e) => setDepositAmount(e.target.value)}
-                                style={inputStyle}
-                                autoFocus
-                            />
-                            <button onClick={handleSaveDeposit} style={{...actionButtonStyle, backgroundColor: '#28a745'}}>Confirmer</button>
-                            <button onClick={() => setIsEnteringDeposit(false)} style={{...actionButtonStyle, backgroundColor: '#6c757d'}}>Annuler</button>
-                        </div>
-                    )}
+                        {isEnteringDeposit && (
+                            <div style={{width: '100%', display: 'flex', gap: '10px', alignItems: 'center'}}>
+                                <input
+                                    type="number"
+                                    placeholder="Montant de l\'acompte"
+                                    value={depositAmount}
+                                    onChange={(e) => setDepositAmount(e.target.value)}
+                                    style={inputStyle}
+                                    autoFocus
+                                />
+                                <button onClick={handleSaveDeposit} style={{...actionButtonStyle, backgroundColor: '#28a745'}}>Confirmer</button>
+                                <button onClick={() => setIsEnteringDeposit(false)} style={{...actionButtonStyle, backgroundColor: '#6c757d'}}>Annuler</button>
+                            </div>
+                        )}
+                    </>
                 </div>
             </div>
         </div>
