@@ -39,6 +39,8 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
     const clientInfoWithTag = clientInfo ? { ...clientInfo, type: demande.clients ? 'client' : 'entreprise' } : null;
 
     const handleRedirectToCreateQuote = async () => {
+        console.log('--- [DEBUG] Type de demande au clic sur "Créer Devis":', demande.type); // Ligne de débogage
+
         if (!clientInfoWithTag) {
             alert('Impossible de continuer : aucune information client trouvée.');
             onClose();

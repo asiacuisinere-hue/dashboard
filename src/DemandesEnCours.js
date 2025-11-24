@@ -66,6 +66,7 @@ const DemandesEnCours = () => {
              } else {
                 alert('Statut de la demande mis à jour.');
                 fetchDemandes(); // Rafraîchit la liste
+                setSelectedDemande(null);
             }
         };
     
