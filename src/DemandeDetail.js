@@ -4,8 +4,8 @@ import { supabase } from './supabaseClient';
 
 const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
     const navigate = useNavigate();
-    
     const [details, setDetails] = useState(demande.details_json || {});
+    const [isGenerating, setIsGenerating] = useState(false);
 
     useEffect(() => {
         setDetails(demande.details_json || {});
@@ -19,11 +19,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
     };
 
     const handleUpdateDetails = async () => {
-        const { error } = await supabase
-            .from('demandes')
-            .update({ details_json: details })
-            .eq('id', demande.id);
-        
+        const { error } = await supabase.from('demandes').update({ details_json: details }).eq('id', demande.id);
         if (error) {
             alert(`Erreur: ${error.message}`);
         } else {
@@ -32,28 +28,23 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
             onClose();
         }
     };
+    
+    const handleAction = async () => {
+        const clientInfo = demande.clients || demande.entreprises;
+        const clientInfoWithTag = clientInfo ? { ...clientInfo, type: demande.clients ? 'client' : 'entreprise' } : null;
 
-    const clientInfo = demande.clients || demande.entreprises;
-    const clientInfoWithTag = clientInfo ? { ...clientInfo, type: demande.clients ? 'client' : 'entreprise' } : null;
-
-    const handleRedirectToCreateQuote = async () => {
-        // For COMMANDE_MENU, generate the document directly
+        // Flow for COMMANDE_MENU: Directly generate a simple invoice PDF
         if (demande.type === 'COMMANDE_MENU') {
-            if (!window.confirm("Cette action va générer la facture pour cette commande. Continuer ?")) return;
+            setIsGenerating(true);
             try {
-                const response = await fetch('/api/generate-document', {
+                const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/generate-commande-pdf`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        demandeId: demande.id, 
-                        documentType: 'Facture'
-                    })
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.REACT_APP_SUPABASE_ANON_KEY}` },
+                    body: JSON.stringify({ demandeId: demande.id })
                 });
 
-                if (!response.ok) {
-                    throw new Error(`Erreur ${response.status}: ${response.statusText}`);
-                }
-                
+                if (!response.ok) throw new Error('Erreur de génération du PDF.');
+
                 const blob = await response.blob();
                 const contentDisposition = response.headers.get('Content-Disposition');
                 let filename = `facture-commande.pdf`;
@@ -70,31 +61,30 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                 a.click();
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
-                onClose();
 
             } catch (error) {
-                console.error('Erreur auto-génération:', error);
-                alert(`Erreur: ${error.message}`);
+                alert(error.message);
+            } finally {
+                setIsGenerating(false);
             }
-        } else {
-            // For other types, navigate to the quote creation page
-            if (clientInfoWithTag) {
+        } 
+        // Flow for RESERVATION_SERVICE: Navigate to the quote creation page
+        else if (demande.type === 'RESERVATION_SERVICE' && demande.status === 'confirmed') {
+             if (clientInfoWithTag) {
                 navigate('/devis', { state: { customer: clientInfoWithTag, demandeId: demande.id } });
+                onClose();
             } else {
                 alert('Infos client manquantes.');
             }
-            onClose();
         }
     };
 
     const renderReservationServiceForm = () => (
-        <>
+         <>
             <div style={formGroupStyle}><label style={labelStyle}>Nombre d'invités</label><input style={inputStyle} type="number" name="numberOfGuests" value={details.numberOfGuests || ''} onChange={handleDetailChange} /></div>
             <div style={formGroupStyle}><label style={labelStyle}>Lieu</label><input style={inputStyle} type="text" name="lieu" value={details.lieu || ''} onChange={handleDetailChange} /></div>
-            <div style={formGroupStyle}><label style={labelStyle}>Formules</label><input style={inputStyle} type="text" name="selectedFormulas" value={Array.isArray(details.selectedFormulas) ? details.selectedFormulas.join(', ') : details.selectedFormulas || ''} onChange={(e) => setDetails(prev => ({...prev, selectedFormulas: e.target.value.split(',').map(s => s.trim())}))} /></div>
+            <div style={formGroupStyle}><label style={labelStyle}>Formules (séparées par ',')</label><input style={inputStyle} type="text" name="selectedFormulas" value={Array.isArray(details.selectedFormulas) ? details.selectedFormulas.join(', ') : details.selectedFormulas || ''} onChange={(e) => setDetails(prev => ({...prev, selectedFormulas: e.target.value.split(',').map(s => s.trim())}))} /></div>
             <div style={formGroupStyle}><label style={labelStyle}>Allergies</label><textarea style={textareaStyle} name="allergies" value={details.allergies || ''} onChange={handleDetailChange}></textarea></div>
-            <div style={formGroupStyle}><label style={labelStyle}>Équipement</label><textarea style={textareaStyle} name="equipement" value={details.equipement || ''} onChange={handleDetailChange}></textarea></div>
-            <div style={formGroupStyle}><label style={labelStyle}>Détails</label><textarea style={textareaStyle} name="extraInfo" value={details.extraInfo || ''} onChange={handleDetailChange}></textarea></div>
         </>
     );
 
@@ -110,34 +100,31 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                 <button onClick={onClose} style={closeButtonStyle}>&times;</button>
                 <h2>Détails demande #{demande.id.substring(0, 8)}</h2>
                 
-                <div style={detailSectionStyle}>
-                    <h3 style={detailTitleStyle}>Client / Entreprise</h3>
-                    {demande.clients && <p><strong>Nom:</strong> {demande.clients.last_name} {demande.clients.first_name}</p>}
-                    {demande.entreprises && <p><strong>Entreprise:</strong> {demande.entreprises.nom_entreprise}</p>}
-                </div>
-
+                {/* ... Customer and Demand Info ... */}
                 <div style={detailSectionStyle}>
                     <h3 style={detailTitleStyle}>Détails</h3>
-                    <p><strong>Date événement:</strong> {new Date(demande.request_date).toLocaleDateString('fr-FR')}</p>
                     <p><strong>Statut:</strong> <span style={statusBadgeStyle(demande.status)}>{demande.status}</span></p>
                     {demande.type === 'RESERVATION_SERVICE' ? renderReservationServiceForm() : renderReadOnlyDetails()}
                 </div>
 
                 <div style={modalActionsStyle}>
-                    <>
-                        {demande.type === 'RESERVATION_SERVICE' && (
-                            <button onClick={handleUpdateDetails} style={{ ...actionButtonStyle, backgroundColor: '#5a6268', marginRight: 'auto' }}>Sauvegarder</button>
-                        )}
-                        {demande.status === 'En attente de traitement' && (
-                             <button onClick={() => onUpdateStatus(demande.id, 'confirmed')} style={{ ...actionButtonStyle, backgroundColor: '#28a745' }}>Confirmer</button>
-                        )}
-                        {(demande.status === 'confirmed' || demande.type === 'COMMANDE_MENU') && (
-                            <button onClick={handleRedirectToCreateQuote} style={{ ...actionButtonStyle, backgroundColor: '#007bff' }}>
-                                {demande.type === 'COMMANDE_MENU' ? 'Générer Facture' : 'Créer Devis'}
-                            </button>
-                        )}
-                         <button onClick={() => onUpdateStatus(demande.id, 'cancelled')} style={{ ...actionButtonStyle, backgroundColor: '#dc3545' }}>Annuler</button>
-                    </>
+                     {demande.type === 'RESERVATION_SERVICE' && <button onClick={handleUpdateDetails} style={{ ...actionButtonStyle, backgroundColor: '#5a6268', marginRight: 'auto' }}>Sauvegarder</button>}
+                    
+                    {demande.status === 'En attente de traitement' && (
+                         <button onClick={() => onUpdateStatus(demande.id, 'confirmed')} style={{ ...actionButtonStyle, backgroundColor: '#28a745' }}>Confirmer</button>
+                    )}
+
+                    {(demande.status === 'confirmed' && demande.type === 'RESERVATION_SERVICE') && (
+                        <button onClick={handleAction} style={{ ...actionButtonStyle, backgroundColor: '#007bff' }}>Créer Devis</button>
+                    )}
+
+                    {(demande.type === 'COMMANDE_MENU') && (
+                        <button onClick={handleAction} disabled={isGenerating} style={{ ...actionButtonStyle, backgroundColor: '#007bff' }}>
+                            {isGenerating ? 'Génération...' : 'Générer Facture'}
+                        </button>
+                    )}
+
+                     <button onClick={() => onUpdateStatus(demande.id, 'cancelled')} style={{ ...actionButtonStyle, backgroundColor: '#dc3545' }}>Annuler</button>
                 </div>
             </div>
         </div>
@@ -159,6 +146,6 @@ const statusBadgeStyle = (status) => {
 const formGroupStyle = { marginBottom: '15px' };
 const labelStyle = { display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#333' };
 const inputStyle = { width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' };
-const textareaStyle = { ...inputStyle, height: '100px', resize: 'vertical' };
+const textareaStyle = { ...inputStyle, height: '80px', resize: 'vertical' };
 
 export default DemandeDetail;
