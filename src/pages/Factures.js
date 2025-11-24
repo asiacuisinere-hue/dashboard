@@ -143,7 +143,7 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
             alert(`Erreur: ${error.message}`);
         } else {
             alert('Acompte enregistré avec succès !');
-            onUpdate(); // Rafraîchit la liste et ferme la modale
+            onUpdate();
         }
     };
     
@@ -204,17 +204,38 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
                 <h2>Détails Facture #{invoice.document_number || invoice.id.substring(0, 8)}</h2>
                 
                 <div style={detailSectionStyle}>
-                    <h3 style={detailTitleStyle}>Informations</h3>
-                    <p><strong>Date:</strong> {new Date(invoice.created_at).toLocaleDateString('fr-FR')}</p>
-                    <p><strong>Statut:</strong> <span style={statusBadgeStyle(invoice.status)}>{invoice.status}</span></p>
-                    <p><strong>Total:</strong> {(invoice.total_amount || 0).toFixed(2)} €</p>
-                    {invoice.deposit_amount && <p><strong>Acompte Versé:</strong> {invoice.deposit_amount.toFixed(2)} €</p>}
-                    {invoice.status === 'deposit_paid' && <p><strong>Reste à Payer:</strong> {remainingBalance.toFixed(2)} €</p>}
+                    <h3 style={detailTitleStyle}>Client / Entreprise</h3>
+                    {renderCustomerInfo()}
                 </div>
 
                 <div style={detailSectionStyle}>
-                    <h3 style={detailTitleStyle}>Articles</h3>
-                    {/* ... (affichage des articles) ... */}
+                    <h3 style={detailTitleStyle}>Client / Entreprise</h3>
+                    {renderCustomerInfo()}
+                </div>
+                    {(invoice.items && invoice.items.length > 0) ? (
+                        <div style={tableContainerStyle}>
+                            <table style={tableStyle}>
+                                <thead>
+                                    <tr>
+                                        <th style={thStyle}>Description</th>
+                                        <th style={thStyle}>Qté</th>
+                                        <th style={thStyle}>Prix U. (€)</th>
+                                        <th style={thStyle}>Total (€)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {(invoice.items || []).map((item, index) => (
+                                        <tr key={index}>
+                                            <td style={tdStyle}>{item.name || item.description}</td>
+                                            <td style={tdStyle}>{item.quantity || 0}</td>
+                                            <td style={tdStyle}>{(item.unit_price || 0).toFixed(2)}</td>
+                                            <td style={tdStyle}>{((item.quantity || 0) * (item.unit_price || 0)).toFixed(2)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : <p>Aucun article détaillé.</p>}
                 </div>
 
                 <div style={modalActionsStyle}>
@@ -234,7 +255,7 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
                         <div style={{width: '100%', display: 'flex', gap: '10px', alignItems: 'center'}}>
                             <input
                                 type="number"
-                                placeholder="Montant de l'acompte"
+                                placeholder="Montant de l\'acompte"
                                 value={depositAmount}
                                 onChange={(e) => setDepositAmount(e.target.value)}
                                 style={inputStyle}
@@ -251,8 +272,7 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
 };
 
 // --- Styles ---
-// ... (tous les styles existants)
-const containerStyle = { padding: '20px', maxWidth: '1200px', margin: '0 auto' };
+const containerStyle = { padding: '20px', maxWidth: '1200px', margin: '0 auto', fontFamily: 'Arial, sans-serif' };
 const filterContainerStyle = { display: 'flex', gap: '1rem', marginBottom: '2rem', alignItems: 'center' };
 const inputStyle = { padding: '8px', borderRadius: '5px', border: '1px solid #ccc', flex: '1 1 auto', minWidth: '200px' };
 const tableContainerStyle = { marginTop: '1rem', boxShadow: '0 4px 8px rgba(0,0,0,0.05)', borderRadius: '8px', overflowX: 'auto', background: 'white' };
