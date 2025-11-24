@@ -111,7 +111,7 @@ const Factures = () => {
                                 <td style={tdStyle}>{invoice.id.substring(0, 8)}</td>
                                 <td style={tdStyle}>{renderCustomerName(invoice)}</td>
                                 <td style={tdStyle}>{new Date(invoice.created_at).toLocaleDateString('fr-FR')}</td>
-                                <td style={tdStyle}>{invoice.total_amount.toFixed(2)} €</td>
+                                <td style={tdStyle}>{(invoice.total_amount || 0).toFixed(2)} €</td>
                                 <td style={tdStyle}><span style={statusBadgeStyle(invoice.status)}>{invoice.status}</span></td>
                                 <td style={tdStyle}>
                                     <button onClick={() => setSelectedInvoice(invoice)} style={detailsButtonStyle}>Voir Détails</button>
