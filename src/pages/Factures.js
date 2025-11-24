@@ -170,7 +170,7 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
                 <h2>Détails Facture #{invoice.document_number || invoice.id.substring(0, 8)}</h2>
                 
                 <div style={detailSectionStyle}>
-                    <h3>Informations</h3>
+                    <h3 style={detailTitleStyle}>Informations</h3>
                     <p><strong>Date:</strong> {new Date(invoice.created_at).toLocaleDateString('fr-FR')}</p>
                     <p><strong>Statut:</strong> <span style={statusBadgeStyle(invoice.status)}>{invoice.status}</span></p>
                     <p><strong>Total:</strong> {(invoice.total_amount || 0).toFixed(2)} €</p>
@@ -179,7 +179,7 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
                 </div>
 
                 <div style={detailSectionStyle}>
-                    <h3>Articles</h3>
+                    <h3 style={detailTitleStyle}>Articles</h3>
                     {/* ... (affichage des articles) ... */}
                 </div>
 
