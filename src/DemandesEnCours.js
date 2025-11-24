@@ -53,6 +53,20 @@ const DemandesEnCours = () => {
         const { name, value } = e.target;
         setFilter(prev => ({ ...prev, [name]: value }));
     };
+
+    const handleUpdateStatus = async (demandeId, newStatus) => {
+             const { error } = await supabase
+                 .from('demandes')
+                 .update({ status: newStatus })
+                 .eq('id', demandeId);
+    
+             if (error) {
+                 alert(`Erreur lors de la mise à jour du statut : ${error.message}`);
+             } else {
+                alert('Statut de la demande mis à jour.');
+                fetchDemandes(); // Rafraîchit la liste
+            }
+        };
     
     const resetFilters = () => {
         setFilter({ date: '', status: '' });
