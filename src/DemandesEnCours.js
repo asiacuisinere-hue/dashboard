@@ -19,7 +19,7 @@ const DemandesEnCours = () => {
             `)
             .in('status', [
                 'En attente de traitement', 
-                'confirmed'
+                'confirmed',
                 'En attente de validation de devis', 
                 'En attente de paiement', 
                 'En attente de préparation', 
