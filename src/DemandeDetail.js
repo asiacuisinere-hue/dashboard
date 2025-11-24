@@ -106,16 +106,18 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                 </div>
 
                 <div style={modalActionsStyle}>
-                    {demande.type === 'RESERVATION_SERVICE' && (
-                        <button onClick={handleUpdateDetails} style={{ ...actionButtonStyle, backgroundColor: '#5a6268', marginRight: 'auto' }}>Sauvegarder les détails</button>
-                    )}
-                    {demande.status === 'pending' && (
-                         <button onClick={() => onUpdateStatus(demande.id, 'confirmed')} style={{ ...actionButtonStyle, backgroundColor: '#28a745' }}>Confirmer Demande</button>
-                    )}
-                    {demande.status === 'confirmed' && (
-                        <button onClick={handleRedirectToCreateQuote} style={{ ...actionButtonStyle, backgroundColor: '#007bff' }}>Créer Devis</button>
-                    )}
-                     <button onClick={() => onUpdateStatus(demande.id, 'cancelled')} style={{ ...actionButtonStyle, backgroundColor: '#dc3545' }}>Annuler</button>
+                    <>
+                        {demande.type === 'RESERVATION_SERVICE' && (
+                            <button onClick={handleUpdateDetails} style={{ ...actionButtonStyle, backgroundColor: '#5a6268', marginRight: 'auto' }}>Sauvegarder les détails</button>
+                        )}
+                        {demande.status === 'En attente de traitement' && (
+                             <button onClick={() => onUpdateStatus(demande.id, 'confirmed')} style={{ ...actionButtonStyle, backgroundColor: '#28a745' }}>Confirmer Demande</button>
+                        )}
+                        {demande.status === 'confirmed' && (
+                            <button onClick={handleRedirectToCreateQuote} style={{ ...actionButtonStyle, backgroundColor: '#007bff' }}>Créer Devis</button>
+                        )}
+                         <button onClick={() => onUpdateStatus(demande.id, 'cancelled')} style={{ ...actionButtonStyle, backgroundColor: '#dc3545' }}>Annuler</button>
+                    </>
                 </div>
             </div>
         </div>
