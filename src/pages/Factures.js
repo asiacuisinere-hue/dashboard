@@ -1,6 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 
+// Helper function to get French status
+const getFrenchStatus = (status) => {
+    switch (status) {
+        case 'pending': return 'En attente';
+        case 'deposit_paid': return 'Acompte versé';
+        case 'paid': return 'Payée';
+        case 'cancelled': return 'Annulée';
+        default: return status;
+    }
+};
+
 const Factures = () => {
     const [invoices, setInvoices] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -23,7 +34,9 @@ const Factures = () => {
         if (searchTerm) {
             const searchPattern = `%${searchTerm}%`;
             query = query.or(
-                `document_number.ilike.${searchPattern},clients.last_name.ilike.${searchPattern},entreprises.nom_entreprise.ilike.${searchPattern}`
+                `document_number.ilike.${searchPattern}`,
+                `clients.last_name.ilike.${searchPattern}`,
+                `entreprises.nom_entreprise.ilike.${searchPattern}`
             );
         }
 
@@ -68,10 +81,10 @@ const Factures = () => {
                 />
                 <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={inputStyle}>
                     <option value="all">Tous les statuts</option>
-                    <option value="pending">En attente</option>
-                    <option value="deposit_paid">Acompte versé</option>
-                    <option value="paid">Payée</option>
-                    <option value="cancelled">Annulée</option>
+                    <option value="pending">{getFrenchStatus('pending')}</option>
+                    <option value="deposit_paid">{getFrenchStatus('deposit_paid')}</option>
+                    <option value="paid">{getFrenchStatus('paid')}</option>
+                    <option value="cancelled">{getFrenchStatus('cancelled')}</option>
                 </select>
             </div>
 
@@ -95,7 +108,7 @@ const Factures = () => {
                                     <td style={tdStyle}>{renderCustomerName(invoice)}</td>
                                     <td style={tdStyle}>{new Date(invoice.created_at).toLocaleDateString('fr-FR')}</td>
                                     <td style={tdStyle}>{(invoice.total_amount || 0).toFixed(2)} €</td>
-                                    <td style={tdStyle}><span style={statusBadgeStyle(invoice.status)}>{invoice.status}</span></td>
+                                    <td style={tdStyle}><span style={statusBadgeStyle(invoice.status)}>{getFrenchStatus(invoice.status)}</span></td>
                                     <td style={tdStyle}>
                                         <button onClick={() => setSelectedInvoice(invoice)} style={detailsButtonStyle}>Voir Détails</button>
                                     </td>
@@ -209,7 +222,7 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
                 <div style={detailSectionStyle}>
                     <h3 style={detailTitleStyle}>Informations</h3>
                     <p><strong>Date:</strong> {new Date(invoice.created_at).toLocaleDateString('fr-FR')}</p>
-                    <p><strong>Statut:</strong> <span style={statusBadgeStyle(invoice.status)}>{invoice.status}</span></p>
+                    <p><strong>Statut:</strong> <span style={statusBadgeStyle(invoice.status)}>{getFrenchStatus(invoice.status)}</span></p>
                     <p><strong>Total:</strong> {(invoice.total_amount || 0).toFixed(2)} €</p>
                     {invoice.deposit_amount && <p><strong>Acompte Versé:</strong> {invoice.deposit_amount.toFixed(2)} €</p>}
                     {invoice.status === 'deposit_paid' && <p><strong>Reste à Payer:</strong> {remainingBalance.toFixed(2)} €</p>}
@@ -260,7 +273,7 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
                         <div style={{width: '100%', display: 'flex', gap: '10px', alignItems: 'center'}}>
                             <input
                                 type="number"
-                                placeholder="Montant de l'acompte"
+                                placeholder="Montant de l\'acompte"
                                 value={depositAmount}
                                 onChange={(e) => setDepositAmount(e.target.value)}
                                 style={inputStyle}
