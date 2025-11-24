@@ -130,11 +130,11 @@ const DemandeDetail = ({ demande, onClose, onUpdate }) => {
 
     const handleRedirectToCreateQuote = () => {
         if (clientInfoWithTag) {
-            navigate('/devis', { state: { customer: clientInfoWithTag } });
+            navigate('/devis', { state: { customer: clientInfoWithTag, demandeId: demande.id } });
         } else {
             alert('Impossible de rediriger : aucune information client trouvée pour cette demande.');
         }
-        onClose(); // Fermer la modale
+        onClose();
     };
 
 

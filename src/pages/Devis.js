@@ -5,7 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 const Devis = () => {
     const location = useLocation();
     const navigate = useNavigate(); // ADDED: Initialize useNavigate
-    const prefilledCustomer = location.state?.customer;
+    const { customer: prefilledCustomer, demandeId } = location.state || {};
 
     const [clients, setClients] = useState([]);
     const [entreprises, setEntreprises] = useState([]);
@@ -170,19 +170,19 @@ const handleGenerateQuote = async () => {
     }
 
     const total = calculateTotal();
-    const payload = {
-        customer: selectedCustomer,
-        items: quoteItems.map(item => ({
-            service_id: item.service_id,
-            name: item.name,
-            description: item.description,
-            quantity: item.quantity,
-            price: item.price
-        })),
-        total: total,
-        type: 'service_reservation'
-    };
-
+            const payload = {
+                customer: selectedCustomer,
+                items: quoteItems.map(item => ({
+                    service_id: item.service_id,
+                    name: item.name,
+                    description: item.description,
+                    quantity: item.quantity,
+                    price: item.price
+                })),
+                total: total,
+                type: 'service_reservation',
+                demandeId: demandeId // <-- AJOUT DE DEMANDEID
+            };
     try {
         setSuccessMessage('Génération du devis en cours...');
 
