@@ -162,7 +162,10 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
         if (!window.confirm("Confirmer le paiement total de la facture ?")) return;
         const { error } = await supabase
             .from('invoices')
-            .update({ status: 'paid' })
+            .update({ 
+                status: 'paid',
+                deposit_amount: invoice.total_amount // Ensure deposit covers the total
+            })
             .eq('id', invoice.id);
 
         if (error) alert(`Erreur: ${error.message}`);
