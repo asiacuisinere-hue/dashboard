@@ -38,13 +38,60 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
     const clientInfo = demande.clients || demande.entreprises;
     const clientInfoWithTag = clientInfo ? { ...clientInfo, type: demande.clients ? 'client' : 'entreprise' } : null;
 
-    const handleRedirectToCreateQuote = () => {
-        if (clientInfoWithTag) {
-            navigate('/devis', { state: { customer: clientInfoWithTag, demandeId: demande.id } });
-        } else {
-            alert('Impossible de rediriger : aucune information client trouvée.');
+    const handleRedirectToCreateQuote = async () => {
+        if (!clientInfoWithTag) {
+            alert('Impossible de continuer : aucune information client trouvée.');
+            onClose();
+            return;
         }
-        onClose();
+
+        // Pour les commandes de menu, générer le document directement
+        if (demande.type === 'COMMANDE_MENU') {
+            if (!window.confirm("Cette action va générer la facture pour cette commande. Continuer ?")) return;
+
+            try {
+                // Note: You might want a loading state here
+                const response = await fetch('/functions/generate-document', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ demandeId: demande.id, documentType: 'Facture', sendEmail: false })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Erreur lors de la génération du document.');
+                }
+                
+                const blob = await response.blob();
+                const contentDisposition = response.headers.get('Content-Disposition');
+                let filename = `facture-commande.pdf`;
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+                    if (filenameMatch && filenameMatch.length === 2)
+                        filename = filenameMatch[1];
+                }
+
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+
+                alert('Document généré et téléchargé.');
+                onClose();
+
+            } catch (error) {
+                console.error('Erreur auto-génération document:', error);
+                alert(`Erreur: ${error.message}`);
+            }
+
+        } else { // Pour les autres types (ex: RESERVATION_SERVICE), rediriger vers la page de devis
+            navigate('/devis', { state: { customer: clientInfoWithTag, demandeId: demande.id } });
+            onClose();
+        }
     };
 
     const renderReservationServiceForm = () => (
