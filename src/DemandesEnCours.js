@@ -125,7 +125,8 @@ const DemandesEnCours = () => {
                 <DemandeDetail 
                     demande={selectedDemande} 
                     onClose={() => setSelectedDemande(null)}
-                    onUpdate={fetchDemandes} 
+                    onUpdateStatus={handleUpdateStatus}
+                    onRefresh={fetchDemandes} 
                 />
             )}
         </div>

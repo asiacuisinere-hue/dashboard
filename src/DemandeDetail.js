@@ -30,7 +30,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
             alert(`Erreur lors de la sauvegarde: ${error.message}`);
         } else {
             alert('Détails sauvegardés avec succès !');
-            onRefresh(); // Refresh the list to show updated data
+            onRefresh && onRefresh(); // Refresh the list to show updated data
             onClose();
         }
     };
