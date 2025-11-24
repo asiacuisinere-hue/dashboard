@@ -1,132 +1,14 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
-import { useNavigate } from 'react-router-dom'; // Importer useNavigate
 
-// --- Helper Components ---
-
-const DetailsRenderer = ({ details }) => {
-    if (!details) return null;
-    const keyMap = {
-        customerType: 'Type de client', serviceType: 'Type de service', numberOfPeople: 'Nombre de personnes',
-        customerMessage: 'Message du client', formulaName: 'Formule', formulaOption: 'Option de la formule',
-        deliveryCity: 'Ville de livraison'
-    };
-    return (
-        <ul style={{ listStyleType: 'none', background: '#f9f9f9', borderRadius: '5px', padding: '15px' }}>
-            {Object.entries(details).map(([key, value]) => {
-                if (!value) return null;
-                const label = keyMap[key] || key;
-                return (
-                    <li key={key} style={{ marginBottom: '8px', borderBottom: '1px solid #eee', paddingBottom: '8px' }}>
-                        <strong style={{ color: '#333', minWidth: '150px', display: 'inline-block' }}>{label}</strong>
-                        <span style={{ color: '#555' }}>{value}</span>
-                    </li>
-                );
-            })}
-        </ul>
-    );
-};
-
-// --- Main Component ---
-
-const DemandeDetail = ({ demande, onClose, onUpdate }) => {
-    const navigate = useNavigate(); // Utiliser useNavigate
-
-    // Construire l'objet client avec son type pour la redirection
-    const clientInfoWithTag = demande.client_id
-        ? { ...demande.clients, type: 'client' }
-        : demande.entreprise_id
-            ? { ...demande.entreprises, type: 'entreprise' }
-            : null;
+const DemandeDetail = ({ demande, onClose, onUpdateStatus }) => {
+    const navigate = useNavigate();
 
     if (!demande) return null;
 
-    const handleUpdateStatus = async (newStatus) => {
-        const { error } = await supabase.from('demandes').update({ status: newStatus }).eq('id', demande.id);
-        if (error) {
-            alert(`Erreur lors de la mise à jour : ${error.message}`);
-            return false;
-        }
-        return true;
-    };
-
-    const handleGenerateDocument = async (documentType, shouldUpdateStatus = true) => {
-        const shouldSendEmail = window.confirm(`Voulez-vous envoyer ce ${documentType} par e-mail au client ?`);
-        
-        try {
-            const response = await fetch('https://www.asiacuisine.re/generate-document', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ demandeId: demande.id, documentType, sendEmail: shouldSendEmail })
-            });
-
-            if (!response.ok) throw new Error(`Erreur du serveur: ${response.statusText}`);
-
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${documentType}_${demande.id}.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            window.URL.revokeObjectURL(url);
-
-            alert(`${documentType} généré. ${shouldSendEmail ? 'Un e-mail a été envoyé au client.' : ''}`);
-
-            if (shouldUpdateStatus) {
-                const nextStatus = documentType === 'Devis' ? 'En attente de validation de devis' : 'En attente de paiement';
-                const success = await handleUpdateStatus(nextStatus);
-                if (success) {
-                    onUpdate();
-                    onClose();
-                }
-            }
-
-        } catch (error) {
-            alert(`Erreur lors de la génération du document : ${error.message}`);
-        }
-    };
-
-    const handleMarkAsPaid = async () => {
-        const success = await handleUpdateStatus('En attente de préparation');
-        if (!success) {
-            alert("Le statut n'a pas pu être mis à jour. L'envoi du QR code est annulé.");
-            return;
-        }
-        
-        try {
-            const response = await fetch('https://www.asiacuisine.re/send-qrcode', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ demandeId: demande.id })
-            });
-            if (!response.ok) throw new Error((await response.json()).error || 'Erreur inconnue');
-            alert('Statut mis à jour et QR code envoyé !');
-            onUpdate();
-            onClose();
-        } catch (error) {
-            alert(`Erreur lors de l'envoi du QR code : ${error.message}`);
-        }
-    };
-
-    const handleStartPreparation = async () => {
-        const success = await handleUpdateStatus('Préparation en cours');
-        if (success) {
-            alert('Statut mis à jour à "Préparation en cours".');
-            onUpdate();
-            onClose();
-        }
-    };
-
-    const handleMoveToPreparation = async () => {
-        const success = await handleUpdateStatus('En attente de préparation');
-        if (success) {
-            alert('Statut mis à jour à "En attente de préparation".');
-            onUpdate();
-            onClose();
-        }
-    };
+    const clientInfo = demande.clients || demande.entreprises;
+    const clientInfoWithTag = clientInfo ? { ...clientInfo, type: demande.clients ? 'client' : 'entreprise' } : null;
 
     const handleRedirectToCreateQuote = () => {
         if (clientInfoWithTag) {
@@ -137,177 +19,89 @@ const DemandeDetail = ({ demande, onClose, onUpdate }) => {
         onClose();
     };
 
-
-    const renderCustomerDetails = () => {
-        if (demande.clients) { // C'est un particulier
-            return (
-                <>
-                    <p><strong>Nom:</strong> {demande.clients.last_name} {demande.clients.first_name}</p>
-                    <p><strong>Email:</strong> {demande.clients.email}</p>
-                </>
-            );
-        } else if (demande.entreprises) { // C'est une entreprise
-            return (
-                <>
-                    <p><strong>Nom de l'entreprise:</strong> {demande.entreprises.nom_entreprise}</p>
-                    <p><strong>Email du contact:</strong> {demande.entreprises.contact_email}</p>
-                </>
-            );
+    const renderSpecificDetails = () => {
+        const details = demande.details_json || {};
+        switch (demande.type) {
+            case 'RESERVATION_SERVICE':
+                return (
+                    <>
+                        <p><strong>Nombre d'invités:</strong> {details.numberOfGuests || 'Non spécifié'}</p>
+                        <p><strong>Lieu de la prestation:</strong> {details.lieu || 'Non spécifié'}</p>
+                        <p><strong>Formules souhaitées:</strong> {details.selectedFormulas ? details.selectedFormulas.join(', ') : 'Non spécifié'}</p>
+                        <p><strong>Allergies/Restrictions:</strong> {details.allergies || 'Aucune'}</p>
+                        <p><strong>Équipement sur place:</strong> {details.equipement || 'Non spécifié'}</p>
+                        <p><strong>Détails supplémentaires:</strong> {details.extraInfo || 'Aucun'}</p>
+                    </>
+                );
+            case 'COMMANDE_MENU':
+                 return (
+                    <>
+                        <p><strong>Formule choisie:</strong> {details.formulaName || 'Non spécifié'}</p>
+                        <p><strong>Nombre de personnes:</strong> {details.numberOfPeople || 'Non spécifié'}</p>
+                        <p><strong>Détails de livraison:</strong> {details.deliveryDetails || 'Non spécifié'}</p>
+                    </>
+                 );
+            case 'COURS_CUISINE':
+                 return (
+                    <>
+                        <p><strong>Thème du cours:</strong> {details.theme || 'Non spécifié'}</p>
+                        <p><strong>Nombre de participants:</strong> {details.participants || 'Non spécifié'}</p>
+                        <p><strong>Niveau:</strong> {details.level || 'Non spécifié'}</p>
+                    </>
+                 );
+            default:
+                return <p>Aucun détail spécifique pour ce type de demande.</p>;
         }
-        return <p>Informations client non disponibles.</p>;
     };
-
-    const renderActions = () => {
-        const statusActions = {
-            'En attente de traitement': (
-                <>
-                    {demande.type === 'RESERVATION_SERVICE' ? (
-                        <button onClick={handleRedirectToCreateQuote} style={{...actionButtonStyle, backgroundColor: '#fd7e14'}}>Créer Devis</button>
-                    ) : (
-                        <button onClick={() => handleGenerateDocument('Devis')} style={{...actionButtonStyle, backgroundColor: '#fd7e14'}}>Générer Devis</button>
-                    )}
-                    {demande.type !== 'RESERVATION_SERVICE' && (
-                        <button onClick={() => handleGenerateDocument('Facture')} style={{...actionButtonStyle, backgroundColor: '#17a2b8'}}>Générer Facture</button>
-                    )}
-                </>
-            ),
-            'En attente de validation de devis': (
-                <>
-                    <button onClick={() => handleGenerateDocument('Facture')} style={{...actionButtonStyle, backgroundColor: '#17a2b8'}}>Générer la Facture</button>
-                </>
-            ),
-            'En attente de paiement': (
-                <button onClick={handleMarkAsPaid} style={{...actionButtonStyle, backgroundColor: '#6f42c1'}}>Marquer comme Payée & Envoyer QR</button>
-            ),
-            'Payée': ( // Action pour les anciennes demandes
-                <button onClick={handleMoveToPreparation} style={{...actionButtonStyle, backgroundColor: '#6f42c1'}}>Passer à "En attente de préparation"</button>
-            ),
-            'En attente de préparation': (
-                <button onClick={handleStartPreparation} style={{...actionButtonStyle, backgroundColor: '#20c997', color: 'black'}}>Mettre en préparation</button>
-            ),
-            'Confirmée': (
-                <button onClick={() => handleUpdateStatus('Archivée')} style={{...actionButtonStyle, backgroundColor: '#6c757d'}}>Archiver</button>
-            ),
-            'Refusée': (
-                <button onClick={() => handleUpdateStatus('Archivée')} style={{...actionButtonStyle, backgroundColor: '#6c757d'}}>Archiver</button>
-            ),
-            'Annulée': (
-                <button onClick={() => handleUpdateStatus('Archivée')} style={{...actionButtonStyle, backgroundColor: '#6c757d'}}>Archiver</button>
-            )
-        };
-
-        const duplicateButton = (
-             <button onClick={() => handleGenerateDocument('Facture', false)} style={{...actionButtonStyle, backgroundColor: '#6c757d', marginRight: 'auto'}}>Dupliquer facture</button>
-        );
-
-        const mainActions = statusActions[demande.status] || null;
-        
-        const showDuplicateButton = ['En attente de paiement', 'En attente de préparation', 'Préparation en cours', 'Confirmée'].includes(demande.status);
-
-        return (
-            <>
-                {showDuplicateButton && duplicateButton}
-                {mainActions}
-            </>
-        );
-    };
-
+    
     return (
         <div style={modalOverlayStyle}>
             <div style={modalContentStyle}>
                 <button onClick={onClose} style={closeButtonStyle}>&times;</button>
-                <h2 style={{ borderBottom: '2px solid #eee', paddingBottom: '10px', marginBottom: '20px' }}>Gérer la demande</h2>
+                <h2>Détails de la demande #{demande.id.substring(0, 8)}</h2>
                 
                 <div style={detailSectionStyle}>
                     <h3 style={detailTitleStyle}>Client / Entreprise</h3>
-                    {renderCustomerDetails()}
+                    {demande.clients && <p><strong>Nom:</strong> {demande.clients.last_name} {demande.clients.first_name}</p>}
+                    {demande.entreprises && <p><strong>Entreprise:</strong> {demande.entreprises.nom_entreprise}</p>}
+                    <p><strong>Email:</strong> {demande.clients?.email || demande.entreprises?.contact_email}</p>
+                    <p><strong>Téléphone:</strong> {demande.clients?.phone || demande.entreprises?.contact_phone}</p>
                 </div>
 
                 <div style={detailSectionStyle}>
-                    <h3 style={detailTitleStyle}>Demande</h3>
-                    <p><strong>Statut actuel:</strong> <span style={statusBadgeStyle(demande.status)}>{demande.status}</span></p>
-                    <DetailsRenderer details={demande.details_json} />
+                    <h3 style={detailTitleStyle}>Détails de la Prestation</h3>
+                    <p><strong>Date de la demande:</strong> {new Date(demande.created_at).toLocaleDateString('fr-FR')}</p>
+                    <p><strong>Date de l'événement:</strong> {new Date(demande.request_date).toLocaleDateString('fr-FR')}</p>
+                    <p><strong>Type:</strong> {demande.type}</p>
+                    <p><strong>Statut:</strong> <span style={statusBadgeStyle(demande.status)}>{demande.status}</span></p>
+                    {renderSpecificDetails()}
                 </div>
 
                 <div style={modalActionsStyle}>
-                    {renderActions()}
+                    {demande.status === 'pending' && (
+                         <button onClick={() => onUpdateStatus(demande.id, 'confirmed')} style={{ ...actionButtonStyle, backgroundColor: '#28a745' }}>Confirmer la demande</button>
+                    )}
+                    {demande.status === 'confirmed' && (
+                        <button onClick={handleRedirectToCreateQuote} style={{ ...actionButtonStyle, backgroundColor: '#007bff' }}>Créer Devis</button>
+                    )}
+                     <button onClick={() => onUpdateStatus(demande.id, 'cancelled')} style={{ ...actionButtonStyle, backgroundColor: '#dc3545' }}>Annuler</button>
                 </div>
             </div>
         </div>
     );
 };
 
-// --- Styles ---
-
-const modalOverlayStyle = { 
-    position: 'fixed', 
-    top: 0, 
-    left: 0, 
-    right: 0, 
-    bottom: 0, 
-    backgroundColor: 'rgba(0, 0, 0, 0.6)', 
-    display: 'flex', 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    zIndex: 1000 
-};
-const modalContentStyle = { 
-    background: 'white', 
-    padding: '30px', 
-    borderRadius: '8px', 
-    width: '90%', 
-    maxWidth: '700px', 
-    maxHeight: '90vh', 
-    overflowY: 'auto', 
-    position: 'relative',
-    boxSizing: 'border-box',
-};
-const closeButtonStyle = { 
-    position: 'absolute', 
-    top: '15px', 
-    right: '15px', 
-    background: 'transparent', 
-    border: 'none', 
-    fontSize: '24px', 
-    cursor: 'pointer' 
-};
-const detailSectionStyle = { 
-    marginBottom: '20px', 
-    paddingBottom: '20px', 
-    borderBottom: '1px solid #f0f0f0' 
-};
-const detailTitleStyle = { 
-    fontSize: '18px', 
-    color: '#d4af37', 
-    marginBottom: '10px' 
-};
-const actionButtonStyle = { 
-    padding: '10px 15px', 
-    border: 'none', 
-    borderRadius: '5px', 
-    cursor: 'pointer', 
-    color: 'white', 
-    fontWeight: 'bold' 
-};
+// --- Styles (similar to Factures.js for consistency) ---
+const modalOverlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 };
+const modalContentStyle = { background: 'white', padding: '30px', borderRadius: '8px', width: '90%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto', position: 'relative' };
+const closeButtonStyle = { position: 'absolute', top: '15px', right: '15px', background: 'transparent', border: 'none', fontSize: '24px', cursor: 'pointer' };
+const detailSectionStyle = { marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px solid #f0f0f0' };
+const detailTitleStyle = { fontSize: '18px', color: '#d4af37', marginBottom: '10px' };
+const actionButtonStyle = { padding: '10px 15px', border: 'none', borderRadius: '5px', cursor: 'pointer', color: 'white', fontWeight: 'bold' };
+const modalActionsStyle = { marginTop: '30px', display: 'flex', justifyContent: 'flex-end', gap: '10px' };
 const statusBadgeStyle = (status) => {
-    const colors = {
-        'Nouvelle': '#007bff', 'En attente de traitement': '#ffc107', 'En attente de validation de devis': '#fd7e14',
-        'En attente de paiement': '#17a2b8', 'En attente de préparation': '#6f42c1', 'Préparation en cours': '#20c997',
-        'Confirmée': '#28a745', 'Refusée': '#6c757d', 'Annulée': '#dc3545', 'Payée': '#6f42c1'
-    };
-    return {
-        padding: '4px 8px', borderRadius: '12px',
-        color: ['En attente de traitement', 'Préparation en cours'].includes(status) ? 'black' : 'white',
-        fontWeight: 'bold', fontSize: '12px', backgroundColor: colors[status] || '#6c757d'
-    };
-};
-
-const modalActionsStyle = {
-    marginTop: '30px',
-    display: 'flex',
-    justifyContent: 'flex-end',
-    gap: '10px',
-    flexWrap: 'wrap',
+    const colors = { 'pending': '#ffc107', 'confirmed': '#007bff', 'in_progress': '#17a2b8', 'completed': '#28a745', 'cancelled': '#dc3545' };
+    return { padding: '4px 8px', borderRadius: '12px', color: 'white', fontWeight: 'bold', fontSize: '12px', backgroundColor: colors[status] || '#6c757d' };
 };
 
 export default DemandeDetail;
