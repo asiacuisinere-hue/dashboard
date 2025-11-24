@@ -106,23 +106,20 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                 </div>
 
                 <div style={modalActionsStyle}>
-                     {demande.type === 'RESERVATION_SERVICE' && <button onClick={handleUpdateDetails} style={{ ...actionButtonStyle, backgroundColor: '#5a6268', marginRight: 'auto' }}>Sauvegarder</button>}
-                    
-                    {demande.status === 'En attente de traitement' && (
-                         <button onClick={() => onUpdateStatus(demande.id, 'confirmed')} style={{ ...actionButtonStyle, backgroundColor: '#28a745' }}>Confirmer</button>
-                    )}
-
-                    {(demande.status === 'confirmed' && demande.type === 'RESERVATION_SERVICE') && (
-                        <button onClick={handleAction} style={{ ...actionButtonStyle, backgroundColor: '#007bff' }}>Créer Devis</button>
-                    )}
-
-                    {(demande.type === 'COMMANDE_MENU') && (
-                        <button onClick={handleAction} disabled={isGenerating} style={{ ...actionButtonStyle, backgroundColor: '#007bff' }}>
-                            {isGenerating ? 'Génération...' : 'Générer Facture'}
-                        </button>
-                    )}
-
-                     <button onClick={() => onUpdateStatus(demande.id, 'cancelled')} style={{ ...actionButtonStyle, backgroundColor: '#dc3545' }}>Annuler</button>
+                    <>
+                        {demande.type === 'RESERVATION_SERVICE' && (
+                            <button onClick={handleUpdateDetails} style={{ ...actionButtonStyle, backgroundColor: '#5a6268', marginRight: 'auto' }}>Sauvegarder les détails</button>
+                        )}
+                        {demande.status === 'En attente de traitement' && (
+                             <button onClick={() => onUpdateStatus(demande.id, 'confirmed')} style={{ ...actionButtonStyle, backgroundColor: '#28a745' }}>Confirmer Demande</button>
+                        )}
+                        {demande.status === 'confirmed' && (
+                            <button onClick={handleAction} style={{ ...actionButtonStyle, backgroundColor: '#007bff' }}>
+                                {demande.type === 'COMMANDE_MENU' ? 'Générer Facture' : 'Créer Devis'}
+                            </button>
+                        )}
+                         <button onClick={() => onUpdateStatus(demande.id, 'cancelled')} style={{ ...actionButtonStyle, backgroundColor: '#dc3545' }}>Annuler</button>
+                    </>
                 </div>
             </div>
         </div>
