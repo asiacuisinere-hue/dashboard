@@ -34,35 +34,33 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
         const clientInfo = demande.clients || demande.entreprises;
         const clientInfoWithTag = clientInfo ? { ...clientInfo, type: demande.clients ? 'client' : 'entreprise' } : null;
 
-        // Flow for COMMANDE_MENU: Directly generate a simple invoice PDF
+        // Flow for COMMANDE_MENU: Generate and send the invoice via email
         if (demande.type === 'COMMANDE_MENU') {
+            if (!window.confirm("Cette action va générer la facture, l'envoyer au client, et passer la demande en 'attente de paiement'. Continuer ?")) return;
+            
             setIsGenerating(true);
             try {
-                const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/generate-commande-pdf`, {
+                const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/send-invoice-by-email`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.REACT_APP_SUPABASE_ANON_KEY}` },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${process.env.REACT_APP_SUPABASE_ANON_KEY}` 
+                    },
                     body: JSON.stringify({ demandeId: demande.id })
                 });
 
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Erreur de génération du PDF.');
-                }
+                const result = await response.json();
 
-                const blob = await response.blob();
-                const documentNumber = response.headers.get('X-Document-Number') || `facture-commande-${demande.id.substring(0,8)}`;
+                if (!response.ok) {
+                    throw new Error(result.error || 'Erreur lors de la génération et de l\'envoi de la facture.');
+                }
                 
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `${documentNumber}.pdf`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
+                alert('Facture envoyée avec succès ! Le statut a été mis à jour.');
+                onRefresh && onRefresh();
+                onClose();
 
             } catch (error) {
-                alert(error.message);
+                alert(`Erreur: ${error.message}`);
             } finally {
                 setIsGenerating(false);
             }
@@ -115,9 +113,9 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                              <button onClick={() => onUpdateStatus(demande.id, 'confirmed')} style={{ ...actionButtonStyle, backgroundColor: '#28a745' }}>Confirmer Demande</button>
                         )}
                         {demande.status === 'confirmed' && (
-                            <button onClick={handleAction} style={{ ...actionButtonStyle, backgroundColor: '#007bff' }}>
-                                {demande.type === 'COMMANDE_MENU' ? 'Générer Facture' : 'Créer Devis'}
-                            </button>
+                        <button onClick={handleAction} disabled={isGenerating} style={{ ...actionButtonStyle, backgroundColor: '#007bff' }}>
+                            {isGenerating ? 'Envoi en cours...' : 'Générer et Envoyer Facture'}
+                        </button>
                         )}
                          <button onClick={() => onUpdateStatus(demande.id, 'cancelled')} style={{ ...actionButtonStyle, backgroundColor: '#dc3545' }}>Annuler</button>
                     </>
