@@ -149,7 +149,12 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                 {/* Customer Info */}
                 <div style={detailSectionStyle}>
                     <h3 style={detailTitleStyle}>Client / Entreprise</h3>
-                    {demande.clients && <p><strong>Nom:</strong> {demande.clients.last_name} {demande.clients.first_name}</p>}
+                    {demande.clients && (
+                        <>
+                            <p><strong>ID Client:</strong> {demande.clients.client_id || 'N/A'}</p>
+                            <p><strong>Nom:</strong> {demande.clients.last_name} {demande.clients.first_name}</p>
+                        </>
+                    )}
                     {demande.entreprises && <p><strong>Entreprise:</strong> {demande.entreprises.nom_entreprise}</p>}
                 </div>
 
