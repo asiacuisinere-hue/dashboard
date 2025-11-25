@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { supabase } from './supabaseClient'; // Import supabase
 
-const Sidebar = ({ isMobile, newCount, inProgressCount }) => {
+const Sidebar = ({ newCount, inProgressCount, pendingQuotesCount, isMobile }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -31,6 +31,11 @@ const Sidebar = ({ isMobile, newCount, inProgressCount }) => {
     ...badgeStyle,
     backgroundColor: '#ffc107', // Jaune
     color: '#333',
+  };
+
+  const pendingQuotesBadgeStyle = {
+    ...badgeStyle,
+    backgroundColor: '#17a2b8', // Teal/Blue
   };
 
   const hamburgerBadgeStyle = {
@@ -169,7 +174,7 @@ const Sidebar = ({ isMobile, newCount, inProgressCount }) => {
       { to: '/historique', label: 'Historique' },
       { to: '/particuliers', label: 'Particuliers' },
       { to: '/entreprises', label: 'Entreprises' },
-      { to: '/devis', label: 'Devis' },
+      { to: '/devis', label: 'Devis', count: pendingQuotesCount, style: pendingQuotesBadgeStyle },
       { to: '/factures', label: 'Factures' },
       { to: '/scanner', label: 'Scanner' },
       { to: '/services', label: 'Services' }, // Added Services link
