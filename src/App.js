@@ -15,6 +15,7 @@ import Services from './pages/Services'; // Importation de la page Services
 import CalendarSettings from './pages/CalendarSettings'; // Importation de la page CalendarSettings
 import Abonnements from './pages/Abonnements'; // Importation de la page Abonnements
 import AdminAccountSettings from './pages/AdminAccountSettings'; // Importation de la page Compte Administrateur
+import Validation from './pages/Validation'; // Importation de la page Validation
 
 // --- Composants ---
 
