@@ -5,6 +5,7 @@ import { supabase } from './supabaseClient';
 const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
     const navigate = useNavigate();
     const [details, setDetails] = useState(demande.details_json || {});
+    // eslint-disable-next-line no-unused-vars
     const [isGenerating, setIsGenerating] = useState(false);
 
     useEffect(() => {
