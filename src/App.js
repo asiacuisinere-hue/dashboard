@@ -144,6 +144,7 @@ const DashboardLayout = () => {
                     <Route path="/factures" element={<Factures />} />
                     <Route path="/scanner" element={<Scanner />} />
                     <Route path="/parametres" element={<Parametres />} />
+                    <Route path="/validation" element={<Validation />} /> 
                     <Route path="/services" element={<Services />} /> {/* Route pour la page Services */}
                     <Route path="/calendrier" element={<CalendarSettings />} /> {/* Route pour la page Calendrier */}
                     <Route path="/abonnements" element={<Abonnements />} /> {/* Route pour la page Abonnements */}
