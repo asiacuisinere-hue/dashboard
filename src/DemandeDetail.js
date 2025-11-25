@@ -6,7 +6,8 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
     const navigate = useNavigate();
     const [details, setDetails] = useState(demande.details_json || {});
     // eslint-disable-next-line no-unused-vars
-    const [isGenerating, setIsGenerating] = useState(false);
+    const [isGenerating, setIsGenerating] = useState(false); // Used for "Générer Facture" button
+    const [isSendingQrCode, setIsSendingQrCode] = useState(false); // Used for "Paiement reçu" button
 
     useEffect(() => {
         setDetails(demande.details_json || {});
@@ -93,6 +94,37 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
         }
     };
 
+    const handleSendQrCodeAndPay = async () => {
+        if (!window.confirm("Confirmer la réception du paiement et envoyer le QR Code au client ?")) return;
+        
+        setIsSendingQrCode(true);
+        try {
+            const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/send-qrcode`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${process.env.REACT_APP_SUPABASE_ANON_KEY}` 
+                },
+                body: JSON.stringify({ demandeId: demande.id })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Erreur lors de l\'envoi du QR Code.');
+            }
+            
+            alert('Paiement confirmé et QR Code envoyé ! Le statut a été mis à jour.');
+            onRefresh && onRefresh();
+            onClose();
+
+        } catch (error) {
+            alert(`Erreur: ${error.message}`);
+        } finally {
+            setIsSendingQrCode(false);
+        }
+    };
+
     const renderReservationServiceForm = () => (
          <>
             <div style={formGroupStyle}><label style={labelStyle}>Nombre d'invités</label><input style={inputStyle} type="number" name="numberOfGuests" value={details.numberOfGuests || ''} onChange={handleDetailChange} /></div>
@@ -114,7 +146,13 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                 <button onClick={onClose} style={closeButtonStyle}>&times;</button>
                 <h2>Détails demande #{demande.id.substring(0, 8)}</h2>
                 
-                {/* ... Customer and Demand Info ... */}
+                {/* Customer Info */}
+                <div style={detailSectionStyle}>
+                    <h3 style={detailTitleStyle}>Client / Entreprise</h3>
+                    {demande.clients && <p><strong>Nom:</strong> {demande.clients.last_name} {demande.clients.first_name}</p>}
+                    {demande.entreprises && <p><strong>Entreprise:</strong> {demande.entreprises.nom_entreprise}</p>}
+                </div>
+
                 <div style={detailSectionStyle}>
                     <h3 style={detailTitleStyle}>Détails</h3>
                     <p><strong>Statut:</strong> <span style={statusBadgeStyle(demande.status)}>{demande.status}</span></p>
@@ -129,11 +167,22 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                         {demande.status === 'En attente de traitement' && (
                              <button onClick={() => onUpdateStatus(demande.id, 'confirmed')} style={{ ...actionButtonStyle, backgroundColor: '#28a745' }}>Confirmer Demande</button>
                         )}
-                        {demande.status === 'confirmed' && (
-                        <button onClick={handleAction} disabled={isGenerating} style={{ ...actionButtonStyle, backgroundColor: '#007bff' }}>
-                            {isGenerating ? 'Envoi en cours...' : 'Générer et Envoyer Facture'}
-                        </button>
+                        {demande.status === 'En attente de paiement' && demande.type === 'COMMANDE_MENU' && (
+                            <button onClick={handleSendQrCodeAndPay} disabled={isSendingQrCode} style={{ ...actionButtonStyle, backgroundColor: '#28a745' }}>
+                                {isSendingQrCode ? 'Envoi en cours...' : 'Paiement reçu & Envoyer QR Code'}
+                            </button>
                         )}
+
+                        {(demande.status === 'confirmed' && demande.type === 'RESERVATION_SERVICE') && (
+                            <button onClick={handleAction} style={{ ...actionButtonStyle, backgroundColor: '#007bff' }}>Créer Devis</button>
+                        )}
+
+                        {(demande.type === 'COMMANDE_MENU') && (
+                            <button onClick={handleAction} disabled={isGenerating} style={{ ...actionButtonStyle, backgroundColor: '#007bff' }}>
+                                {isGenerating ? 'Envoi en cours...' : 'Générer et Envoyer Facture'}
+                            </button>
+                        )}
+
                          <button onClick={() => onUpdateStatus(demande.id, 'cancelled')} style={{ ...actionButtonStyle, backgroundColor: '#dc3545' }}>Annuler</button>
                     </>
                 </div>
@@ -151,7 +200,7 @@ const detailTitleStyle = { fontSize: '18px', color: '#d4af37', marginBottom: '15
 const actionButtonStyle = { padding: '10px 15px', border: 'none', borderRadius: '5px', cursor: 'pointer', color: 'white', fontWeight: 'bold' };
 const modalActionsStyle = { marginTop: '30px', display: 'flex', justifyContent: 'flex-end', gap: '10px' };
 const statusBadgeStyle = (status) => {
-    const colors = { 'pending': '#ffc107', 'En attente de traitement': '#ffc107', 'confirmed': '#007bff', 'in_progress': '#17a2b8', 'completed': '#28a745', 'cancelled': '#dc3545' };
+    const colors = { 'pending': '#ffc107', 'En attente de traitement': '#ffc107', 'confirmed': '#007bff', 'En attente de paiement': '#fd7e14', 'En attente de préparation': '#17a2b8', 'in_progress': '#17a2b8', 'completed': '#28a745', 'cancelled': '#dc3545' };
     return { padding: '4px 8px', borderRadius: '12px', color: 'white', fontWeight: 'bold', fontSize: '12px', backgroundColor: colors[status] || '#6c757d' };
 };
 const formGroupStyle = { marginBottom: '15px' };
