@@ -177,6 +177,9 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                                 {isSendingQrCode ? 'Envoi en cours...' : 'Paiement reçu & Envoyer QR Code'}
                             </button>
                         )}
+                        {demande.status === 'En attente de préparation' && (
+                             <button onClick={() => onUpdateStatus(demande.id, 'Préparation en cours')} style={{ ...actionButtonStyle, backgroundColor: '#17a2b8' }}>Mettre en préparation</button>
+                        )}
 
                         {(demande.status === 'confirmed' && demande.type === 'RESERVATION_SERVICE') && (
                             <button onClick={handleAction} style={{ ...actionButtonStyle, backgroundColor: '#007bff' }}>Créer Devis</button>
@@ -205,7 +208,7 @@ const detailTitleStyle = { fontSize: '18px', color: '#d4af37', marginBottom: '15
 const actionButtonStyle = { padding: '10px 15px', border: 'none', borderRadius: '5px', cursor: 'pointer', color: 'white', fontWeight: 'bold' };
 const modalActionsStyle = { marginTop: '30px', display: 'flex', justifyContent: 'flex-end', gap: '10px' };
 const statusBadgeStyle = (status) => {
-    const colors = { 'pending': '#ffc107', 'En attente de traitement': '#ffc107', 'confirmed': '#007bff', 'En attente de paiement': '#fd7e14', 'En attente de préparation': '#17a2b8', 'in_progress': '#17a2b8', 'completed': '#28a745', 'cancelled': '#dc3545' };
+    const colors = { 'pending': '#ffc107', 'En attente de traitement': '#ffc107', 'confirmed': '#007bff', 'En attente de paiement': '#fd7e14', 'En attente de préparation': '#6f42c1', 'Préparation en cours': '#17a2b8', 'in_progress': '#17a2b8', 'completed': '#28a745', 'cancelled': '#dc3545' };
     return { padding: '4px 8px', borderRadius: '12px', color: 'white', fontWeight: 'bold', fontSize: '12px', backgroundColor: colors[status] || '#6c757d' };
 };
 const formGroupStyle = { marginBottom: '15px' };
