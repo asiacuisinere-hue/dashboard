@@ -34,9 +34,9 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
         const clientInfo = demande.clients || demande.entreprises;
         const clientInfoWithTag = clientInfo ? { ...clientInfo, type: demande.clients ? 'client' : 'entreprise' } : null;
 
-        // Flow for COMMANDE_MENU: Generate and send the invoice via email
+        // Flow for COMMANDE_MENU: Generate, send, and download the invoice
         if (demande.type === 'COMMANDE_MENU') {
-            if (!window.confirm("Cette action va générer la facture, l'envoyer au client, et passer la demande en 'attente de paiement'. Continuer ?")) return;
+            if (!window.confirm("Cette action va générer la facture, l'envoyer au client, et la télécharger. Continuer ?")) return;
             
             setIsGenerating(true);
             try {
@@ -49,13 +49,30 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                     body: JSON.stringify({ demandeId: demande.id })
                 });
 
-                const result = await response.json();
-
                 if (!response.ok) {
-                    throw new Error(result.error || 'Erreur lors de la génération et de l\'envoi de la facture.');
+                    const errorData = await response.json().catch(() => ({ error: 'Erreur inattendue du serveur.' }));
+                    throw new Error(errorData.error || `Erreur ${response.status}`);
                 }
                 
-                alert('Facture envoyée avec succès ! Le statut a été mis à jour.');
+                // Handle PDF download
+                const blob = await response.blob();
+                const contentDisposition = response.headers.get('Content-Disposition');
+                let filename = `facture.pdf`;
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+                    if (filenameMatch && filenameMatch[1]) filename = filenameMatch[1];
+                }
+
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+
+                alert('Facture envoyée et téléchargée avec succès ! Le statut a été mis à jour.');
                 onRefresh && onRefresh();
                 onClose();
 
