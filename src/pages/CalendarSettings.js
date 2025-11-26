@@ -9,8 +9,12 @@ const CalendarSettings = () => {
     const [reason, setReason] = useState('');
     const [recurringDay, setRecurringDay] = useState('');
     const [loading, setLoading] = useState(true);
-    
-    const SERVICE_TYPE = 'RESERVATION_SERVICE'; // This page now only manages this service type
+    const [activeTab, setActiveTab] = useState('RESERVATION_SERVICE');
+
+    const serviceTypeMap = {
+        'RESERVATION_SERVICE': 'Réservation de Service',
+        'COMMANDE_MENU': 'Commande de Menu'
+    };
 
     const dayOfWeekMap = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 
@@ -19,16 +23,15 @@ const CalendarSettings = () => {
         const { data, error } = await supabase
             .from('indisponibilites')
             .select('id, date, day_of_week, reason')
-            .eq('service_type', SERVICE_TYPE);
+            .eq('service_type', activeTab);
         
         if (error) {
             console.error('Error fetching unavailable entries:', error);
-            alert('Erreur de chargement des indisponibilités.');
         } else {
             setUnavailableEntries(data || []);
         }
         setLoading(false);
-    }, []);
+    }, [activeTab]);
 
     useEffect(() => {
         fetchUnavailableEntries();
@@ -40,7 +43,7 @@ const CalendarSettings = () => {
         const { error } = await supabase.from('indisponibilites').insert([{ 
             date: dateString, 
             reason: reason,
-            service_type: SERVICE_TYPE
+            service_type: activeTab
         }]);
         if (error) alert(`Erreur: ${error.message}`);
         else {
@@ -59,10 +62,12 @@ const CalendarSettings = () => {
         const { error } = await supabase.from('indisponibilites').insert([{
             day_of_week: parseInt(recurringDay),
             reason: `Jour récurrent bloqué`,
-            service_type: SERVICE_TYPE
+            service_type: activeTab
         }]);
-        if (error) alert(`Erreur: ${error.message}`);
-        else {
+        if (error) {
+            console.error("Supabase insert error:", error);
+            alert(`Erreur: ${error.message}`);
+        } else {
             alert('Jour récurrent ajouté !');
             fetchUnavailableEntries();
         }
@@ -93,12 +98,17 @@ const CalendarSettings = () => {
 
     return (
         <div style={containerStyle}>
-            <h1>Gestion du Calendrier (Réservation de Service)</h1>
-            <p>Sélectionnez les jours où le service de **réservation à domicile** n'est pas disponible.</p>
+            <h1>Gestion des Calendriers</h1>
+            <p>Sélectionnez les jours où un service n'est pas disponible.</p>
+
+            <div style={tabsContainerStyle}>
+                <button style={activeTab === 'RESERVATION_SERVICE' ? activeTabStyle : tabStyle} onClick={() => setActiveTab('RESERVATION_SERVICE')}>Réservation de Service</button>
+                <button style={activeTab === 'COMMANDE_MENU' ? activeTabStyle : tabStyle} onClick={() => setActiveTab('COMMANDE_MENU')}>Commande de Menu</button>
+            </div>
 
             <div style={contentContainerStyle}>
                 <div style={calendarSectionStyle}>
-                    <h2>Calendrier des Réservations</h2>
+                    <h2>Calendrier pour: {serviceTypeMap[activeTab]}</h2>
                     <Calendar onChange={setSelectedDate} value={selectedDate} tileClassName={tileClassName} />
                     <form onSubmit={handleAddDate} style={formStyle}>
                         <h3>Ajouter une date spécifique</h3>
@@ -110,6 +120,7 @@ const CalendarSettings = () => {
 
                 <div style={listSectionStyle}>
                     <h2>Gérer les indisponibilités</h2>
+                    
                     <div style={{ ...formStyle, marginBottom: '2rem' }}>
                         <h3>Ajouter un jour récurrent</h3>
                         <select value={recurringDay} onChange={(e) => setRecurringDay(e.target.value)} style={inputStyle}>
@@ -146,6 +157,9 @@ const CalendarSettings = () => {
 
 // Styles
 const containerStyle = { padding: '20px' };
+const tabsContainerStyle = { display: 'flex', marginBottom: '20px', borderBottom: '1px solid #ccc' };
+const tabStyle = { padding: '10px 20px', cursor: 'pointer', border: 'none', background: 'transparent', fontSize: '16px', color: '#666' };
+const activeTabStyle = { ...tabStyle, fontWeight: 'bold', color: '#d4af37', borderBottom: '2px solid #d4af37' };
 const contentContainerStyle = { display: 'flex', gap: '2rem', flexWrap: 'wrap' };
 const calendarSectionStyle = { flex: 1, minWidth: '300px' };
 const listSectionStyle = { flex: 1, minWidth: '300px' };
