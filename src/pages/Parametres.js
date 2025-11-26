@@ -10,19 +10,17 @@ const Parametres = () => {
     const [companySettings, setCompanySettings] = useState({
         id: null, name: '', owner: '', address: '', city: '', phone: '', email: '',
         website: '', siret: '', tva_message: '', logo_url: '',
-        order_cutoff_days: 2,
-        order_cutoff_hour: 11,
-        payment_conditions: '',
-        payment_methods: ''
+        order_cutoff_days: 2, // Ajout du champ avec valeur par défaut
+        order_cutoff_hour: 11,  // Ajout du champ avec valeur par défaut
+        payment_conditions: '', // Ajout du champ avec valeur par défaut
+        payment_methods: '' // Ajout du champ avec valeur par défaut
     });
     const [isCompanyLoading, setIsCompanyLoading] = useState(true);
 
-    // --- États pour le Message de Bienvenue et Refusal Template ---
+    // --- Autres états ---
     const [welcomeMessage, setWelcomeMessage] = useState('');
     const [refusalTemplate, setRefusalTemplate] = useState('');
     const [isOtherSettingsLoading, setIsOtherSettingsLoading] = useState(true);
-
-    // --- États pour la Gestion des Menus ---
     const [menuDecouverte, setMenuDecouverte] = useState('');
     const [menuStandard, setMenuStandard] = useState('');
     const [menuConfort, setMenuConfort] = useState('');
@@ -56,8 +54,11 @@ const Parametres = () => {
             setCompanySettings(prev => ({
                 ...prev,
                 ...companyDataArray[0],
+                // Assurer que les valeurs sont des nombres, avec fallback
                 order_cutoff_days: companyDataArray[0].order_cutoff_days ?? 2,
-                order_cutoff_hour: companyDataArray[0].order_cutoff_hour ?? 11
+                order_cutoff_hour: companyDataArray[0].order_cutoff_hour ?? 11,
+                payment_conditions: companyDataArray[0].payment_conditions ?? '',
+                payment_methods: companyDataArray[0].payment_methods ?? ''
             }));
         }
         setIsCompanyLoading(false);
@@ -86,7 +87,7 @@ const Parametres = () => {
         setIsOtherSettingsLoading(false);
         setIsMenuLoading(false);
     }, []);
-
+    
     useEffect(() => {
         fetchAllSettings();
     }, [fetchAllSettings]);
@@ -100,7 +101,8 @@ const Parametres = () => {
     const handleSaveCompanySettings = async (e) => {
         e.preventDefault();
         setStatus({ message: 'Enregistrement...', type: 'info' });
-
+        
+        // Assurer que les valeurs sont bien des nombres
         const payload = {
             ...companySettings,
             order_cutoff_days: parseInt(companySettings.order_cutoff_days, 10) || 2,
@@ -134,10 +136,11 @@ const Parametres = () => {
             ]);
         } finally {
             setIsMenuLoading(false);
+            setStatus({ message: 'Menus enregistrés !', type: 'success' });
             setTimeout(() => setStatus({ message: '', type: 'info' }), 3000);
         }
     };
-
+    
     return (
         <div style={containerStyle}>
             <h1>Paramètres</h1>
@@ -146,12 +149,12 @@ const Parametres = () => {
 
             <div style={gridStyle}>
                 <Link to="/calendrier" style={cardStyle}><h2>Gestion du Calendrier</h2><p>Bloquer des dates et des jours.</p></Link>
-                <Link to="/abonnements" style={cardStyle}><h2>Gestion des Abonnements</h2><p>Gérer les demandes d'abonnements.</p></Link>
+                <Link to="/abonnements" style={cardStyle}><h2>Gestion des Abonnements</h2><p>Gérer les demandes d\'abonnements.</p></Link>
                 <Link to="/admin-account" style={cardStyle}><h2>Compte Administrateur</h2><p>Gérer les informations de connexion.</p></Link>
             </div>
 
             <div style={sectionStyle}>
-                <h2>Informations de l'entreprise</h2>
+                <h2>Informations de l\'entreprise</h2>
                 {isCompanyLoading ? <p>Chargement...</p> : (
                     <form onSubmit={handleSaveCompanySettings}>
                         <div style={formGridStyle}>
@@ -165,12 +168,11 @@ const Parametres = () => {
                             <InputField label="Site Web" name="website" value={companySettings.website} onChange={handleCompanyInputChange} />
                             <div style={{gridColumn: '1 / -1'}}><InputField label="URL du Logo" name="logo_url" value={companySettings.logo_url} onChange={handleCompanyInputChange} /></div>
                             <div style={{gridColumn: '1 / -1'}}><InputField label="Mention TVA" name="tva_message" value={companySettings.tva_message} onChange={handleCompanyInputChange} /></div>
-
-                            {/* NOUVEAUX CHAMPS AJOUTÉS ICI */}
-                            <InputField label="Conditions de paiement" name="payment_conditions" value={companySettings.payment_conditions} onChange={handleCompanyInputChange} />
-                            <InputField label="Moyens de paiement" name="payment_methods" value={companySettings.payment_methods} onChange={handleCompanyInputChange} />
+                            
                             <InputField label="Délai de commande (jours)" name="order_cutoff_days" type="number" value={companySettings.order_cutoff_days} onChange={handleCompanyInputChange} />
                             <InputField label="Heure limite de commande (0-23)" name="order_cutoff_hour" type="number" value={companySettings.order_cutoff_hour} onChange={handleCompanyInputChange} />
+                            <InputField label="Conditions de paiement" name="payment_conditions" value={companySettings.payment_conditions} onChange={handleCompanyInputChange} />
+                            <InputField label="Moyens de paiement" name="payment_methods" value={companySettings.payment_methods} onChange={handleCompanyInputChange} />
 
                         </div>
                         <button type="submit" style={saveButtonStyle}>Enregistrer les informations</button>
@@ -179,7 +181,7 @@ const Parametres = () => {
             </div>
 
             <div style={sectionStyle}>
-                <h2>Message d'accueil (Popup)</h2>
+                <h2>Message d\'accueil (Popup)</h2>
                 {isOtherSettingsLoading ? <p>Chargement...</p> : (
                     <>
                         <textarea value={welcomeMessage} onChange={(e) => setWelcomeMessage(e.target.value)} style={{...inputStyle, height: '100px'}} placeholder="Saisissez le message ici..."/>
@@ -192,7 +194,7 @@ const Parametres = () => {
                 <h2>Modèle e-mail de refus</h2>
                 {isOtherSettingsLoading ? <p>Chargement...</p> : (
                     <>
-                        <textarea value={refusalTemplate} onChange={(e) => setRefusalTemplate(e.target.value)} style={{...inputStyle, height: '150px'}} placeholder="Saisissez le modèle d'e-mail de refus ici..."/>
+                        <textarea value={refusalTemplate} onChange={(e) => setRefusalTemplate(e.target.value)} style={{...inputStyle, height: '150px'}} placeholder="Saisissez le modèle d\'e-mail de refus ici..."/>
                         <button onClick={() => saveSetting('refusalEmailTemplate', refusalTemplate)} style={{...saveButtonStyle, alignSelf: 'flex-start', fontSize: '14px'}}>Enregistrer le modèle</button>
                     </>
                 )}
