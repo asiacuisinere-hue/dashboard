@@ -4,84 +4,95 @@ import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 
 const CalendarSettings = () => {
-    const [unavailableDates, setUnavailableDates] = useState([]);
+    const [unavailableEntries, setUnavailableEntries] = useState([]);
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [reason, setReason] = useState('');
+    const [recurringDay, setRecurringDay] = useState('');
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState('RESERVATION_SERVICE'); // 'RESERVATION_SERVICE' or 'COMMANDE_MENU'
+    const [activeTab, setActiveTab] = useState('RESERVATION_SERVICE');
 
     const serviceTypeMap = {
         'RESERVATION_SERVICE': 'Réservation de Service',
         'COMMANDE_MENU': 'Commande de Menu'
     };
 
-    const fetchUnavailableDates = useCallback(async () => {
+    const dayOfWeekMap = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+
+    const fetchUnavailableEntries = useCallback(async () => {
         setLoading(true);
         const { data, error } = await supabase
             .from('indisponibilites')
-            .select('id, date, reason')
+            .select('id, date, day_of_week, reason')
             .eq('service_type', activeTab);
         
         if (error) {
-            console.error('Error fetching unavailable dates:', error);
-            alert('Erreur de chargement des dates.');
+            console.error('Error fetching unavailable entries:', error);
         } else {
-            setUnavailableDates(data.map(d => ({ ...d, date: new Date(d.date) })));
+            setUnavailableEntries(data || []);
         }
         setLoading(false);
     }, [activeTab]);
 
     useEffect(() => {
-        fetchUnavailableDates();
-    }, [fetchUnavailableDates]);
+        fetchUnavailableEntries();
+    }, [fetchUnavailableEntries]);
 
     const handleAddDate = async (e) => {
         e.preventDefault();
         const dateString = selectedDate.toISOString().split('T')[0];
-
-        const { error } = await supabase
-            .from('indisponibilites')
-            .insert([{ 
-                date: dateString, 
-                reason: reason,
-                service_type: activeTab // Add the service type
-            }]);
-
-        if (error) {
-            console.error('Error adding date:', error);
-            alert(`Erreur: ${error.message}`);
-        } else {
-            alert('Date ajoutée avec succès !');
+        const { error } = await supabase.from('indisponibilites').insert([{ 
+            date: dateString, 
+            reason: reason,
+            service_type: activeTab
+        }]);
+        if (error) alert(`Erreur: ${error.message}`);
+        else {
+            alert('Date ajoutée !');
             setReason('');
-            fetchUnavailableDates();
+            fetchUnavailableEntries();
         }
     };
 
-    const handleDeleteDate = async (id) => {
-        if (!window.confirm("Confirmer la suppression de cette date ?")) return;
+    const handleAddRecurringDay = async (e) => {
+        e.preventDefault();
+        if (recurringDay === '') {
+            alert('Veuillez sélectionner un jour.');
+            return;
+        }
+        const { error } = await supabase.from('indisponibilites').insert([{
+            day_of_week: parseInt(recurringDay),
+            reason: `Jour récurrent bloqué`,
+            service_type: activeTab
+        }]);
+        if (error) alert(`Erreur: ${error.message}`);
+        else {
+            alert('Jour récurrent ajouté !');
+            fetchUnavailableEntries();
+        }
+    };
 
-        const { error } = await supabase
-            .from('indisponibilites')
-            .delete()
-            .eq('id', id);
-
-        if (error) {
-            alert(`Erreur: ${error.message}`);
-        } else {
-            alert('Date supprimée avec succès.');
-            fetchUnavailableDates();
+    const handleDelete = async (id) => {
+        if (!window.confirm("Confirmer la suppression ?")) return;
+        const { error } = await supabase.from('indisponibilites').delete().eq('id', id);
+        if (error) alert(`Erreur: ${error.message}`);
+        else {
+            alert('Supprimé avec succès.');
+            fetchUnavailableEntries();
         }
     };
     
     const tileClassName = ({ date, view }) => {
         if (view === 'month') {
-            const isUnavailable = unavailableDates.some(
-                d => d.date.toDateString() === date.toDateString()
-            );
-            return isUnavailable ? 'unavailable-tile' : null;
+            const dateString = date.toISOString().split('T')[0];
+            const isSpecificDate = unavailableEntries.some(d => d.date === dateString);
+            const isRecurringDay = unavailableEntries.some(d => d.day_of_week === date.getDay());
+            return (isSpecificDate || isRecurringDay) ? 'unavailable-tile' : null;
         }
         return null;
     };
+    
+    const specificDates = unavailableEntries.filter(e => e.date);
+    const recurringDays = unavailableEntries.filter(e => e.day_of_week !== null);
 
     return (
         <div style={containerStyle}>
@@ -89,53 +100,52 @@ const CalendarSettings = () => {
             <p>Sélectionnez les jours où un service n'est pas disponible.</p>
 
             <div style={tabsContainerStyle}>
-                <button 
-                    style={activeTab === 'RESERVATION_SERVICE' ? activeTabStyle : tabStyle}
-                    onClick={() => setActiveTab('RESERVATION_SERVICE')}
-                >
-                    Réservation de Service
-                </button>
-                <button 
-                    style={activeTab === 'COMMANDE_MENU' ? activeTabStyle : tabStyle}
-                    onClick={() => setActiveTab('COMMANDE_MENU')}
-                >
-                    Commande de Menu
-                </button>
+                <button style={activeTab === 'RESERVATION_SERVICE' ? activeTabStyle : tabStyle} onClick={() => setActiveTab('RESERVATION_SERVICE')}>Réservation de Service</button>
+                <button style={activeTab === 'COMMANDE_MENU' ? activeTabStyle : tabStyle} onClick={() => setActiveTab('COMMANDE_MENU')}>Commande de Menu</button>
             </div>
 
             <div style={contentContainerStyle}>
                 <div style={calendarSectionStyle}>
                     <h2>Calendrier pour: {serviceTypeMap[activeTab]}</h2>
-                    <Calendar
-                        onChange={setSelectedDate}
-                        value={selectedDate}
-                        tileClassName={tileClassName}
-                    />
+                    <Calendar onChange={setSelectedDate} value={selectedDate} tileClassName={tileClassName} />
                     <form onSubmit={handleAddDate} style={formStyle}>
-                        <h3>Ajouter une indisponibilité</h3>
+                        <h3>Ajouter une date spécifique</h3>
                         <p>Date sélectionnée: {selectedDate.toLocaleDateString('fr-FR')}</p>
-                        <input
-                            type="text"
-                            placeholder="Raison (ex: Férié, Vacances)"
-                            value={reason}
-                            onChange={(e) => setReason(e.target.value)}
-                            style={inputStyle}
-                        />
+                        <input type="text" placeholder="Raison (ex: Férié)" value={reason} onChange={(e) => setReason(e.target.value)} style={inputStyle} />
                         <button type="submit" style={buttonStyle}>Ajouter la date</button>
                     </form>
                 </div>
 
                 <div style={listSectionStyle}>
-                    <h2>Dates non disponibles</h2>
+                    <h2>Gérer les indisponibilités</h2>
+                    
+                    <div style={{ ...formStyle, marginBottom: '2rem' }}>
+                        <h3>Ajouter un jour récurrent</h3>
+                        <select value={recurringDay} onChange={(e) => setRecurringDay(e.target.value)} style={inputStyle}>
+                            <option value="">-- Choisir un jour --</option>
+                            {dayOfWeekMap.map((day, index) => <option key={index} value={index}>{day}</option>)}
+                        </select>
+                        <button onClick={handleAddRecurringDay} style={buttonStyle}>Ajouter le jour</button>
+                    </div>
+
+                    <h3>Jours récurrents bloqués</h3>
                     {loading ? <p>Chargement...</p> : (
-                        <ul>
-                            {unavailableDates.map(d => (
-                                <li key={d.id} style={listItemStyle}>
-                                    <span>{d.date.toLocaleDateString('fr-FR')} - {d.reason || 'Aucune raison'}</span>
-                                    <button onClick={() => handleDeleteDate(d.id)} style={deleteButtonStyle}>X</button>
-                                </li>
-                            ))}
-                        </ul>
+                        <ul>{recurringDays.map(d => (
+                            <li key={d.id} style={listItemStyle}>
+                                <span>{dayOfWeekMap[d.day_of_week]}</span>
+                                <button onClick={() => handleDelete(d.id)} style={deleteButtonStyle}>X</button>
+                            </li>
+                        ))}</ul>
+                    )}
+
+                    <h3 style={{marginTop: '2rem'}}>Dates spécifiques bloquées</h3>
+                    {loading ? <p>Chargement...</p> : (
+                        <ul>{specificDates.map(d => (
+                            <li key={d.id} style={listItemStyle}>
+                                <span>{new Date(d.date).toLocaleDateString('fr-FR')} - {d.reason || 'N/A'}</span>
+                                <button onClick={() => handleDelete(d.id)} style={deleteButtonStyle}>X</button>
+                            </li>
+                        ))}</ul>
                     )}
                 </div>
             </div>
@@ -144,7 +154,6 @@ const CalendarSettings = () => {
 };
 
 // Styles
-// ...
 const containerStyle = { padding: '20px' };
 const tabsContainerStyle = { display: 'flex', marginBottom: '20px', borderBottom: '1px solid #ccc' };
 const tabStyle = { padding: '10px 20px', cursor: 'pointer', border: 'none', background: 'transparent', fontSize: '16px', color: '#666' };
