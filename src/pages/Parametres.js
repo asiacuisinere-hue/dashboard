@@ -10,8 +10,10 @@ const Parametres = () => {
     const [companySettings, setCompanySettings] = useState({
         id: null, name: '', owner: '', address: '', city: '', phone: '', email: '',
         website: '', siret: '', tva_message: '', logo_url: '',
-        order_cutoff_days: 2, // Ajout du champ avec valeur par défaut
-        order_cutoff_hour: 11  // Ajout du champ avec valeur par défaut
+        order_cutoff_days: 2,
+        order_cutoff_hour: 11,
+        payment_conditions: '',
+        payment_methods: ''
     });
     const [isCompanyLoading, setIsCompanyLoading] = useState(true);
 
@@ -165,6 +167,8 @@ const Parametres = () => {
                             <div style={{gridColumn: '1 / -1'}}><InputField label="Mention TVA" name="tva_message" value={companySettings.tva_message} onChange={handleCompanyInputChange} /></div>
 
                             {/* NOUVEAUX CHAMPS AJOUTÉS ICI */}
+                            <InputField label="Conditions de paiement" name="payment_conditions" value={companySettings.payment_conditions} onChange={handleCompanyInputChange} />
+                            <InputField label="Moyens de paiement" name="payment_methods" value={companySettings.payment_methods} onChange={handleCompanyInputChange} />
                             <InputField label="Délai de commande (jours)" name="order_cutoff_days" type="number" value={companySettings.order_cutoff_days} onChange={handleCompanyInputChange} />
                             <InputField label="Heure limite de commande (0-23)" name="order_cutoff_hour" type="number" value={companySettings.order_cutoff_hour} onChange={handleCompanyInputChange} />
 
