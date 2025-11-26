@@ -64,8 +64,10 @@ const CalendarSettings = () => {
             reason: `Jour récurrent bloqué`,
             service_type: activeTab
         }]);
-        if (error) alert(`Erreur: ${error.message}`);
-        else {
+        if (error) {
+            console.error("Supabase insert error:", error); // Log detailed error
+            alert(`Erreur: ${error.message}`);
+        } else {
             alert('Jour récurrent ajouté !');
             fetchUnavailableEntries();
         }
