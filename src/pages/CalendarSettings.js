@@ -9,7 +9,7 @@ const CalendarSettings = () => {
     const [reason, setReason] = useState('');
     const [recurringDay, setRecurringDay] = useState('');
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState('RESERVATION_SERVICE');
+    const [activeTab, setActiveTab] = useState('RESERVATION_SERVICE'); // 'RESERVATION_SERVICE' or 'COMMANDE_MENU'
 
     const serviceTypeMap = {
         'RESERVATION_SERVICE': 'Réservation de Service',
@@ -27,6 +27,7 @@ const CalendarSettings = () => {
         
         if (error) {
             console.error('Error fetching unavailable entries:', error);
+            alert('Erreur de chargement des indisponibilités.');
         } else {
             setUnavailableEntries(data || []);
         }
@@ -102,18 +103,38 @@ const CalendarSettings = () => {
             <p>Sélectionnez les jours où un service n'est pas disponible.</p>
 
             <div style={tabsContainerStyle}>
-                <button style={activeTab === 'RESERVATION_SERVICE' ? activeTabStyle : tabStyle} onClick={() => setActiveTab('RESERVATION_SERVICE')}>Réservation de Service</button>
-                <button style={activeTab === 'COMMANDE_MENU' ? activeTabStyle : tabStyle} onClick={() => setActiveTab('COMMANDE_MENU')}>Commande de Menu</button>
+                <button 
+                    style={activeTab === 'RESERVATION_SERVICE' ? activeTabStyle : tabStyle}
+                    onClick={() => setActiveTab('RESERVATION_SERVICE')}
+                >
+                    Réservation de Service
+                </button>
+                <button 
+                    style={activeTab === 'COMMANDE_MENU' ? activeTabStyle : tabStyle}
+                    onClick={() => setActiveTab('COMMANDE_MENU')}
+                >
+                    Commande de Menu
+                </button>
             </div>
 
             <div style={contentContainerStyle}>
                 <div style={calendarSectionStyle}>
                     <h2>Calendrier pour: {serviceTypeMap[activeTab]}</h2>
-                    <Calendar onChange={setSelectedDate} value={selectedDate} tileClassName={tileClassName} />
+                    <Calendar
+                        onChange={setSelectedDate}
+                        value={selectedDate}
+                        tileClassName={tileClassName}
+                    />
                     <form onSubmit={handleAddDate} style={formStyle}>
                         <h3>Ajouter une date spécifique</h3>
                         <p>Date sélectionnée: {selectedDate.toLocaleDateString('fr-FR')}</p>
-                        <input type="text" placeholder="Raison (ex: Férié, Vacances)" value={reason} onChange={(e) => setReason(e.target.value)} style={inputStyle} />
+                        <input
+                            type="text"
+                            placeholder="Raison (ex: Férié, Vacances)"
+                            value={reason}
+                            onChange={(e) => setReason(e.target.value)}
+                            style={inputStyle}
+                        />
                         <button type="submit" style={buttonStyle}>Ajouter la date</button>
                     </form>
                 </div>
