@@ -15,10 +15,12 @@ const Parametres = () => {
     });
     const [isCompanyLoading, setIsCompanyLoading] = useState(true);
 
-    // --- Autres états ---
+    // --- États pour le Message de Bienvenue et Refusal Template ---
     const [welcomeMessage, setWelcomeMessage] = useState('');
     const [refusalTemplate, setRefusalTemplate] = useState('');
     const [isOtherSettingsLoading, setIsOtherSettingsLoading] = useState(true);
+
+    // --- États pour la Gestion des Menus ---
     const [menuDecouverte, setMenuDecouverte] = useState('');
     const [menuStandard, setMenuStandard] = useState('');
     const [menuConfort, setMenuConfort] = useState('');
@@ -28,6 +30,7 @@ const Parametres = () => {
     const [isMenuLoading, setIsMenuLoading] = useState(true);
 
 
+    // Fonction générique pour sauvegarder un paramètre unique
     const saveSetting = async (key, value) => {
         setStatus({ message: 'Enregistrement...', type: 'info' });
         const { error } = await supabase.from('settings').upsert({ key, value }, { onConflict: 'key' });
@@ -39,28 +42,36 @@ const Parametres = () => {
         }
     };
 
+    // Fonction pour charger tous les paramètres au montage
     const fetchAllSettings = useCallback(async () => {
+        // 1. Charger les paramètres de l'entreprise
         setIsCompanyLoading(true);
         const { data: companyDataArray, error: companyError } = await supabase.from('company_settings').select('*').limit(1);
 
         if (companyError) {
             console.error("Erreur chargement infos entreprise:", companyError);
         } else if (companyDataArray && companyDataArray.length > 0) {
-            // Fusionne les données récupérées avec l'état initial pour ne pas perdre les nouvelles propriétés
             setCompanySettings(prev => ({
                 ...prev,
-                ...companyDataArray[0]
+                ...companyDataArray[0],
+                order_cutoff_days: companyDataArray[0].order_cutoff_days ?? 2,
+                order_cutoff_hour: companyDataArray[0].order_cutoff_hour ?? 11
             }));
         }
         setIsCompanyLoading(false);
 
+        // 2. Charger les autres paramètres (welcome, menus, etc.)
         setIsOtherSettingsLoading(true);
         setIsMenuLoading(true);
         const { data: settingsData, error: settingsError } = await supabase.from('settings').select('key, value');
         if (settingsError) {
             console.error("Erreur chargement settings:", settingsError);
+            setStatus({ message: `Erreur settings: ${settingsError.message}`, type: 'error' });
         } else if (settingsData) {
-            const settingsMap = settingsData.reduce((acc, setting) => { acc[setting.key] = setting.value; return acc; }, {});
+            const settingsMap = settingsData.reduce((acc, setting) => {
+                acc[setting.key] = setting.value;
+                return acc;
+            }, {});
             setWelcomeMessage(settingsMap.welcomePopupMessage || '');
             setRefusalTemplate(settingsMap.refusalEmailTemplate || '');
             setMenuDecouverte(settingsMap.menu_decouverte || '');
@@ -73,11 +84,12 @@ const Parametres = () => {
         setIsOtherSettingsLoading(false);
         setIsMenuLoading(false);
     }, []);
-    
+
     useEffect(() => {
         fetchAllSettings();
     }, [fetchAllSettings]);
 
+    // --- Handlers ---
     const handleCompanyInputChange = (e) => {
         const { name, value } = e.target;
         setCompanySettings(prev => ({ ...prev, [name]: value }));
@@ -86,37 +98,58 @@ const Parametres = () => {
     const handleSaveCompanySettings = async (e) => {
         e.preventDefault();
         setStatus({ message: 'Enregistrement...', type: 'info' });
-        
-        // Assurer que les valeurs sont bien des nombres
+
         const payload = {
             ...companySettings,
             order_cutoff_days: parseInt(companySettings.order_cutoff_days, 10) || 2,
             order_cutoff_hour: parseInt(companySettings.order_cutoff_hour, 10) || 11,
         };
 
-        const { error } = await supabase.from('company_settings').upsert(payload);
+        const { error } = await supabase
+            .from('company_settings')
+            .upsert(payload, { onConflict: 'id' });
 
         if (error) {
+            console.error('Erreur sauvegarde infos entreprise:', error);
             setStatus({ message: `Erreur: ${error.message}`, type: 'error' });
         } else {
-            setStatus({ message: 'Informations de l\'entreprise enregistrées !', type: 'success' });
+            setStatus({ message: 'Informations de l\'entreprise enregistrées avec succès !', type: 'success' });
             fetchAllSettings();
         }
     };
 
-    const handleSaveMenus = async () => { /* ... */ };
-    
+    const handleSaveMenus = async () => {
+        setStatus({ message: 'Enregistrement...', type: 'info' });
+        setIsMenuLoading(true);
+        try {
+            await Promise.all([
+                saveSetting('menu_decouverte', menuDecouverte),
+                saveSetting('menu_standard', menuStandard),
+                saveSetting('menu_confort', menuConfort),
+                saveSetting('menu_duo', menuDuo),
+                saveSetting('menu_override_message', menuOverrideMessage),
+                saveSetting('menu_override_enabled', String(menuOverrideEnabled)),
+            ]);
+        } finally {
+            setIsMenuLoading(false);
+            setTimeout(() => setStatus({ message: '', type: 'info' }), 3000);
+        }
+    };
+
     return (
         <div style={containerStyle}>
             <h1>Paramètres</h1>
+            <p>Gérez ici les différentes configurations de votre application.</p>
             {status.message && <div style={statusStyle(status.type)}>{status.message}</div>}
 
             <div style={gridStyle}>
-                {/* ... Liens ... */}
+                <Link to="/calendrier" style={cardStyle}><h2>Gestion du Calendrier</h2><p>Bloquer des dates et des jours.</p></Link>
+                <Link to="/abonnements" style={cardStyle}><h2>Gestion des Abonnements</h2><p>Gérer les demandes d'abonnements.</p></Link>
+                <Link to="/admin-account" style={cardStyle}><h2>Compte Administrateur</h2><p>Gérer les informations de connexion.</p></Link>
             </div>
 
             <div style={sectionStyle}>
-                <h2>Informations de l\'entreprise</h2>
+                <h2>Informations de l'entreprise</h2>
                 {isCompanyLoading ? <p>Chargement...</p> : (
                     <form onSubmit={handleSaveCompanySettings}>
                         <div style={formGridStyle}>
@@ -130,7 +163,7 @@ const Parametres = () => {
                             <InputField label="Site Web" name="website" value={companySettings.website} onChange={handleCompanyInputChange} />
                             <div style={{gridColumn: '1 / -1'}}><InputField label="URL du Logo" name="logo_url" value={companySettings.logo_url} onChange={handleCompanyInputChange} /></div>
                             <div style={{gridColumn: '1 / -1'}}><InputField label="Mention TVA" name="tva_message" value={companySettings.tva_message} onChange={handleCompanyInputChange} /></div>
-                            
+
                             {/* NOUVEAUX CHAMPS AJOUTÉS ICI */}
                             <InputField label="Délai de commande (jours)" name="order_cutoff_days" type="number" value={companySettings.order_cutoff_days} onChange={handleCompanyInputChange} />
                             <InputField label="Heure limite de commande (0-23)" name="order_cutoff_hour" type="number" value={companySettings.order_cutoff_hour} onChange={handleCompanyInputChange} />
@@ -141,9 +174,8 @@ const Parametres = () => {
                 )}
             </div>
 
-            {/* ... Reste des sections ... */}
             <div style={sectionStyle}>
-                <h2>Message d\'accueil (Popup)</h2>
+                <h2>Message d'accueil (Popup)</h2>
                 {isOtherSettingsLoading ? <p>Chargement...</p> : (
                     <>
                         <textarea value={welcomeMessage} onChange={(e) => setWelcomeMessage(e.target.value)} style={{...inputStyle, height: '100px'}} placeholder="Saisissez le message ici..."/>
@@ -156,7 +188,7 @@ const Parametres = () => {
                 <h2>Modèle e-mail de refus</h2>
                 {isOtherSettingsLoading ? <p>Chargement...</p> : (
                     <>
-                        <textarea value={refusalTemplate} onChange={(e) => setRefusalTemplate(e.target.value)} style={{...inputStyle, height: '150px'}} placeholder="Saisissez le modèle d\'e-mail de refus ici..."/>
+                        <textarea value={refusalTemplate} onChange={(e) => setRefusalTemplate(e.target.value)} style={{...inputStyle, height: '150px'}} placeholder="Saisissez le modèle d'e-mail de refus ici..."/>
                         <button onClick={() => saveSetting('refusalEmailTemplate', refusalTemplate)} style={{...saveButtonStyle, alignSelf: 'flex-start', fontSize: '14px'}}>Enregistrer le modèle</button>
                     </>
                 )}
@@ -164,12 +196,35 @@ const Parametres = () => {
 
             <div style={sectionStyle}>
                 <h2>Gestion des Menus de la Semaine</h2>
-                {/* ... (Contenu de la gestion des menus) ... */}
+                {isMenuLoading ? <p>Chargement...</p> : (
+                    <>
+                        <div style={{ border: '1px solid #eee', borderRadius: '8px', padding: '15px', marginTop: '15px' }}>
+                            <h3 style={{ marginTop: 0, fontSize: '1.1rem' }}>Message personnalisé (prioritaire)</h3>
+                            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+                                <input type="checkbox" id="override-enabled" checked={menuOverrideEnabled} onChange={(e) => setMenuOverrideEnabled(e.target.checked)} style={{ marginRight: '10px', height: '18px', width: '18px' }} />
+                                <label htmlFor="override-enabled">Activer le message personnalisé (remplace les menus)</label>
+                            </div>
+                            <textarea value={menuOverrideMessage} onChange={(e) => setMenuOverrideMessage(e.target.value)} style={{...inputStyle, height: '80px', backgroundColor: menuOverrideEnabled ? '#fff' : '#f9f9f9' }} placeholder="Ex: Les livraisons reprendront le 2 janvier." disabled={!menuOverrideEnabled}/>
+                        </div>
+
+                        <div style={{ marginTop: '20px' }}>
+                            <h3 style={{ marginTop: 0, fontSize: '1.1rem' }}>Contenu des formules</h3>
+                            <div style={formGridStyle}>
+                                <div><label style={labelStyle}>Formule Découverte</label><textarea value={menuDecouverte} onChange={(e) => setMenuDecouverte(e.target.value)} style={{...inputStyle, height: '120px'}} /></div>
+                                <div><label style={labelStyle}>Formule Standard</label><textarea value={menuStandard} onChange={(e) => setMenuStandard(e.target.value)} style={{...inputStyle, height: '120px'}} /></div>
+                                <div><label style={labelStyle}>Formule Confort</label><textarea value={menuConfort} onChange={(e) => setMenuConfort(e.target.value)} style={{...inputStyle, height: '120px'}} /></div>
+                                <div><label style={labelStyle}>Option Duo</label><textarea value={menuDuo} onChange={(e) => setMenuDuo(e.target.value)} style={{...inputStyle, height: '120px'}} /></div>
+                            </div>
+                        </div>
+                        <button onClick={handleSaveMenus} style={saveButtonStyle}>Enregistrer les Menus</button>
+                    </>
+                )}
             </div>
         </div>
     );
 };
 
+// Composant utilitaire
 const InputField = ({ label, name, value, onChange, type = 'text' }) => (
     <div style={inputGroupStyle}>
         <label htmlFor={name} style={labelStyle}>{label}</label>
