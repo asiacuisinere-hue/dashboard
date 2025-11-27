@@ -2,15 +2,18 @@ import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 
-const Sidebar = ({ newCount, inProgressCount, pendingQuotesCount, toPrepareCount, isMobile }) => {
+const Sidebar = ({ newCount, inProgressCount, pendingQuotesCount, toPrepareCount, pendingInvoicesCount, depositPaidInvoicesCount, isMobile }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+        alert('Erreur lors de la déconnexion: ' + error.message);
+    }
   };
 
   const badgeStyle = {
-    marginLeft: '8px',
+    marginLeft: '10px',
     padding: '2px 8px',
     borderRadius: '12px',
     fontSize: '12px',
@@ -20,15 +23,10 @@ const Sidebar = ({ newCount, inProgressCount, pendingQuotesCount, toPrepareCount
 
   const newBadgeStyle = { ...badgeStyle, backgroundColor: '#28a745' };
   const inProgressBadgeStyle = { ...badgeStyle, backgroundColor: '#ffc107', color: '#333' };
-  const pendingQuotesBadgeStyle = {
-    ...badgeStyle,
-    backgroundColor: '#17a2b8', // Bleu clair
-  };
-
-  const toPrepareBadgeStyle = { // NOUVEAU STYLE POUR 'À PRÉPARER'
-    ...badgeStyle,
-    backgroundColor: '#6f42c1', // Violet
-  };
+  const pendingQuotesBadgeStyle = { ...badgeStyle, backgroundColor: '#17a2b8' };
+  const toPrepareBadgeStyle = { ...badgeStyle, backgroundColor: '#6f42c1' };
+  const pendingInvoiceBadgeStyle = { ...badgeStyle, backgroundColor: '#fd7e14' }; // Orange
+  const depositPaidInvoiceBadgeStyle = { ...badgeStyle, backgroundColor: '#20c997' }; // Teal
 
   const hamburgerBadgeStyle = {
     position: 'absolute',

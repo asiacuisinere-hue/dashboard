@@ -100,7 +100,9 @@ const DashboardLayout = () => {
     const [newCount, setNewCount] = useState(0);
     const [inProgressCount, setInProgressCount] = useState(0);
     const [pendingQuotesCount, setPendingQuotesCount] = useState(0);
-    const [toPrepareCount, setToPrepareCount] = useState(0); // <-- NOUVEL ETAT POUR 'À PRÉPARER'
+    const [toPrepareCount, setToPrepareCount] = useState(0);
+    const [pendingInvoicesCount, setPendingInvoicesCount] = useState(0);
+    const [depositPaidInvoicesCount, setDepositPaidInvoicesCount] = useState(0);
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
     const appStyle = {
@@ -124,15 +126,23 @@ const DashboardLayout = () => {
 
         // Commandes à préparer
         const { count: toPrepareDemandsCount } = await supabase.from('demandes').select('*', { count: 'exact', head: true }).in('status', ['En attente de préparation', 'Préparation en cours']);
-        setToPrepareCount(toPrepareDemandsCount); // <-- MISE A JOUR DU NOUVEL ETAT
+        setToPrepareCount(toPrepareDemandsCount);
+
+        // Factures
+        const { count: pendingInvoices } = await supabase.from('invoices').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+        setPendingInvoicesCount(pendingInvoices);
+
+        const { count: depositPaidInvoices } = await supabase.from('invoices').select('*', { count: 'exact', head: true }).eq('status', 'deposit_paid');
+        setDepositPaidInvoicesCount(depositPaidInvoices);
 
     }, []);
 
     useEffect(() => {
         fetchCounts();
-        const channel = supabase.channel('demandes-quotes-changes')
+        const channel = supabase.channel('demandes-quotes-invoices-changes')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'demandes' }, () => fetchCounts())
             .on('postgres_changes', { event: '*', schema: 'public', table: 'quotes' }, () => fetchCounts())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, () => fetchCounts())
             .subscribe();
         
         const handleResize = () => setIsMobile(window.innerWidth <= 768);
@@ -146,7 +156,15 @@ const DashboardLayout = () => {
 
     return (
         <div style={appStyle}>
-            <Sidebar newCount={newCount} inProgressCount={inProgressCount} pendingQuotesCount={pendingQuotesCount} toPrepareCount={toPrepareCount} isMobile={isMobile} />
+            <Sidebar 
+                newCount={newCount} 
+                inProgressCount={inProgressCount} 
+                pendingQuotesCount={pendingQuotesCount} 
+                toPrepareCount={toPrepareCount}
+                pendingInvoicesCount={pendingInvoicesCount}
+                depositPaidInvoicesCount={depositPaidInvoicesCount}
+                isMobile={isMobile} 
+            />
             <main style={mainContentStyle}>
                 <Routes>
                     <Route path="/" element={<Demandes />} />
