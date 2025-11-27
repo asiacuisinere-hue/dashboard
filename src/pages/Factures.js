@@ -20,7 +20,7 @@ const Factures = () => {
     const [statusFilter, setStatusFilter] = useState('all');
     const [selectedInvoice, setSelectedInvoice] = useState(null);
     const [currentPage, setCurrentPage] = useState(0);
-    const itemsPerPage = 10;
+    const itemsPerPage = 10; // Items per page for pagination
 
     const fetchInvoices = useCallback(async () => {
         setLoading(true);
@@ -52,7 +52,7 @@ const Factures = () => {
     }, [searchTerm, statusFilter]);
 
     useEffect(() => {
-        const timer = setTimeout(() => {
+        const timer = setTimeout(() => { // Debounce search term
             fetchInvoices();
         }, 300);
         return () => clearTimeout(timer);
@@ -69,6 +69,7 @@ const Factures = () => {
         return 'N/A';
     };
     
+    // Pagination logic
     const handlePageClick = (event) => {
         setCurrentPage(event.selected);
     };
@@ -137,8 +138,8 @@ const Factures = () => {
                 marginPagesDisplayed={2}
                 pageRangeDisplayed={5}
                 onPageChange={handlePageClick}
-                containerClassName={'pagination'}
-                activeClassName={'active'}
+                containerClassName={'pagination'} // Style this in your CSS
+                activeClassName={'active'} // Style this in your CSS
             />
 
             {selectedInvoice && (
@@ -179,7 +180,8 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
             alert(`Erreur: ${error.message}`);
         } else {
             alert('Acompte enregistré avec succès !');
-            onUpdate();
+            onUpdate(); // Refresh the list and close modal
+            onClose();
         }
     };
     
@@ -197,6 +199,7 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
             return;
         }
 
+        // --- AUTOMATIC COMPLETION LOGIC ---
         if (newStatus === 'paid') {
             try {
                 if (invoice.demande_id) {
@@ -366,6 +369,7 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
 // --- Styles for Factures component ---
 const containerStyle = { padding: '20px', maxWidth: '1200px', margin: '0 auto', fontFamily: 'Arial, sans-serif' };
 const filterContainerStyle = { display: 'flex', gap: '1rem', marginBottom: '2rem', alignItems: 'center' };
+const inputStyle = { padding: '8px', borderRadius: '5px', border: '1px solid #ccc', flex: '1 1 auto', minWidth: '200px' };
 const tableContainerStyle = { marginTop: '1rem', boxShadow: '0 4px 8px rgba(0,0,0,0.05)', borderRadius: '8px', overflowX: 'auto', background: 'white' };
 const tableStyle = { width: '100%', borderCollapse: 'collapse' };
 const thStyle = { background: '#f8f9fa', padding: '12px 15px', textAlign: 'left', fontWeight: 'bold', color: '#333', borderBottom: '2px solid #eee' };
@@ -384,6 +388,5 @@ const detailSectionStyle = { marginBottom: '20px', paddingBottom: '20px', border
 const detailTitleStyle = { fontSize: '18px', color: '#d4af37', marginBottom: '10px' };
 const actionButtonStyle = { padding: '10px 15px', border: 'none', borderRadius: '5px', cursor: 'pointer', color: 'white', fontWeight: 'bold' };
 const modalActionsStyle = { marginTop: '30px', display: 'flex', justifyContent: 'flex-end', gap: '10px' };
-const inputStyle = { padding: '8px', borderRadius: '5px', border: '1px solid #ccc' };
 
 export default Factures;
