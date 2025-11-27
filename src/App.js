@@ -122,10 +122,10 @@ const DashboardLayout = () => {
         console.log("DEBUG: New Demands Count:", newDemandsCount);
         setNewCount(newDemandsCount);
 
-        const inProgressStatuses = ['En attente de traitement', 'confirmed', 'En attente de validation de devis', 'En attente de paiement', 'En attente de préparation', 'Préparation en cours'];
-        const { count: inProgressDemandsCount, error: inProgressError } = await supabase.from('demandes').select('*', { count: 'exact', head: true }).in('status', inProgressStatuses);
-        if(inProgressError) console.error("Error fetching in-progress demands:", inProgressError);
-        console.log("DEBUG: In-Progress Demands Count:", inProgressDemandsCount);
+        const { count: inProgressDemandsCount } = await supabase
+            .from('demandes')
+            .select('*', { count: 'exact', head: true })
+            .or(`and(type.eq.COMMANDE_MENU,status.not.in.("completed","cancelled","paid")),and(type.eq.RESERVATION_SERVICE,status.in.("Nouvelle","En attente de traitement","confirmed"))`);
         setInProgressCount(inProgressDemandsCount);
         
         // Devis

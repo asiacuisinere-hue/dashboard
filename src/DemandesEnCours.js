@@ -10,16 +10,16 @@ const DemandesEnCours = () => {
 
     const fetchDemandes = useCallback(async () => {
         setLoading(true);
-                const inProgressStatuses = ['En attente de traitement', 'confirmed', 'En attente de validation de devis', 'En attente de paiement', 'En attente de préparation', 'Préparation en cours'];
-                let query = supabase
-                    .from('demandes')
-                    .select(`
-                        *,
-                        clients (*),
-                        entreprises (*)
-                    `)
-                    .in('status', inProgressStatuses);
-        if (filter.date) {
+                        let query = supabase
+                            .from('demandes')
+                            .select(`
+                                *,
+                                clients (*),
+                                entreprises (*)
+                            `)
+                            .or(
+                                `and(type.eq.COMMANDE_MENU,status.not.in.("completed","cancelled","paid")),and(type.eq.RESERVATION_SERVICE,status.in.("Nouvelle","En attente de traitement","confirmed"))`
+                            );        if (filter.date) {
             query = query.eq('request_date', filter.date);
         }
         if (filter.status) {

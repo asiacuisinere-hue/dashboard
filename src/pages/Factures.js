@@ -158,21 +158,45 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
         }
     };
     
-    const handleMarkAsPaid = async () => {
-        if (!window.confirm("Confirmer le paiement total de la facture ?")) return;
-        const { error } = await supabase
+    const handleUpdateStatus = async (invoiceId, newStatus) => {
+        const { error: invoiceError } = await supabase
             .from('invoices')
-            .update({ 
-                status: 'paid',
-                deposit_amount: invoice.total_amount // Ensure deposit covers the total
-            })
-            .eq('id', invoice.id);
+            .update({ status: newStatus })
+            .eq('id', invoiceId);
 
-        if (error) alert(`Erreur: ${error.message}`);
-        else {
-            alert('Facture marquée comme payée.');
-            onUpdate();
+        if (invoiceError) {
+            console.error('Error updating invoice status:', invoiceError);
+            alert(`Erreur: ${invoiceError.message}`);
+            return;
         }
+
+        // Si la facture est marquée comme payée, essayez de compléter la demande de réservation associée
+        if (newStatus === 'paid') {
+            try {
+                const { data: updatedInvoice, error: fetchError } = await supabase
+                    .from('invoices')
+                    .select('demande_id, demandes (type)')
+                    .eq('id', invoiceId)
+                    .single();
+
+                if (fetchError) throw fetchError;
+
+                if (updatedInvoice?.demande_id && updatedInvoice.demandes?.type === 'RESERVATION_SERVICE') {
+                    const { error: demandeError } = await supabase
+                        .from('demandes')
+                        .update({ status: 'completed' })
+                        .eq('id', updatedInvoice.demande_id);
+                    
+                    if (demandeError) throw demandeError;
+                    console.log(`Demande ${updatedInvoice.demande_id} automatiquement marquée comme "completed".`);
+                }
+            } catch (error) {
+                // Ne pas bloquer l'utilisateur si cette étape échoue, juste l'enregistrer dans la console.
+                console.error('Failed to auto-complete linked demand:', error.message);
+            }
+        }
+        
+        fetchInvoices(); // Rafraîchir la liste des factures
     };
 
     const renderCustomerInfo = () => {
