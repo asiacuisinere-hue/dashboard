@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 
-const Sidebar = ({ newCount, inProgressCount, pendingQuotesCount, pendingInvoicesCount, depositPaidInvoicesCount, isMobile }) => {
+const Sidebar = ({ newCount, inProgressCount, pendingQuotesCount, toPrepareCount, isMobile }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -20,9 +20,15 @@ const Sidebar = ({ newCount, inProgressCount, pendingQuotesCount, pendingInvoice
 
   const newBadgeStyle = { ...badgeStyle, backgroundColor: '#28a745' };
   const inProgressBadgeStyle = { ...badgeStyle, backgroundColor: '#ffc107', color: '#333' };
-  const pendingQuotesBadgeStyle = { ...badgeStyle, backgroundColor: '#17a2b8' };
-  const pendingInvoiceBadgeStyle = { ...badgeStyle, backgroundColor: '#fd7e14' };
-  const depositPaidInvoiceBadgeStyle = { ...badgeStyle, backgroundColor: '#007bff' };
+  const pendingQuotesBadgeStyle = {
+    ...badgeStyle,
+    backgroundColor: '#17a2b8', // Bleu clair
+  };
+
+  const toPrepareBadgeStyle = { // NOUVEAU STYLE POUR 'À PRÉPARER'
+    ...badgeStyle,
+    backgroundColor: '#6f42c1', // Violet
+  };
 
   const hamburgerBadgeStyle = {
     position: 'absolute',
@@ -35,12 +41,17 @@ const Sidebar = ({ newCount, inProgressCount, pendingQuotesCount, pendingInvoice
     border: '2px solid #343a40',
   };
 
+  // ... (rest of styles)
+
   const NavLinks = ({ mobile = false }) => {
-    const handleClick = () => mobile && setIsOpen(false);
+    const handleClick = () => {
+      if (mobile) setIsOpen(false);
+    };
 
     const links = [
-      { to: '/', label: 'Nouvelles Demandes', badges: [{ count: newCount, style: newBadgeStyle }] },
-      { to: '/demandes-en-cours', label: 'Demandes en Cours', badges: [{ count: inProgressCount, style: inProgressBadgeStyle }] },
+      { to: '/', label: 'Nouvelles Demandes', count: newCount, style: newBadgeStyle },
+      { to: '/demandes-en-cours', label: 'Demandes en Cours', count: inProgressCount, style: inProgressBadgeStyle },
+      { to: '/a-preparer', label: 'À Préparer', count: toPrepareCount, style: toPrepareBadgeStyle }, // NOUVEAU LIEN
       { to: '/historique', label: 'Historique' },
       { to: '/particuliers', label: 'Particuliers' },
       { to: '/entreprises', label: 'Entreprises' },

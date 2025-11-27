@@ -17,15 +17,7 @@ const DemandesEnCours = () => {
                 clients (*),
                 entreprises (*)
             `)
-            .in('status', [
-                'En attente de traitement', 
-                'confirmed',
-                'En attente de validation de devis', 
-                'En attente de paiement', 
-                'En attente de préparation', 
-                'Préparation en cours',
-                'Payée'
-            ]);
+                        .not('status', 'in', '("completed", "cancelled")');
 
         if (filter.date) {
             query = query.eq('request_date', filter.date);

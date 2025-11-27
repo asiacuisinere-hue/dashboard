@@ -100,8 +100,7 @@ const DashboardLayout = () => {
     const [newCount, setNewCount] = useState(0);
     const [inProgressCount, setInProgressCount] = useState(0);
     const [pendingQuotesCount, setPendingQuotesCount] = useState(0);
-    const [pendingInvoicesCount, setPendingInvoicesCount] = useState(0); // <-- NOUVEL ETAT
-    const [depositPaidInvoicesCount, setDepositPaidInvoicesCount] = useState(0); // <-- NOUVEL ETAT
+    const [toPrepareCount, setToPrepareCount] = useState(0); // <-- NOUVEL ETAT POUR 'À PRÉPARER'
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
     const appStyle = {
@@ -115,27 +114,25 @@ const DashboardLayout = () => {
         // Demandes
         const { count: newDemandsCount } = await supabase.from('demandes').select('*', { count: 'exact', head: true }).eq('status', 'Nouvelle');
         setNewCount(newDemandsCount);
-        const { count: inProgressDemandsCount } = await supabase.from('demandes').select('*', { count: 'exact', head: true }).in('status', ['En attente de traitement', 'confirmed', 'En attente de validation de devis', 'En attente de paiement', 'En attente de préparation', 'Préparation en cours', 'Payée']);
+
+        const { count: inProgressDemandsCount } = await supabase.from('demandes').select('*', { count: 'exact', head: true }).not('status', 'in', '("completed", "paid", "cancelled")');
         setInProgressCount(inProgressDemandsCount);
         
         // Devis
         const { count: sentQuotesCount } = await supabase.from('quotes').select('*', { count: 'exact', head: true }).eq('status', 'sent');
         setPendingQuotesCount(sentQuotesCount);
 
-        // Factures
-        const { count: pendingInvCount } = await supabase.from('invoices').select('*', { count: 'exact', head: true }).eq('status', 'pending');
-        setPendingInvoicesCount(pendingInvCount);
-        const { count: depositPaidInvCount } = await supabase.from('invoices').select('*', { count: 'exact', head: true }).eq('status', 'deposit_paid');
-        setDepositPaidInvoicesCount(depositPaidInvCount);
+        // Commandes à préparer
+        const { count: toPrepareDemandsCount } = await supabase.from('demandes').select('*', { count: 'exact', head: true }).in('status', ['En attente de préparation', 'Préparation en cours']);
+        setToPrepareCount(toPrepareDemandsCount); // <-- MISE A JOUR DU NOUVEL ETAT
 
     }, []);
 
     useEffect(() => {
         fetchCounts();
-        const channel = supabase.channel('table-changes')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'demandes' }, fetchCounts)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'quotes' }, fetchCounts)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, fetchCounts)
+        const channel = supabase.channel('demandes-quotes-changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'demandes' }, () => fetchCounts())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'quotes' }, () => fetchCounts())
             .subscribe();
         
         const handleResize = () => setIsMobile(window.innerWidth <= 768);
@@ -149,14 +146,7 @@ const DashboardLayout = () => {
 
     return (
         <div style={appStyle}>
-            <Sidebar 
-                newCount={newCount} 
-                inProgressCount={inProgressCount} 
-                pendingQuotesCount={pendingQuotesCount} 
-                pendingInvoicesCount={pendingInvoicesCount}
-                depositPaidInvoicesCount={depositPaidInvoicesCount}
-                isMobile={isMobile} 
-            />
+            <Sidebar newCount={newCount} inProgressCount={inProgressCount} pendingQuotesCount={pendingQuotesCount} toPrepareCount={toPrepareCount} isMobile={isMobile} />
             <main style={mainContentStyle}>
                 <Routes>
                     <Route path="/" element={<Demandes />} />
