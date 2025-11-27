@@ -156,11 +156,11 @@ const Factures = () => {
 // Modal Component for Invoice Details
 const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
     const [isEnteringDeposit, setIsEnteringDeposit] = useState(false);
-    const [depositAmount, setDepositAmount] = useState('');
+    const [depositAmountInput, setDepositAmountInput] = useState(''); // Renamed state
     const [loadingAction, setLoadingAction] = useState(false);
 
     const handleSaveDeposit = async () => {
-        const amount = parseFloat(depositAmount);
+        const amount = parseFloat(depositAmountInput);
         if (isNaN(amount) || amount <= 0) {
             alert("Veuillez entrer un montant d'acompte valide.");
             return;
@@ -348,9 +348,9 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
                         <div style={{width: '100%', display: 'flex', gap: '10px', alignItems: 'center'}}>
                             <input
                                 type="number"
-                                placeholder="Montant de l\'acompte"
-                                value={depositAmount}
-                                onChange={(e) => setDepositAmount(e.target.value)}
+                                placeholder="Montant de l'acompte"
+                                value={depositAmountInput}
+                                onChange={(e) => setDepositAmountInput(e.target.value)}
                                 style={inputStyle}
                                 autoFocus
                             />
