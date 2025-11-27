@@ -117,7 +117,8 @@ const DashboardLayout = () => {
         const { count: newDemandsCount } = await supabase.from('demandes').select('*', { count: 'exact', head: true }).eq('status', 'Nouvelle');
         setNewCount(newDemandsCount);
 
-        const { count: inProgressDemandsCount } = await supabase.from('demandes').select('*', { count: 'exact', head: true }).not('status', 'in', '("completed", "paid", "cancelled")');
+        const inProgressStatuses = ['En attente de traitement', 'confirmed', 'En attente de validation de devis', 'En attente de paiement', 'En attente de préparation', 'Préparation en cours'];
+        const { count: inProgressDemandsCount } = await supabase.from('demandes').select('*', { count: 'exact', head: true }).in('status', inProgressStatuses);
         setInProgressCount(inProgressDemandsCount);
         
         // Devis
