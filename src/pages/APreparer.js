@@ -9,7 +9,7 @@ const APreparer = () => {
     const [selectedDemande, setSelectedDemande] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(0);
-    const [itemsPerPage, setItemsPerPage] = useState(10);
+    const itemsPerPage = 10; // Fixed value
 
     const fetchDemandes = useCallback(async () => {
         setLoading(true);
