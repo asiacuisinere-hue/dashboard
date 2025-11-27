@@ -113,27 +113,41 @@ const DashboardLayout = () => {
     };
 
     const fetchCounts = useCallback(async () => {
+        console.log("--- [DEBUG] Fetching all counts ---");
+        
         // Demandes
-        const { count: newDemandsCount } = await supabase.from('demandes').select('*', { count: 'exact', head: true }).eq('status', 'Nouvelle');
+        const { count: newDemandsCount, error: newError } = await supabase.from('demandes').select('*', { count: 'exact', head: true }).eq('status', 'Nouvelle');
+        if(newError) console.error("Error fetching new demands:", newError);
+        console.log("DEBUG: New Demands Count:", newDemandsCount);
         setNewCount(newDemandsCount);
 
         const inProgressStatuses = ['En attente de traitement', 'confirmed', 'En attente de validation de devis', 'En attente de paiement', 'En attente de préparation', 'Préparation en cours'];
-        const { count: inProgressDemandsCount } = await supabase.from('demandes').select('*', { count: 'exact', head: true }).in('status', inProgressStatuses);
+        const { count: inProgressDemandsCount, error: inProgressError } = await supabase.from('demandes').select('*', { count: 'exact', head: true }).in('status', inProgressStatuses);
+        if(inProgressError) console.error("Error fetching in-progress demands:", inProgressError);
+        console.log("DEBUG: In-Progress Demands Count:", inProgressDemandsCount);
         setInProgressCount(inProgressDemandsCount);
         
         // Devis
-        const { count: sentQuotesCount } = await supabase.from('quotes').select('*', { count: 'exact', head: true }).eq('status', 'sent');
+        const { count: sentQuotesCount, error: quotesError } = await supabase.from('quotes').select('*', { count: 'exact', head: true }).eq('status', 'sent');
+        if(quotesError) console.error("Error fetching quotes:", quotesError);
+        console.log("DEBUG: Sent Quotes Count:", sentQuotesCount);
         setPendingQuotesCount(sentQuotesCount);
 
         // Commandes à préparer
-        const { count: toPrepareDemandsCount } = await supabase.from('demandes').select('*', { count: 'exact', head: true }).in('status', ['En attente de préparation', 'Préparation en cours']);
+        const { count: toPrepareDemandsCount, error: toPrepareError } = await supabase.from('demandes').select('*', { count: 'exact', head: true }).in('status', ['En attente de préparation', 'Préparation en cours']);
+        if(toPrepareError) console.error("Error fetching to-prepare demands:", toPrepareError);
+        console.log("DEBUG: To Prepare Demands Count:", toPrepareDemandsCount);
         setToPrepareCount(toPrepareDemandsCount);
 
         // Factures
-        const { count: pendingInvoices } = await supabase.from('invoices').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+        const { count: pendingInvoices, error: pendingInvError } = await supabase.from('invoices').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+        if(pendingInvError) console.error("Error fetching pending invoices:", pendingInvError);
+        console.log("DEBUG: Pending Invoices Count:", pendingInvoices);
         setPendingInvoicesCount(pendingInvoices);
 
-        const { count: depositPaidInvoices } = await supabase.from('invoices').select('*', { count: 'exact', head: true }).eq('status', 'deposit_paid');
+        const { count: depositPaidInvoices, error: depositInvError } = await supabase.from('invoices').select('*', { count: 'exact', head: true }).eq('status', 'deposit_paid');
+        if(depositInvError) console.error("Error fetching deposit paid invoices:", depositInvError);
+        console.log("DEBUG: Deposit Paid Invoices Count:", depositPaidInvoices);
         setDepositPaidInvoicesCount(depositPaidInvoices);
 
     }, []);
