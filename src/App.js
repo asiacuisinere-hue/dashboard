@@ -15,6 +15,7 @@ import Services from './pages/Services'; // Importation de la page Services
 import CalendarSettings from './pages/CalendarSettings'; // Importation de la page CalendarSettings
 import Abonnements from './pages/Abonnements'; // Importation de la page Abonnements
 import AdminAccountSettings from './pages/AdminAccountSettings'; // Importation de la page Compte Administrateur
+import APreparer from './pages/APreparer';
 import Validation from './pages/Validation'; // Importation de la page Validation
 
 // --- Composants ---
@@ -184,6 +185,7 @@ const DashboardLayout = () => {
                 <Routes>
                     <Route path="/" element={<Demandes />} />
                     <Route path="/demandes-en-cours" element={<DemandesEnCours />} />
+                    <Route path="/a-preparer" element={<APreparer />} />
                     <Route path="/historique" element={<Historique />} />
                     <Route path="/particuliers" element={<Particuliers />} />
                     <Route path="/entreprises" element={<Entreprises />} />
