@@ -101,13 +101,27 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
         if (!window.confirm("Confirmer la réception du paiement et envoyer le QR Code ?")) return;
         setIsSendingQrCode(true);
         try {
+            // Fetch company settings from the client-side
+            const { data: companySettings, error: settingsError } = await supabase
+                .from('company_settings')
+                .select('*')
+                .limit(1)
+                .single();
+
+            if (settingsError || !companySettings) {
+                throw new Error(settingsError?.message || 'Impossible de récupérer les paramètres de l\'entreprise.');
+            }
+
             const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/send-qrcode`, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json', 
                     'Authorization': `Bearer ${process.env.REACT_APP_SUPABASE_ANON_KEY}` 
                 },
-                body: JSON.stringify({ demandeId: demande.id })
+                body: JSON.stringify({ 
+                    demandeId: demande.id,
+                    companySettings: companySettings // Pass settings in the body
+                })
             });
             const result = await response.json();
             if (!response.ok) throw new Error(result.error || 'Erreur lors de l\'envoi du QR Code.');
