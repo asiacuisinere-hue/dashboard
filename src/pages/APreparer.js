@@ -45,18 +45,8 @@ const APreparer = () => {
 
     const offset = currentPage * itemsPerPage;
     const currentDemandes = demandes.slice(offset, offset + itemsPerPage);
-    const pageCount = Math.ceil(demandes.length / itemsPerPage);
-
-        const getStatusStyle = (status) => ({
-
-            padding: '5px 10px', borderRadius: '15px', color: 'white',
-
-            backgroundColor: status === 'En attente de préparation' ? '#6f42c1' : '#17a2b8'
-
-        });
-
+        const pageCount = Math.ceil(demandes.length / itemsPerPage);
     
-
         if (loading) return <div style={containerStyle}><p>Chargement...</p></div>;
 
     
