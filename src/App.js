@@ -125,7 +125,7 @@ const DashboardLayout = () => {
         const { count: inProgressDemandsCount } = await supabase
             .from('demandes')
             .select('*', { count: 'exact', head: true })
-            .or(`and(type.eq.COMMANDE_MENU,status.not.in.("completed","cancelled","paid")),and(type.eq.RESERVATION_SERVICE,status.in.("Nouvelle","En attente de traitement","confirmed"))`);
+            .or(`and(type.eq.COMMANDE_MENU,status.not.in.("completed","cancelled","paid")),and(type.eq.RESERVATION_SERVICE,status.in.("En attente de traitement","confirmed"))`);
         setInProgressCount(inProgressDemandsCount);
         
         // Devis
