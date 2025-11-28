@@ -47,75 +47,296 @@ const APreparer = () => {
     const currentDemandes = demandes.slice(offset, offset + itemsPerPage);
     const pageCount = Math.ceil(demandes.length / itemsPerPage);
 
-    const getStatusStyle = (status) => ({
-        padding: '5px 10px', borderRadius: '15px', color: 'white',
-        backgroundColor: status === 'En attente de préparation' ? '#6f42c1' : '#17a2b8'
-    });
+        const getStatusStyle = (status) => ({
 
-    if (loading) return <div style={{ padding: '20px' }}>Chargement...</div>;
+            padding: '5px 10px', borderRadius: '15px', color: 'white',
 
-    return (
-        <div style={{ padding: '20px' }}>
-            <h1>Commandes à Préparer</h1>
-            <p>Liste des commandes à préparer ou en cours de préparation.</p>
+            backgroundColor: status === 'En attente de préparation' ? '#6f42c1' : '#17a2b8'
 
-            <input 
-                type="text"
-                placeholder="Rechercher par nom, formule..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{ width: '100%', padding: '10px', marginBottom: '20px', boxSizing: 'border-box' }}
-            />
+        });
 
-            <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                        <tr style={{ borderBottom: '2px solid #ddd', textAlign: 'left' }}>
-                            <th style={{ padding: '12px' }}>Date Demande</th>
-                            <th style={{ padding: '12px' }}>Client</th>
-                            <th style={{ padding: '12px' }}>Type</th>
-                            <th style={{ padding: '12px' }}>Statut</th>
-                            <th style={{ padding: '12px' }}>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {currentDemandes.map(demande => (
-                            <tr key={demande.id} style={{ borderBottom: '1px solid #eee' }}>
-                                <td style={{ padding: '12px' }}>{new Date(demande.created_at).toLocaleDateString()}</td>
-                                <td style={{ padding: '12px' }}>{demande.clients?.last_name || demande.entreprises?.nom_entreprise || 'N/A'}</td>
-                                <td style={{ padding: '12px' }}>{demande.type}</td>
-                                <td style={{ padding: '12px' }}><span style={getStatusStyle(demande.status)}>{demande.status}</span></td>
-                                <td style={{ padding: '12px' }}>
-                                    <button onClick={() => setSelectedDemande(demande)}>Gérer</button>
-                                </td>
+    
+
+        if (loading) return <div style={containerStyle}><p>Chargement...</p></div>;
+
+    
+
+        return (
+
+            <div style={containerStyle}>
+
+                <h1>Commandes à Préparer</h1>
+
+                <p>Liste des commandes à préparer ou en cours de préparation.</p>
+
+    
+
+                <div style={filterContainerStyle}>
+
+                    <input 
+
+                        type="text"
+
+                        placeholder="Rechercher par nom, formule..."
+
+                        value={searchTerm}
+
+                        onChange={(e) => setSearchTerm(e.target.value)}
+
+                        style={inputStyle}
+
+                    />
+
+                </div>
+
+    
+
+                <div style={tableContainerStyle}>
+
+                    <table style={tableStyle}>
+
+                        <thead>
+
+                            <tr>
+
+                                <th style={thStyle}>Date Demande</th>
+
+                                <th style={thStyle}>Client</th>
+
+                                <th style={thStyle}>Type</th>
+
+                                <th style={thStyle}>Statut</th>
+
+                                <th style={thStyle}>Actions</th>
+
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+
+                        </thead>
+
+                        <tbody>
+
+                            {currentDemandes.map(demande => (
+
+                                <tr key={demande.id}>
+
+                                    <td style={tdStyle}>{new Date(demande.created_at).toLocaleDateString()}</td>
+
+                                    <td style={tdStyle}>{demande.clients?.last_name || demande.entreprises?.nom_entreprise || 'N/A'}</td>
+
+                                    <td style={tdStyle}>{demande.type}</td>
+
+                                    <td style={tdStyle}><span style={statusBadgeStyle(demande.status)}>{demande.status}</span></td>
+
+                                    <td style={tdStyle}>
+
+                                        <button onClick={() => setSelectedDemande(demande)} style={detailsButtonStyle}>
+
+                                            Gérer
+
+                                        </button>
+
+                                    </td>
+
+                                </tr>
+
+                            ))}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+    
+
+                <div style={{ borderTop: '1px solid #eee', marginTop: '2rem', paddingTop: '1rem' }}>
+
+                    <style>{`
+
+                        .pagination {
+
+                            display: flex;
+
+                            justify-content: center;
+
+                            align-items: center;
+
+                            list-style: none;
+
+                            padding: 0;
+
+                            font-family: Arial, sans-serif;
+
+                        }
+
+                        .pagination li {
+
+                            margin: 0 4px;
+
+                        }
+
+                        .pagination li a {
+
+                            padding: 8px 14px;
+
+                            border-radius: 5px;
+
+                            cursor: pointer;
+
+                            color: #333;
+
+                            text-decoration: none;
+
+                            transition: background-color 0.2s, color 0.2s;
+
+                            border: 1px solid #ddd;
+
+                            font-weight: bold;
+
+                        }
+
+                        .pagination li.active a {
+
+                            background-color: #d4af37;
+
+                            color: white;
+
+                            border-color: #d4af37;
+
+                        }
+
+                        .pagination li.disabled a {
+
+                            color: #ccc;
+
+                            cursor: not-allowed;
+
+                        }
+
+                        .pagination li a:hover:not(.disabled) {
+
+                            background-color: #f5f5f5;
+
+                        }
+
+                    `}</style>
+
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+
+                        {pageCount > 1 && (
+
+                             <span style={{ marginRight: '1.5rem', color: '#555', fontSize: '14px', fontWeight: 'bold' }}>
+
+                                Page {currentPage + 1} sur {pageCount}
+
+                            </span>
+
+                        )}
+
+                        <ReactPaginate
+
+                            previousLabel={'<'}
+
+                            nextLabel={'>'}
+
+                            breakLabel={'...'}
+
+                            pageCount={pageCount}
+
+                            marginPagesDisplayed={1}
+
+                            pageRangeDisplayed={3}
+
+                            onPageChange={handlePageClick}
+
+                            containerClassName={'pagination'}
+
+                            activeClassName={'active'}
+
+                            disabledClassName={'disabled'}
+
+                        />
+
+                    </div>
+
+                </div>
+
+                
+
+                {selectedDemande && (
+
+                    <DemandeDetail
+
+                        demande={selectedDemande}
+
+                        onClose={() => setSelectedDemande(null)}
+
+                        onUpdateStatus={handleUpdateStatus}
+
+                        onRefresh={fetchDemandes}
+
+                    />
+
+                )}
+
             </div>
 
-            <ReactPaginate
-                previousLabel={'< Précédent'}
-                nextLabel={'Suivant >'}
-                breakLabel={'...'}
-                pageCount={pageCount}
-                marginPagesDisplayed={2}
-                pageRangeDisplayed={5}
-                onPageChange={handlePageClick}
-                containerClassName={'pagination'}
-                activeClassName={'active'}
-            />
-            
-            {selectedDemande && (
-                <DemandeDetail
-                    demande={selectedDemande}
-                    onClose={() => setSelectedDemande(null)}
-                    onUpdateStatus={handleUpdateStatus}
-                    onRefresh={fetchDemandes}
-                />
-            )}
-        </div>
-    );
-};
+        );
 
-export default APreparer;
+    };
+
+    
+
+    // --- Styles (inspirés de Factures.js) ---
+
+    const containerStyle = { padding: '20px', maxWidth: '1200px', margin: '0 auto', fontFamily: 'Arial, sans-serif' };
+
+    const filterContainerStyle = { display: 'flex', gap: '1rem', marginBottom: '2rem', alignItems: 'center' };
+
+    const inputStyle = { padding: '8px', borderRadius: '5px', border: '1px solid #ccc', flex: '1 1 auto', minWidth: '200px' };
+
+    const tableContainerStyle = { marginTop: '1rem', boxShadow: '0 4px 8px rgba(0,0,0,0.05)', borderRadius: '8px', overflowX: 'auto', background: 'white' };
+
+    const tableStyle = { width: '100%', borderCollapse: 'collapse' };
+
+    const thStyle = { background: '#f8f9fa', padding: '12px 15px', textAlign: 'left', fontWeight: 'bold', color: '#333', borderBottom: '2px solid #eee' };
+
+    const tdStyle = { padding: '12px 15px', borderBottom: '1px solid #eee' };
+
+    const detailsButtonStyle = { padding: '8px 12px', background: '#d4af37', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' };
+
+    
+
+    const statusBadgeStyle = (status) => {
+
+        const colors = {
+
+            'En attente de préparation': '#6f42c1', 
+
+            'Préparation en cours': '#17a2b8'
+
+        };
+
+        return {
+
+            padding: '4px 8px',
+
+            borderRadius: '12px',
+
+            color: 'white',
+
+            fontWeight: 'bold',
+
+            fontSize: '12px',
+
+            backgroundColor: colors[status] || '#6c757d'
+
+        };
+
+    };
+
+    
+
+    export default APreparer;
+
+    
