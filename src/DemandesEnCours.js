@@ -128,14 +128,13 @@ const DemandesEnCours = () => {
                         <table style={tableStyle}>
                             <thead>
                                 <tr>
-                                    <th style={thStyle}>Date Demande</th>
-                                    <th style={thStyle}>Client</th>
-                                    <th style={thStyle}>Ville</th>
-                                    <th style={thStyle}>Date Événement</th>
-                                    <th style={thStyle}>Date Livraison/Retrait</th>
-                                    <th style={thStyle}>Statut</th>
-                                    <th style={thStyle}>Actions</th>
-                                </tr>
+                                                                <th style={thStyle}>Date Demande</th>
+                                                                <th style={thStyle}>Client</th>
+                                                                <th style={thStyle}>Ville</th>
+                                                                <th style={thStyle}>D.Evé</th>
+                                                                <th style={thStyle}>D.Liv.Re</th>
+                                                                <th style={thStyle}>Statut</th>
+                                                                <th style={thStyle}>Actions</th>                                </tr>
                             </thead>
                             <tbody>
                                 {demandes.map(demande => (
