@@ -18,7 +18,7 @@ const DemandesEnCours = () => {
                                 entreprises (*)
                             `)
                             .or(
-                                `and(type.eq.COMMANDE_MENU,status.not.in.("completed","cancelled","paid")),and(type.eq.RESERVATION_SERVICE,status.in.("Nouvelle","En attente de traitement","confirmed"))`
+                                `and(type.eq.COMMANDE_MENU,status.not.in.("completed","cancelled","paid")),and(type.eq.RESERVATION_SERVICE,status.in.("En attente de traitement","confirmed"))`
                             );        if (filter.date) {
             query = query.eq('request_date', filter.date);
         }
