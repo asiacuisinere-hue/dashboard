@@ -742,3 +742,163 @@ const addServiceButtonStyle = {
     backgroundColor: '#d4af37',
     color: 'white',
     border: 'none',
+    borderRadius: '5px',
+    cursor: 'pointer',
+};
+
+const quoteItemsTableContainerStyle = {
+    overflowX: 'auto',
+};
+
+const tableStyle = {
+    width: '100%',
+    borderCollapse: 'collapse',
+    marginTop: '20px',
+};
+
+const thStyle = {
+    background: '#f4f7fa',
+    padding: '12px 15px',
+    textAlign: 'left',
+    fontWeight: 'bold',
+    color: '#333',
+    borderBottom: '2px solid #ddd',
+    whiteSpace: 'nowrap',
+};
+
+const tdStyle = {
+    padding: '12px 15px',
+    borderBottom: '1px solid #eee',
+    color: '#555',
+    whiteSpace: 'nowrap',
+};
+
+const smallInputStyle = {
+    width: '80px',
+    padding: '5px',
+    borderRadius: '4px',
+    border: '1px solid #ddd',
+    boxSizing: 'border-box',
+};
+
+const removeServiceButtonStyle = {
+    background: '#dc3545',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    padding: '5px 10px',
+    cursor: 'pointer',
+};
+
+const generateQuoteButtonStyle = {
+    padding: '12px 25px',
+    backgroundColor: '#d4af37',
+    color: 'white',
+    border: 'none',
+    borderRadius: '5px',
+    cursor: 'pointer',
+    fontSize: '18px',
+    fontWeight: 'bold',
+    marginTop: '20px',
+};
+
+const modalOverlayStyle = { 
+    position: 'fixed', 
+    top: 0, 
+    left: 0, 
+    right: 0, 
+    bottom: 0, 
+    backgroundColor: 'rgba(0, 0, 0, 0.6)', 
+    display: 'flex', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    zIndex: 1000 
+};
+
+const modalContentStyle = { 
+    background: 'white', 
+    padding: '30px', 
+    borderRadius: '8px', 
+    width: '90%', 
+    maxWidth: '700px', 
+    maxHeight: '90vh', 
+    overflowY: 'auto', 
+    position: 'relative',
+    boxSizing: 'border-box',
+};
+
+const closeButtonStyle = { 
+    position: 'absolute', 
+    top: '15px', 
+    right: '15px', 
+    background: 'transparent', 
+    border: 'none', 
+    fontSize: '24px', 
+    cursor: 'pointer' 
+};
+
+const detailSectionStyle = { 
+    marginBottom: '20px', 
+    paddingBottom: '20px', 
+    borderBottom: '1px solid #f0f0f0',
+};
+
+const detailTitleStyle = { 
+    fontSize: '18px', 
+    color: '#d4af37', 
+    marginBottom: '10px' 
+};
+
+const actionButtonStyle = { 
+    padding: '10px 15px', 
+    border: 'none', 
+    borderRadius: '5px', 
+    cursor: 'pointer', 
+    color: 'white', 
+    fontWeight: 'bold' 
+};
+
+const statusBadgeStyle = (status) => {
+    const colors = {
+        'draft': '#6c757d',
+        'sent': '#17a2b8',
+        'accepted': '#28a745',
+        'rejected': '#dc3545',
+    };
+    return {
+        padding: '4px 8px', 
+        borderRadius: '12px',
+        color: 'white',
+        fontWeight: 'bold',
+        fontSize: '12px',
+        backgroundColor: colors[status] || '#6c757d'
+    };
+};
+
+const modalActionsStyle = {
+    marginTop: '30px',
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: '10px',
+    flexWrap: 'wrap',
+};
+
+const tableContainerStyle = {
+    marginTop: '2rem',
+    boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+    borderRadius: '8px',
+    overflowX: 'auto',
+    background: 'white'
+};
+
+const detailsButtonStyle = {
+    padding: '8px 12px',
+    background: '#d4af37',
+    color: 'white',
+    border: 'none',
+    borderRadius: '5px',
+    cursor: 'pointer',
+    marginRight: '5px',
+};
+
+export default Devis;
