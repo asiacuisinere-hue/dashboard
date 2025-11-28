@@ -21,13 +21,15 @@ const DemandesEnCours = () => {
         let query = supabase.from('demandes').select(`*, clients (*), entreprises (*), details_json`);
 
         // --- Type and Status Filtering ---
+        const commandeMenuFilter = `and(type.eq.COMMANDE_MENU,status.not.in.(completed,cancelled,paid,Nouvelle))`;
+        const reservationServiceFilter = `and(type.eq.RESERVATION_SERVICE,status.in.("En attente de traitement",confirmed))`;
+
         if (filter.type === 'COMMANDE_MENU') {
-            query = query.eq('type', 'COMMANDE_MENU').not('status', 'in', ['completed', 'cancelled', 'paid', 'Nouvelle']);
+            query = query.and(commandeMenuFilter);
         } else if (filter.type === 'RESERVATION_SERVICE') {
-            query = query.eq('type', 'RESERVATION_SERVICE').in('status', ['En attente de traitement', 'confirmed']);
+            query = query.and(reservationServiceFilter);
         } else {
-            // Default view: show all in-progress demands
-            query = query.or(`and(type.eq.COMMANDE_MENU,status.not.in.("completed","cancelled","paid","Nouvelle")),and(type.eq.RESERVATION_SERVICE,status.in.("En attente de traitement","confirmed"))`);
+            query = query.or(`${commandeMenuFilter},${reservationServiceFilter}`);
         }
         
         // --- Additional Filters ---
