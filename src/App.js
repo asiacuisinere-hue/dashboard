@@ -154,32 +154,52 @@ const DashboardLayout = () => {
     }, []);
 
     useEffect(() => {
+        // --- 1. Initial fetch and notification permission request ---
         fetchCounts();
+        if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+            Notification.requestPermission();
+        }
 
-        const logAndFetch = (tableName) => () => {
-            console.log(`--- [REALTIME] Change detected on '${tableName}', refetching counts.`);
+        // --- 2. Realtime listener for NEW demands (for notifications) ---
+        const showNotification = () => {
+            if (Notification.permission === 'granted') {
+                new Notification('Nouvelle demande reçue !', {
+                    body: 'Une nouvelle demande est en attente de traitement.',
+                    icon: '/logo.svg' // Assurez-vous que ce fichier est dans votre dossier public
+                });
+            }
+        };
+
+        const handleNewDemand = (payload) => {
+            console.log('--- [REALTIME] New demand INSERT detected.', payload);
+            showNotification();
+            fetchCounts(); // Refetch all counts to update UI
+        };
+        
+        const newDemandsChannel = supabase.channel('nouvelles-demandes-insert')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'demandes' }, handleNewDemand)
+            .subscribe();
+
+        // --- 3. Realtime listener for OTHER updates (silent UI refresh) ---
+        const handleUpdates = (payload) => {
+            console.log(`--- [REALTIME] UPDATE detected on table, refetching counts.`, payload.table);
             fetchCounts();
         };
 
-        const demandesChannel = supabase.channel('demandes-changes')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'demandes' }, logAndFetch('demandes'))
+        const updatesChannel = supabase.channel('db-updates')
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'demandes' }, handleUpdates)
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'quotes' }, handleUpdates)
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'invoices' }, handleUpdates)
             .subscribe();
 
-        const quotesChannel = supabase.channel('quotes-changes')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'quotes' }, logAndFetch('quotes'))
-            .subscribe();
-
-        const invoicesChannel = supabase.channel('invoices-changes')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, logAndFetch('invoices'))
-            .subscribe();
-        
+        // --- 4. Window resize listener ---
         const handleResize = () => setIsMobile(window.innerWidth <= 768);
         window.addEventListener('resize', handleResize);
 
+        // --- 5. Cleanup ---
         return () => {
-            supabase.removeChannel(demandesChannel);
-            supabase.removeChannel(quotesChannel);
-            supabase.removeChannel(invoicesChannel);
+            supabase.removeChannel(newDemandsChannel);
+            supabase.removeChannel(updatesChannel);
             window.removeEventListener('resize', handleResize);
         };
     }, [fetchCounts]);
