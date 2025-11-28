@@ -155,17 +155,31 @@ const DashboardLayout = () => {
 
     useEffect(() => {
         fetchCounts();
-        const channel = supabase.channel('demandes-quotes-invoices-changes')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'demandes' }, () => fetchCounts())
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'quotes' }, () => fetchCounts())
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, () => fetchCounts())
+
+        const logAndFetch = (tableName) => () => {
+            console.log(`--- [REALTIME] Change detected on '${tableName}', refetching counts.`);
+            fetchCounts();
+        };
+
+        const demandesChannel = supabase.channel('demandes-changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'demandes' }, logAndFetch('demandes'))
+            .subscribe();
+
+        const quotesChannel = supabase.channel('quotes-changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'quotes' }, logAndFetch('quotes'))
+            .subscribe();
+
+        const invoicesChannel = supabase.channel('invoices-changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, logAndFetch('invoices'))
             .subscribe();
         
         const handleResize = () => setIsMobile(window.innerWidth <= 768);
         window.addEventListener('resize', handleResize);
 
         return () => {
-            supabase.removeChannel(channel);
+            supabase.removeChannel(demandesChannel);
+            supabase.removeChannel(quotesChannel);
+            supabase.removeChannel(invoicesChannel);
             window.removeEventListener('resize', handleResize);
         };
     }, [fetchCounts]);
