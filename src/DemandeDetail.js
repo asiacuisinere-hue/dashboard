@@ -112,16 +112,20 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                 throw new Error(settingsError?.message || 'Impossible de récupérer les paramètres de l\'entreprise.');
             }
 
+            const payload = { 
+                demandeId: demande.id,
+                companySettings: companySettings
+            };
+
+            console.log('--- [DemandeDetail] Sending payload to send-qrcode:', payload); // Debugging line
+
             const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/send-qrcode`, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json', 
                     'Authorization': `Bearer ${process.env.REACT_APP_SUPABASE_ANON_KEY}` 
                 },
-                body: JSON.stringify({ 
-                    demandeId: demande.id,
-                    companySettings: companySettings // Pass settings in the body
-                })
+                body: JSON.stringify(payload)
             });
             const result = await response.json();
             if (!response.ok) throw new Error(result.error || 'Erreur lors de l\'envoi du QR Code.');
