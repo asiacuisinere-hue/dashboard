@@ -136,32 +136,31 @@ const DemandesEnCours = () => {
                                                                 <th style={thStyle}>Statut</th>
                                                                 <th style={thStyle}>Actions</th>                                </tr>
                             </thead>
-                            <tbody>
-                                {demandes.map(demande => (
-                                    <tr key={demande.id}>
-                                        <td style={tdStyle}>{new Date(demande.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })}</td>
-                                        <td style={tdStyle}>{demande.clients?.last_name || demande.entreprises?.nom_entreprise || 'N/A'}</td>
-                                        <td style={tdStyle}>{demande.details_json?.ville || 'N/A'}</td>
-                                        <td style={tdStyle}>
-                                            {demande.type === 'RESERVATION_SERVICE' && demande.request_date
-                                                ? new Date(demande.request_date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })
-                                                : 'N/A'}
-                                        </td>
-                                        <td style={tdStyle}>
-                                            {demande.type === 'COMMANDE_MENU' && demande.request_date
-                                                ? new Date(demande.request_date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })
-                                                : 'N/A'}
-                                        </td>
-                                        <td style={tdStyle}><span style={statusBadgeStyle(demande.status)}>{demande.status}</span></td>
-                                        <td style={tdStyle}>
-                                            <button onClick={() => setSelectedDemande(demande)} style={detailsButtonStyle}>
-                                                Gérer
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                                <tbody>
+                                                    {demandes.map(demande => (
+                                                        <tr key={demande.id}>
+                                                            <td style={tdStyle}>{new Date(demande.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })}</td>
+                                                            <td style={tdStyle}>{demande.clients?.last_name || demande.entreprises?.nom_entreprise || '—'}</td>
+                                                            <td style={tdStyle}>{demande.details_json?.ville || '—'}</td>
+                                                            <td style={tdStyle}>
+                                                                {demande.type === 'RESERVATION_SERVICE' && demande.request_date
+                                                                    ? new Date(demande.request_date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })
+                                                                    : '—'}
+                                                            </td>
+                                                            <td style={tdStyle}>
+                                                                {demande.type === 'COMMANDE_MENU' && demande.request_date
+                                                                    ? new Date(demande.request_date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })
+                                                                    : '—'}
+                                                            </td>
+                                                            <td style={tdStyle}><span style={statusBadgeStyle(demande.status)}>{demande.status}</span></td>
+                                                            <td style={tdStyle}>
+                                                                <button onClick={() => setSelectedDemande(demande)} style={detailsButtonStyle}>
+                                                                    Gérer
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>                        </table>
                     </div>
         
                     {selectedDemande && (
