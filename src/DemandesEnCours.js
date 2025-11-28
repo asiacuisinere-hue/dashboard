@@ -1,29 +1,42 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from './supabaseClient';
-import DemandeDetail from './DemandeDetail';
+import DemandeDetail from './DemandeDetail'; 
+
+const communesReunion = [
+    "Bras-Panon", "Cilaos", "Entre-Deux", "L'Étang-Salé", "La Plaine-des-Palmistes", 
+    "La Possession", "Le Port", "Le Tampon", "Les Avirons", "Les Trois-Bassins", 
+    "Petite-Île", "Saint-André", "Saint-Benoît", "Saint-Denis", "Saint-Joseph", 
+    "Saint-Leu", "Saint-Louis", "Saint-Paul", "Saint-Philippe", "Saint-Pierre", 
+    "Sainte-Marie", "Sainte-Rose", "Sainte-Suzanne", "Salazie"
+];
 
 const DemandesEnCours = () => {
     const [demandes, setDemandes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedDemande, setSelectedDemande] = useState(null);
-    const [filter, setFilter] = useState({ date: '', status: '' });
+    const [filter, setFilter] = useState({ date: '', status: '', city: '' });
 
     const fetchDemandes = useCallback(async () => {
         setLoading(true);
-                        let query = supabase
-                            .from('demandes')
-                            .select(`
-                                *,
-                                clients (*),
-                                entreprises (*)
-                            `)
-                            .or(
-                                `and(type.eq.COMMANDE_MENU,status.not.in.("completed","cancelled","paid","Nouvelle")),and(type.eq.RESERVATION_SERVICE,status.in.("En attente de traitement","confirmed"))`
-                            );        if (filter.date) {
+        let query = supabase
+            .from('demandes')
+            .select(`
+                *,
+                clients (*),
+                entreprises (*)
+            `)
+            .or(
+                `and(type.eq.COMMANDE_MENU,status.not.in.("completed","cancelled","paid","Nouvelle")),and(type.eq.RESERVATION_SERVICE,status.in.("En attente de traitement","confirmed"))`
+            );
+        
+        if (filter.date) {
             query = query.eq('request_date', filter.date);
         }
         if (filter.status) {
             query = query.eq('status', filter.status);
+        }
+        if (filter.city) {
+            query = query.ilike('details_json->>city', `%${filter.city}%`);
         }
 
         const { data, error } = await query.order('created_at', { ascending: false });
@@ -32,7 +45,7 @@ const DemandesEnCours = () => {
             console.error('Erreur de chargement des demandes en cours:', error);
             alert(`Une erreur est survenue lors du chargement des données : ${error.message}`);
         } else {
-            console.log('--- [DEBUG] Demandes en cours reçues:', data); // Ligne de débogage
+            console.log('--- [DEBUG] Demandes en cours reçues:', data);
             setDemandes(data);
         }
         setLoading(false);
@@ -63,11 +76,11 @@ const DemandesEnCours = () => {
         };
     
     const resetFilters = () => {
-        setFilter({ date: '', status: '' });
+        setFilter({ date: '', status: '', city: '' });
     };
 
     if (loading) {
-        return <div>Chargement des demandes en cours...</div>;
+        return <div style={containerStyle}>Chargement des demandes en cours...</div>;
     }
 
     return (
@@ -97,6 +110,17 @@ const DemandesEnCours = () => {
                     <option value="En attente de préparation">En attente de préparation</option>
                     <option value="Préparation en cours">Préparation en cours</option>
                 </select>
+                <select
+                    name="city"
+                    value={filter.city}
+                    onChange={handleFilterChange}
+                    style={filterInputStyle}
+                >
+                    <option value="">Toutes les villes</option>
+                    {communesReunion.map(commune => (
+                        <option key={commune} value={commune}>{commune}</option>
+                    ))}
+                </select>
                 <button onClick={resetFilters} style={detailsButtonStyle}>Réinitialiser</button>
             </div>
 
@@ -105,8 +129,10 @@ const DemandesEnCours = () => {
                     <thead>
                         <tr>
                             <th style={thStyle}>Date Demande</th>
-                            <th style={thStyle}>Client / Entreprise</th>
-                            <th style={thStyle}>Type</th>
+                            <th style={thStyle}>Client</th>
+                            <th style={thStyle}>Ville</th>
+                            <th style={thStyle}>Date Événement</th>
+                            <th style={thStyle}>Date Livraison/Retrait</th>
                             <th style={thStyle}>Statut</th>
                             <th style={thStyle}>Actions</th>
                         </tr>
@@ -116,7 +142,9 @@ const DemandesEnCours = () => {
                             <tr key={demande.id}>
                                 <td style={tdStyle}>{new Date(demande.created_at).toLocaleDateString('fr-FR')}</td>
                                 <td style={tdStyle}>{demande.clients?.last_name || demande.entreprises?.nom_entreprise || 'N/A'}</td>
-                                <td style={tdStyle}>{demande.type}</td>
+                                <td style={tdStyle}>{demande.details_json?.city || 'N/A'}</td>
+                                <td style={tdStyle}>{demande.request_date ? new Date(demande.request_date).toLocaleDateString('fr-FR') : 'N/A'}</td>
+                                <td style={tdStyle}>{demande.details_json?.deliveryDate ? new Date(demande.details_json.deliveryDate).toLocaleDateString('fr-FR') : 'N/A'}</td>
                                 <td style={tdStyle}><span style={statusBadgeStyle(demande.status)}>{demande.status}</span></td>
                                 <td style={tdStyle}>
                                     <button onClick={() => setSelectedDemande(demande)} style={detailsButtonStyle}>
@@ -145,7 +173,7 @@ const DemandesEnCours = () => {
 // --- Styles ---
 const containerStyle = {
     padding: '20px',
-    maxWidth: '1200px',
+    maxWidth: '1400px', // Increased width for more columns
     margin: '0 auto',
 };
 
@@ -154,22 +182,22 @@ const filterContainerStyle = {
     gap: '1rem',
     marginBottom: '2rem',
     alignItems: 'center',
-    flexWrap: 'wrap', // Permet aux filtres de passer à la ligne
+    flexWrap: 'wrap',
 };
 
 const filterInputStyle = {
     padding: '8px',
     borderRadius: '5px',
     border: '1px solid #ccc',
-    flex: '1 1 auto', // Permet aux inputs de s'étirer mais aussi de se réduire
-    minWidth: '150px', // Largeur minimale pour les inputs
+    flex: '1 1 auto',
+    minWidth: '150px',
 };
 
 const tableContainerStyle = {
     marginTop: '2rem',
     boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
     borderRadius: '8px',
-    overflowX: 'auto', // Permet le défilement horizontal sur les petits écrans
+    overflowX: 'auto',
     background: 'white'
 };
 
@@ -185,14 +213,14 @@ const thStyle = {
     fontWeight: 'bold',
     color: '#333',
     borderBottom: '2px solid #ddd',
-    whiteSpace: 'nowrap', // Empêche le retour à la ligne pour les en-têtes
+    whiteSpace: 'nowrap',
 };
 
 const tdStyle = {
     padding: '12px 15px',
     borderBottom: '1px solid #eee',
     color: '#555',
-    whiteSpace: 'nowrap', // Empêche le retour à la ligne pour les cellules
+    whiteSpace: 'nowrap',
 };
 
 const detailsButtonStyle = {
@@ -215,7 +243,7 @@ const statusBadgeStyle = (status) => {
         'Confirmée': '#28a745',
         'Refusée': '#6c757d',
         'Annulée': '#dc3545',
-        'Payée': '#6f42c1' // Ajout de la couleur pour Payée
+        'Payée': '#6f42c1'
     };
     return {
         padding: '4px 8px',
