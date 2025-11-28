@@ -130,17 +130,63 @@ const Factures = () => {
                 </table>
             </div>
 
-            <ReactPaginate
-                previousLabel={'< Précédent'}
-                nextLabel={'Suivant >'}
-                breakLabel={'...'}
-                pageCount={pageCount}
-                marginPagesDisplayed={2}
-                pageRangeDisplayed={5}
-                onPageChange={handlePageClick}
-                containerClassName={'pagination'} // Style this in your CSS
-                activeClassName={'active'} // Style this in your CSS
-            />
+            <div style={{ borderTop: '1px solid #eee', marginTop: '2rem', paddingTop: '1rem' }}>
+                <style>{`
+                    .pagination {
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        list-style: none;
+                        padding: 0;
+                        font-family: Arial, sans-serif;
+                    }
+                    .pagination li {
+                        margin: 0 4px;
+                    }
+                    .pagination li a {
+                        padding: 8px 14px;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        color: #333;
+                        text-decoration: none;
+                        transition: background-color 0.2s, color 0.2s;
+                        border: 1px solid #ddd;
+                        font-weight: bold;
+                    }
+                    .pagination li.active a {
+                        background-color: #d4af37;
+                        color: white;
+                        border-color: #d4af37;
+                    }
+                    .pagination li.disabled a {
+                        color: #ccc;
+                        cursor: not-allowed;
+                    }
+                    .pagination li a:hover:not(.disabled) {
+                        background-color: #f5f5f5;
+                    }
+                `}</style>
+
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    {pageCount > 1 && (
+                         <span style={{ marginRight: '1.5rem', color: '#555', fontSize: '14px', fontWeight: 'bold' }}>
+                            Page {currentPage + 1} sur {pageCount}
+                        </span>
+                    )}
+                    <ReactPaginate
+                        previousLabel={'<'}
+                        nextLabel={'>'}
+                        breakLabel={'...'}
+                        pageCount={pageCount}
+                        marginPagesDisplayed={1}
+                        pageRangeDisplayed={3}
+                        onPageChange={handlePageClick}
+                        containerClassName={'pagination'}
+                        activeClassName={'active'}
+                        disabledClassName={'disabled'}
+                    />
+                </div>
+            </div>
 
             {selectedInvoice && (
                 <InvoiceDetailModal 
