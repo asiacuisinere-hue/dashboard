@@ -2,6 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 
+const communesReunion = [
+    "Bras-Panon", "Cilaos", "Entre-Deux", "L'Étang-Salé", "La Plaine-des-Palmistes", 
+    "La Possession", "Le Port", "Le Tampon", "Les Avirons", "Les Trois-Bassins", 
+    "Petite-Île", "Saint-André", "Saint-Benoît", "Saint-Denis", "Saint-Joseph", 
+    "Saint-Leu", "Saint-Louis", "Saint-Paul", "Saint-Philippe", "Saint-Pierre", 
+    "Sainte-Marie", "Sainte-Rose", "Sainte-Suzanne", "Salazie"
+];
+
 const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
     const navigate = useNavigate();
 
@@ -161,14 +169,18 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                 />
             </div>
             <div style={formGroupStyle}>
-                <label style={labelStyle}>Lieu</label>
-                <input 
-                    style={inputStyle} 
-                    type="text" 
-                    name="lieu" 
-                    value={details.lieu || ''} 
-                    onChange={handleDetailChange} 
-                />
+                <label style={labelStyle}>Ville</label>
+                <select
+                    style={inputStyle}
+                    name="ville"
+                    value={details.ville || ''}
+                    onChange={handleDetailChange}
+                >
+                    <option value="">-- Sélectionnez une ville --</option>
+                    {communesReunion.map(commune => (
+                        <option key={commune} value={commune}>{commune}</option>
+                    ))}
+                </select>
             </div>
             <div style={formGroupStyle}>
                 <label style={labelStyle}>Formules (séparées par ',')</label>
