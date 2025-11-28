@@ -143,8 +143,16 @@ const DemandesEnCours = () => {
                                 <td style={tdStyle}>{new Date(demande.created_at).toLocaleDateString('fr-FR')}</td>
                                 <td style={tdStyle}>{demande.clients?.last_name || demande.entreprises?.nom_entreprise || 'N/A'}</td>
                                 <td style={tdStyle}>{demande.details_json?.city || 'N/A'}</td>
-                                <td style={tdStyle}>{demande.request_date ? new Date(demande.request_date).toLocaleDateString('fr-FR') : 'N/A'}</td>
-                                <td style={tdStyle}>{demande.details_json?.deliveryDate ? new Date(demande.details_json.deliveryDate).toLocaleDateString('fr-FR') : 'N/A'}</td>
+                                <td style={tdStyle}>
+                                    {demande.type === 'RESERVATION_SERVICE' && demande.request_date
+                                        ? new Date(demande.request_date).toLocaleDateString('fr-FR')
+                                        : 'N/A'}
+                                </td>
+                                <td style={tdStyle}>
+                                    {demande.type === 'COMMANDE_MENU' && demande.details_json?.deliveryDate
+                                        ? new Date(demande.details_json.deliveryDate).toLocaleDateString('fr-FR')
+                                        : 'N/A'}
+                                </td>
                                 <td style={tdStyle}><span style={statusBadgeStyle(demande.status)}>{demande.status}</span></td>
                                 <td style={tdStyle}>
                                     <button onClick={() => setSelectedDemande(demande)} style={detailsButtonStyle}>
