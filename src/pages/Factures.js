@@ -42,8 +42,8 @@ const Factures = () => {
             );
         }
 
-        // --- NEW FILTER: Only show invoices for RESERVATION_SERVICE demands ---
-        query = query.eq('demandes.type', 'RESERVATION_SERVICE');
+        // --- NEW FILTER: Only show invoices for RESERVATION_SERVICE demands (which have a quote_id) ---
+        query = query.not('quote_id', 'is', null);
 
         const { data, error } = await query.order('created_at', { ascending: false });
         if (error) {
