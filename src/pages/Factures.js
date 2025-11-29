@@ -26,6 +26,7 @@ const Factures = () => {
         setLoading(true);
         let query = supabase.from('invoices').select(`
             *,
+            demand_id,
             clients (first_name, last_name, email),
             entreprises (nom_entreprise, contact_email),
             demandes (type)
