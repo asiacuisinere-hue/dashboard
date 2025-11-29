@@ -28,7 +28,7 @@ const DemandesEnCours = () => {
         } else if (filter.type === 'RESERVATION_SERVICE') {
             query = query
                 .eq('type', 'RESERVATION_SERVICE')
-                .in('status', '("En attente de traitement",confirmed)');
+                .in('status', ['En attente de traitement', 'confirmed']);
         } else {
             // Default view: show all in-progress demands
             const commandeMenuFilter = `and(type.eq.COMMANDE_MENU,status.not.in.(completed,cancelled,paid,Nouvelle))`;
