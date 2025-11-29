@@ -141,12 +141,18 @@ const DashboardLayout = () => {
         setToPrepareCount(toPrepareDemandsCount);
 
         // Factures
-        const { count: pendingInvoices, error: pendingInvError } = await supabase.from('invoices').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+        const { count: pendingInvoices, error: pendingInvError } = await supabase.from('invoices')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'pending')
+            .not('quote_id', 'is', null); // NEW FILTER
         if(pendingInvError) console.error("Error fetching pending invoices:", pendingInvError);
         console.log("DEBUG: Pending Invoices Count:", pendingInvoices);
         setPendingInvoicesCount(pendingInvoices);
 
-        const { count: depositPaidInvoices, error: depositInvError } = await supabase.from('invoices').select('*', { count: 'exact', head: true }).eq('status', 'deposit_paid');
+        const { count: depositPaidInvoices, error: depositInvError } = await supabase.from('invoices')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'deposit_paid')
+            .not('quote_id', 'is', null); // NEW FILTER
         if(depositInvError) console.error("Error fetching deposit paid invoices:", depositInvError);
         console.log("DEBUG: Deposit Paid Invoices Count:", depositPaidInvoices);
         setDepositPaidInvoicesCount(depositPaidInvoices);
