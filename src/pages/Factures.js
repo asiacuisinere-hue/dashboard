@@ -258,10 +258,10 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
                         .eq('id', invoice.demande_id)
                         .single();
 
-                    if (fetchError) throw fetchError;
-
-                                        if (linkedDemande?.type === 'RESERVATION_SERVICE') {
-                                            const { error: demandeError } = await supabase
+                                    if (fetchError) throw fetchError;
+                                    console.log('--- [Factures] Linked Demande Type:', linkedDemande?.type);
+                    
+                                    if (linkedDemande?.type === 'RESERVATION_SERVICE') {                                            const { error: demandeError } = await supabase
                                                 .from('demandes')
                                                 .update({ status: 'En attente de préparation' }) // Change 'completed' to 'En attente de préparation'
                                                 .eq('id', invoice.demande_id);
