@@ -547,7 +547,7 @@ const sectionStyle = {
     marginBottom: '30px',
 };
 
-const filterContainerStyle = { display: 'flex', gap: '15px', marginBottom: '20px' };
+const filterContainerStyle = { display: 'flex', gap: '15px', marginBottom: '20px', flexWrap: 'wrap' };
 
 const subSectionStyle = {
     marginBottom: '20px',

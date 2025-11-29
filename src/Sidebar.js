@@ -157,9 +157,9 @@ const Sidebar = ({ newCount, inProgressCount, pendingQuotesCount, toPrepareCount
     };
 
     const links = [
+      { to: '/a-preparer', label: 'À Préparer', count: toPrepareCount, style: toPrepareBadgeStyle },
       { to: '/', label: 'Nouvelles Demandes', count: newCount, style: newBadgeStyle },
       { to: '/demandes-en-cours', label: 'Demandes en Cours', count: inProgressCount, style: inProgressBadgeStyle },
-      { to: '/a-preparer', label: 'À Préparer', count: toPrepareCount, style: toPrepareBadgeStyle },
       { to: '/historique', label: 'Historique' },
       { to: '/particuliers', label: 'Particuliers' },
       { to: '/entreprises', label: 'Entreprises' },
