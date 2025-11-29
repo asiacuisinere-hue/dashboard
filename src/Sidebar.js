@@ -81,10 +81,9 @@ const Sidebar = ({ newCount, inProgressCount, pendingQuotesCount, toPrepareCount
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    justifyContent: 'flex-start', // Align content to the top
-    paddingTop: '60px', // Add some padding at the top
+    justifyContent: 'center',
     zIndex: 1000,
-    overflowY: 'auto',
+    padding: '10px',
   };
 
   const closeButtonStyle = {
@@ -256,12 +255,16 @@ const Sidebar = ({ newCount, inProgressCount, pendingQuotesCount, toPrepareCount
             <div style={closeButtonStyle} onClick={() => setIsOpen(false)}>
               ×
             </div>
-            <h2 style={titleStyle}>Menu</h2>
-            <NavLinks mobile />
-            <div style={{ marginTop: 'auto', padding: '20px', width: '100%', textAlign: 'center' }}>
-                <button onClick={handleLogout} style={mobileLogoutButtonStyle}>
-                    <span>👋</span> Déconnexion
-                </button>
+            <div style={mobileMenuCardStyle}>
+              <h2 style={titleStyle}>Menu</h2>
+              <div style={{ overflowY: 'auto', flex: 1 }}>
+                <NavLinks mobile />
+              </div>
+              <div style={{ padding: '20px', width: '100%', textAlign: 'center' }}>
+                  <button onClick={handleLogout} style={mobileLogoutButtonStyle}>
+                      <span>👋</span> Déconnexion
+                  </button>
+              </div>
             </div>
           </div>
         )}
@@ -284,6 +287,16 @@ const Sidebar = ({ newCount, inProgressCount, pendingQuotesCount, toPrepareCount
         </div>
     </aside>
   );
+};
+
+// --- Styles pour le menu mobile ---
+const mobileMenuCardStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  width: '100%',
+  height: '100%',
+  maxHeight: '95vh', // Limite la hauteur pour voir le centrage
+  paddingTop: '40px', // Espace pour le bouton fermer
 };
 
 export default Sidebar;
