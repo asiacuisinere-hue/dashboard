@@ -42,7 +42,10 @@ const Factures = () => {
             );
         }
 
-        const { data, error } = await query;
+        // --- NEW FILTER: Only show invoices for RESERVATION_SERVICE demands ---
+        query = query.eq('demandes.type', 'RESERVATION_SERVICE');
+
+        const { data, error } = await query.order('created_at', { ascending: false });
         if (error) {
             console.error('Erreur de chargement des factures:', error);
         } else {
