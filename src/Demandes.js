@@ -178,10 +178,13 @@ const Demandes = () => {
                     <tbody>
                         {demandes.map(demande => (
                             <tr key={demande.id}>
-                                <td style={tdStyle}>{new Date(demande.created_at).toLocaleDateString('fr-FR')}</td>
-                                <td style={tdStyle}>{demande.clients?.last_name || demande.entreprises?.nom_entreprise || 'N/A'}</td>
-                                <td style={tdStyle}>{demande.type}</td>
-                                <td style={tdStyle}>{new Date(demande.request_date).toLocaleDateString('fr-FR')}</td>
+                                <td style={tdStyle}>{new Date(demande.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })}</td>
+                                <td style={tdStyle}>{demande.clients?.last_name || demande.entreprises?.nom_entreprise || '—'}</td>
+                                <td style={{...tdStyle, textAlign: 'center', fontSize: '18px'}}>
+                                    {demande.type === 'RESERVATION_SERVICE' && <span title="RESERVATION_SERVICE">🏠</span>}
+                                    {demande.type === 'COMMANDE_MENU' && <span title="COMMANDE_MENU">🚚</span>}
+                                </td>
+                                <td style={tdStyle}>{new Date(demande.request_date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })}</td>
                                 <td style={tdStyle}>
                                     <button onClick={() => setSelectedDemande(demande)} style={detailsButtonStyle}>
                                         Voir Détails
