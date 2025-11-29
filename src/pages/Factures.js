@@ -204,6 +204,7 @@ const Factures = () => {
 
 // Modal Component for Invoice Details
 const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
+    console.log('--- [Factures] Invoice object in modal:', invoice); // Debugging line
     const [isEnteringDeposit, setIsEnteringDeposit] = useState(false);
     const [depositAmountInput, setDepositAmountInput] = useState(''); // Renamed state
     const [loadingAction, setLoadingAction] = useState(false);
