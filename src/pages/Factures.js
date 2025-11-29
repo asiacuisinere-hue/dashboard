@@ -205,7 +205,6 @@ const Factures = () => {
 
 // Modal Component for Invoice Details
 const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
-    console.log('--- [Factures] Invoice object in modal:', invoice); // Debugging line
     const [isEnteringDeposit, setIsEnteringDeposit] = useState(false);
     const [depositAmountInput, setDepositAmountInput] = useState(''); // Renamed state
     const [loadingAction, setLoadingAction] = useState(false);
@@ -251,30 +250,32 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
         }
 
         // --- AUTOMATIC COMPLETION LOGIC ---
-        if (newStatus === 'paid') {
+        if (newStatus === 'paid' && invoice.demand_id) {
             try {
-                if (invoice.demande_id) {
-                    const { data: linkedDemande, error: fetchError } = await supabase
-                        .from('demandes')
-                        .select('type')
-                        .eq('id', invoice.demande_id)
-                        .single();
+                const { data: linkedDemande, error: fetchError } = await supabase
+                    .from('demandes')
+                    .select('type')
+                    .eq('id', invoice.demand_id)
+                    .single();
 
-                                    if (fetchError) throw fetchError;
-                                    console.log('--- [Factures] Linked Demande Type:', linkedDemande?.type);
+                if (fetchError) throw fetchError;
+
+                if (linkedDemande?.type === 'RESERVATION_SERVICE') {
+                    const { error: demandeError } = await supabase
+                        .from('demandes')
+                        .update({ status: 'En attente de préparation' })
+                        .eq('id', invoice.demand_id);
                     
-                                    if (linkedDemande?.type === 'RESERVATION_SERVICE') {                                            const { error: demandeError } = await supabase
-                                                .from('demandes')
-                                                .update({ status: 'En attente de préparation' }) // Change 'completed' to 'En attente de préparation'
-                                                .eq('id', invoice.demande_id);
-                                            
-                                            if (demandeError) throw demandeError;
-                                            console.log(`Demande ${invoice.demande_id} automatiquement marquée comme "En attente de préparation".`);
-                                        }                }
+                    if (demandeError) throw demandeError;
+                    console.log(`Demande ${invoice.demand_id} automatiquement marquée comme "En attente de préparation".`);
+                }
             } catch (error) {
-                console.error('Failed to auto-complete linked demand:', error.message);
+                console.error('Failed to auto-complete linked demand:', error);
+                alert(`La facture a bien été marquée comme "Payée", mais la mise à jour automatique du statut de la demande a échoué: ${error.message}`);
+                // Do not re-throw, as the main action (invoice update) was successful.
             }
         }
+
         setLoadingAction(false);
         alert(`Statut de la facture mis à jour à "${getFrenchStatus(newStatus)}"!`);
         onUpdate();
