@@ -260,16 +260,15 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
 
                     if (fetchError) throw fetchError;
 
-                    if (linkedDemande?.type === 'RESERVATION_SERVICE') {
-                        const { error: demandeError } = await supabase
-                            .from('demandes')
-                            .update({ status: 'completed' })
-                            .eq('id', invoice.demande_id);
-                        
-                        if (demandeError) throw demandeError;
-                        console.log(`Demande ${invoice.demande_id} automatiquement marquée comme "completed".`);
-                    }
-                }
+                                        if (linkedDemande?.type === 'RESERVATION_SERVICE') {
+                                            const { error: demandeError } = await supabase
+                                                .from('demandes')
+                                                .update({ status: 'En attente de préparation' }) // Change 'completed' to 'En attente de préparation'
+                                                .eq('id', invoice.demande_id);
+                                            
+                                            if (demandeError) throw demandeError;
+                                            console.log(`Demande ${invoice.demande_id} automatiquement marquée comme "En attente de préparation".`);
+                                        }                }
             } catch (error) {
                 console.error('Failed to auto-complete linked demand:', error.message);
             }
