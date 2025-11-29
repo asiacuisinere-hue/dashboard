@@ -81,7 +81,8 @@ const Sidebar = ({ newCount, inProgressCount, pendingQuotesCount, toPrepareCount
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start', // Align content to the top
+    paddingTop: '60px', // Add some padding at the top
     zIndex: 1000,
     overflowY: 'auto',
   };
@@ -157,9 +158,9 @@ const Sidebar = ({ newCount, inProgressCount, pendingQuotesCount, toPrepareCount
     };
 
     const links = [
-      { to: '/a-preparer', label: 'À Préparer', count: toPrepareCount, style: toPrepareBadgeStyle },
       { to: '/', label: 'Nouvelles Demandes', count: newCount, style: newBadgeStyle },
       { to: '/demandes-en-cours', label: 'Demandes en Cours', count: inProgressCount, style: inProgressBadgeStyle },
+      { to: '/a-preparer', label: 'À Préparer', count: toPrepareCount, style: toPrepareBadgeStyle },
       { to: '/historique', label: 'Historique' },
       { to: '/particuliers', label: 'Particuliers' },
       { to: '/entreprises', label: 'Entreprises' },
