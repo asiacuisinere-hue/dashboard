@@ -14,6 +14,7 @@ const getFrenchStatus = (status) => {
 };
 
 const Factures = () => {
+    const location = useLocation(); // Call the useLocation hook
     const [invoices, setInvoices] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
