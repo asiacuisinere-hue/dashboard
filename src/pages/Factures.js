@@ -14,22 +14,6 @@ const getFrenchStatus = (status) => {
     }
 };
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../supabaseClient';
-import ReactPaginate from 'react-paginate';
-import { useLocation } from 'react-router-dom';
-
-// Helper function to get French status
-const getFrenchStatus = (status) => {
-    switch (status) {
-        case 'pending': return 'En attente';
-        case 'deposit_paid': return 'Acompte versé';
-        case 'paid': return 'Payée';
-        case 'cancelled': return 'Annulée';
-        default: return status;
-    }
-};
-
 const Factures = () => {
     const location = useLocation();
     const [invoices, setInvoices] = useState([]);
@@ -78,7 +62,7 @@ const Factures = () => {
         if (searchTerm) {
             const searchPattern = `%${searchTerm}%`;
             query = query.or(
-                `document_number.ilike.${searchPattern},clients.first_name.ilike.%${searchPattern},clients.last_name.ilike.%${searchPattern},entreprises.nom_entreprise.ilike.%${searchPattern}`
+                `document_number.ilike.${searchPattern},clients.first_name.ilike.${searchPattern},clients.last_name.ilike.${searchPattern},entreprises.nom_entreprise.ilike.${searchPattern}`
             );
         }
 
