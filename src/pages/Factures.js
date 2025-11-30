@@ -48,9 +48,6 @@ const Factures = () => {
             query = query.eq('status', statusFilter);
         }
 
-        // --- ALWAYS exclude demands that have been sent to preparation or completed ---
-        query = query.not('demandes.status', 'in', '("En attente de préparation","Préparation en cours","completed")');
-
         // --- Apply search term filter ---
         if (searchTerm) {
             const searchPattern = `%${searchTerm}%`;
@@ -64,7 +61,12 @@ const Factures = () => {
         if (error) {
             console.error('Erreur de chargement des factures:', error);
         } else {
-            setInvoices(data || []);
+            // --- Filter out demands in preparation or completed (done client-side) ---
+            const filteredData = (data || []).filter(invoice => {
+                const demandStatus = invoice.demandes?.status;
+                return !demandStatus || !['En attente de préparation', 'Préparation en cours', 'completed'].includes(demandStatus);
+            });
+            setInvoices(filteredData);
         }
         setLoading(false);
     }, [searchTerm, statusFilter]);
