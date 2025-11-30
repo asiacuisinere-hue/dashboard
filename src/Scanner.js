@@ -1,39 +1,32 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { supabase } from './supabaseClient';
-import DemandeDetail from './DemandeDetail'; // Réutilisation de la modale de détail
 
-const qrcodeRegionId = 'html5qrcode-scanner';
+const qrcodeRegionId = 'html5qrcode-scanner-view';
 
 const Scanner = () => {
     const [scanError, setScanError] = useState('');
-    const [scannedDemande, setScannedDemande] = useState(null);
-    const [scanAttempted, setScanAttempted] = useState(false);
-    const html5QrcodeScannerRef = useRef(null);
+    const [successMessage, setSuccessMessage] = useState('');
+    const scannerRef = useRef(null);
+    const lastScannedCode = useRef(null);
+    const timeoutRef = useRef(null);
 
-    // Définir onScanFailure en tant que callback
-    const onScanFailure = useCallback((error) => {
-        if (!scanAttempted) { // Only log if no successful scan has been attempted
-            console.warn(`QR Code scan error = ${error}`);
-            setScanError('Impossible de lire le code QR. Assurez-vous qu\'il est bien éclairé et visible.');
-        }
-    }, [scanAttempted]); // scanAttempted est une dépendance
-
-    const fetchDemandeDetails = useCallback(async (qrCodeData) => {
+    const clearMessages = () => {
         setScanError('');
-        setScannedDemande(null);
+        setSuccessMessage('');
+    };
 
+    const processScan = useCallback(async (qrCodeData) => {
+        clearMessages();
         let demandeId = null;
         let deliveryDateStr = null;
 
         try {
-            // Check if the scanned data is a URL
             if (qrCodeData.includes('asiacuisine.re/suivi')) {
                 const url = new URL(qrCodeData);
                 demandeId = url.searchParams.get('id');
                 deliveryDateStr = url.searchParams.get('date');
             } else {
-                // Fallback to the original pipe format
                 const parts = qrCodeData.split('|');
                 if (parts.length === 2) {
                     demandeId = parts[0];
@@ -42,213 +35,100 @@ const Scanner = () => {
             }
 
             if (!demandeId || !deliveryDateStr) {
-                setScanError(`Format du QR Code non reconnu.`);
-                return;
+                throw new Error("Format du QR Code non reconnu.");
             }
 
-            // Date validation logic remains the same
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             const scanDate = new Date(deliveryDateStr);
             scanDate.setHours(0, 0, 0, 0);
 
             if (scanDate.getTime() !== today.getTime()) {
-                setScanError(`Ce code QR n'est pas valide pour aujourd'hui (${today.toLocaleDateString()}). Date attendue: ${scanDate.toLocaleDateString()}.`);
-                return;
+                throw new Error(`Code QR non valide pour aujourd'hui (${today.toLocaleDateString('fr-FR')}).`);
             }
 
             const { data, error } = await supabase
                 .from('demandes')
-                .select(`*, clients (*), entreprises (*)`)
+                .update({ status: 'completed' })
                 .eq('id', demandeId)
+                .select('clients(last_name, first_name), entreprises(nom_entreprise)')
                 .single();
 
-            if (error) {
-                console.error('Error fetching demande:', error);
-                setScanError(`Erreur lors de la récupération de la demande: ${error.message}. ID: ${demandeId}`);
-            } else if (!data) {
-                setScanError(`Aucune demande trouvée pour l'ID: ${demandeId}.`);
-            } else {
-                setScannedDemande(data);
-                setScanError('');
-            }
+            if (error) throw new Error(error.message);
+            if (!data) throw new Error(`Demande ${demandeId.substring(0,8)}... non trouvée.`);
+
+            const clientName = data.clients?.last_name || data.entreprises?.nom_entreprise || 'Inconnu';
+            setSuccessMessage(`Commande pour ${clientName} validée !`);
+
         } catch (e) {
-            setScanError(`Erreur lors de l'analyse du QR code: ${e.message}`);
+            setScanError(e.message);
+        } finally {
+            if(timeoutRef.current) clearTimeout(timeoutRef.current);
+            timeoutRef.current = setTimeout(clearMessages, 4000);
         }
-    }, []); // fetchDemandeDetails ne dépend pas de valeurs changeantes, seulement de supabase
+    }, []);
 
-    const onScanSuccess = useCallback((decodedText, decodedResult) => {
-        // Stop scanning to prevent multiple scans
-        if (html5QrcodeScannerRef.current) {
-            html5QrcodeScannerRef.current.clear().catch(error => {
-                console.error('Failed to clear html5QrcodeScanner', error);
-            });
-            html5QrcodeScannerRef.current = null; // Mark as cleared
+    const onScanSuccess = useCallback((decodedText) => {
+        if (decodedText === lastScannedCode.current) {
+            return; // Already processed this code within the cooldown period
         }
-        
-        // setDecodedResult(decodedText); // decodedResult n'est plus utilisé
-        setScanError('');
-        setScanAttempted(true);
-        console.log(`Scan result: ${decodedText}`, decodedResult);
-        fetchDemandeDetails(decodedText);
-    }, [fetchDemandeDetails]); // Ajout de fetchDemandeDetails comme dépendance
+        lastScannedCode.current = decodedText;
+        setTimeout(() => { lastScannedCode.current = null; }, 3000); // 3-second cooldown
 
-    const updateDemandeStatus = async (newStatus) => {
-        if (!scannedDemande) return;
+        console.log(`Scan result: ${decodedText}`);
+        processScan(decodedText);
+    }, [processScan]);
 
-        if (!window.confirm(`Confirmer le changement de statut de la demande ${scannedDemande.id.substring(0, 8)} à "${newStatus}" ?`)) {
-            return;
-        }
-
-        const { error } = await supabase
-            .from('demandes')
-            .update({ status: newStatus, updated_at: new Date().toISOString() })
-            .eq('id', scannedDemande.id);
-
-        if (error) {
-            alert(`Erreur lors de la mise à jour du statut : ${error.message}`);
-        } else {
-            alert(`Statut de la demande ${scannedDemande.id.substring(0, 8)} mis à jour à "${newStatus}".`);
-            setScannedDemande(prev => ({ ...prev, status: newStatus })); // Update local state
-            // No need to restart scanner, user will click rescan if needed
-        }
-    };
-
-    const startScanner = useCallback(() => {
-        // setDecodedResult(''); // decodedResult n'est plus utilisé
-        setScanError('');
-        setScannedDemande(null);
-        setScanAttempted(false); // Reset scan attempted flag
-
-        if (!html5QrcodeScannerRef.current) {
-            const html5QrcodeScanner = new Html5QrcodeScanner(
-                qrcodeRegionId, { fps: 10, qrbox: { width: 250, height: 250 } }, false
-            );
-            html5QrcodeScannerRef.current = html5QrcodeScanner; // Store ref
-            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
-        } else {
-             // If scanner already initialized and cleared, just re-render
-             html5QrcodeScannerRef.current.render(onScanSuccess, onScanFailure);
-        }
-    }, [onScanSuccess, onScanFailure]);
-
+    const onScanFailure = useCallback((error) => {
+        // This can be noisy, so we don't display continuous errors
+    }, []);
 
     useEffect(() => {
-        startScanner();
+        if (!scannerRef.current) {
+            const scanner = new Html5QrcodeScanner(
+                qrcodeRegionId, 
+                { fps: 5, qrbox: { width: 250, height: 250 }, supportedScanTypes: [] }, 
+                false
+            );
+            scanner.render(onScanSuccess, onScanFailure);
+            scannerRef.current = scanner;
+        }
 
         return () => {
-            if (html5QrcodeScannerRef.current) {
-                html5QrcodeScannerRef.current.clear().catch(error => {
+            if (scannerRef.current && scannerRef.current.getState() !== 1) { // 1 is NOT_STARTED state
+                scannerRef.current.clear().catch(error => {
                     console.error('Failed to clear html5QrcodeScanner on unmount', error);
                 });
+                scannerRef.current = null;
             }
+            if(timeoutRef.current) clearTimeout(timeoutRef.current);
         };
-    }, [startScanner]);
-
+    }, [onScanSuccess, onScanFailure]);
 
     return (
         <div style={containerStyle}>
-            <h1>Scanner de QR Code</h1>
+            <h1>Validation des Commandes</h1>
+            <p>Scannez le QR code pour valider la livraison ou le retrait d'une commande.</p>
 
             <div style={scannerSectionStyle}>
                 <div id={qrcodeRegionId} style={scannerAreaStyle} />
+                
+                {successMessage && <p style={successMessageStyle}>{successMessage}</p>}
                 {scanError && <p style={errorMessageStyle}>{scanError}</p>}
-                {(scannedDemande || scanError) && (
-                    <button onClick={startScanner} style={rescanButtonStyle}>
-                        Re-scanner un nouveau QR Code
-                    </button>
-                )}
-            </div>
 
-            {scannedDemande && (
-                <div style={detailsSectionStyle}>
-                    <h2>Détails de la Demande</h2>
-                    <DemandeDetail
-                        demande={scannedDemande}
-                        onClose={() => setScannedDemande(null)} // Not used directly, but passed
-                        onUpdate={() => { /* No direct update here, status handled below */ }}
-                    />
-                    
-                    <div style={actionButtonsStyle}>
-                        {scannedDemande.status === 'En attente de préparation' && (
-                            <button onClick={() => updateDemandeStatus('Préparation en cours')} style={{...actionButtonStyle, backgroundColor: '#20c997'}}>Mettre en préparation</button>
-                        )}
-                        {scannedDemande.status === 'Préparation en cours' && (
-                            <button onClick={() => updateDemandeStatus('Confirmée')} style={actionButtonStyle}>Marquer comme Livrée/Retirée</button>
-                        )}
-                        {['Confirmée', 'Refusée', 'Annulée'].includes(scannedDemande.status) && (
-                            <button onClick={() => updateDemandeStatus('Archivée')} style={{...actionButtonStyle, backgroundColor: '#6c757d'}}>Archiver la demande</button>
-                        )}
-                    </div>
-                </div>
-            )}
+                {!successMessage && !scanError && <p style={infoMessageStyle}>En attente de scan...</p>}
+            </div>
         </div>
     );
 };
 
 // --- Styles ---
-const containerStyle = {
-    padding: '20px',
-    maxWidth: '900px',
-    margin: '0 auto',
-};
-
-const scannerSectionStyle = {
-    background: 'white',
-    padding: '20px',
-    borderRadius: '8px',
-    boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-    marginBottom: '30px',
-    textAlign: 'center',
-};
-
-const scannerAreaStyle = {
-    width: '100%', // Assure que le scanner prend toute la largeur disponible
-    maxWidth: '500px', // Limite la largeur du scanner
-    margin: '0 auto', // Centre le scanner
-    marginBottom: '20px',
-};
-
-const errorMessageStyle = {
-    color: '#dc3545',
-    marginTop: '10px',
-    fontWeight: 'bold',
-};
-
-const rescanButtonStyle = {
-    padding: '10px 15px',
-    backgroundColor: '#007bff',
-    color: 'white',
-    border: 'none',
-    borderRadius: '5px',
-    cursor: 'pointer',
-    marginTop: '20px',
-};
-
-const detailsSectionStyle = {
-    background: 'white',
-    padding: '20px',
-    borderRadius: '8px',
-    boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-    marginTop: '30px',
-};
-
-const actionButtonsStyle = {
-    display: 'flex',
-    justifyContent: 'flex-end',
-    gap: '10px',
-    marginTop: '20px',
-    flexWrap: 'wrap', // Permet aux boutons de passer à la ligne
-};
-
-const actionButtonStyle = {
-    padding: '10px 15px',
-    backgroundColor: '#28a745',
-    color: 'white',
-    border: 'none',
-    borderRadius: '5px',
-    cursor: 'pointer',
-    fontWeight: 'bold',
-};
+const containerStyle = { padding: '20px', maxWidth: '900px', margin: '0 auto' };
+const scannerSectionStyle = { background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 4px 8px rgba(0,0,0,0.1)', textAlign: 'center' };
+const scannerAreaStyle = { width: '100%', maxWidth: '400px', margin: '0 auto', marginBottom: '20px' };
+const messageStyle = { marginTop: '20px', fontWeight: 'bold', fontSize: '1.1em', padding: '10px', borderRadius: '5px' };
+const errorMessageStyle = { ...messageStyle, color: '#721c24', backgroundColor: '#f8d7da', border: '1px solid #f5c6cb' };
+const successMessageStyle = { ...messageStyle, color: '#155724', backgroundColor: '#d4edda', border: '1px solid #c3e6cb' };
+const infoMessageStyle = { ...messageStyle, color: '#0c5460', backgroundColor: '#d1ecf1', border: '1px solid #bee5eb' };
 
 export default Scanner;
