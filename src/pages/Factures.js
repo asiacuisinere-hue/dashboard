@@ -58,7 +58,7 @@ const Factures = () => {
             setInvoices(data || []);
         }
         setLoading(false);
-    }, [searchTerm, statusFilter]);
+    }, [searchTerm, statusFilter, location]);
 
     useEffect(() => {
         const timer = setTimeout(() => { // Debounce search term
