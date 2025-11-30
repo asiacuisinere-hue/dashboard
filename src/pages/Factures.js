@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 import ReactPaginate from 'react-paginate';
-import { useLocation } from 'react-router-dom';
 
 // Helper function to get French status
 const getFrenchStatus = (status) => {
@@ -15,7 +14,6 @@ const getFrenchStatus = (status) => {
 };
 
 const Factures = () => {
-    const location = useLocation(); // Call the useLocation hook
     const [invoices, setInvoices] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -58,7 +56,7 @@ const Factures = () => {
             setInvoices(data || []);
         }
         setLoading(false);
-    }, [searchTerm, statusFilter, location]);
+    }, [searchTerm, statusFilter]);
 
     useEffect(() => {
         const timer = setTimeout(() => { // Debounce search term
