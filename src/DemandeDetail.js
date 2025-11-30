@@ -233,7 +233,14 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
         <div style={modalOverlayStyle}>
             <div style={modalContentStyle}>
                 <button onClick={onClose} style={closeButtonStyle}>&times;</button>
-                <h2>Détails demande #{demande.id.substring(0, 8)}</h2>
+                <h2>
+                    Détails demande #{demande.id.substring(0, 8)}
+                    {demande.invoices?.[0]?.document_number && (
+                        <span style={{ fontSize: '14px', color: '#6c757d', marginLeft: '10px' }}>
+                            (Facture: {demande.invoices[0].document_number})
+                        </span>
+                    )}
+                </h2>
 
                 <div style={detailSectionStyle}>
                     <h3 style={detailTitleStyle}>Client / Entreprise</h3>

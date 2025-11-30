@@ -14,10 +14,10 @@ const APreparer = () => {
     const fetchDemandes = useCallback(async () => {
         setLoading(true);
         const toPrepareStatuses = ['En attente de préparation', 'Préparation en cours'];
-        let query = supabase.from('demandes').select(`*, details_json, clients (*), entreprises (*)`).in('status', toPrepareStatuses);
+        let query = supabase.from('demandes').select(`*, details_json, clients (*), entreprises (*), invoices (document_number)`).in('status', toPrepareStatuses);
 
         if (searchTerm) {
-            query = query.or(`details_json->>formulaName.ilike.%${searchTerm}%,clients.first_name.ilike.%${searchTerm}%,clients.last_name.ilike.%${searchTerm}%,entreprises.nom_entreprise.ilike.%${searchTerm}%`);
+            query = query.or(`details_json->>formulaName.ilike.%${searchTerm}%,clients.first_name.ilike.%${searchTerm}%,clients.last_name.ilike.%${searchTerm}%,entreprises.nom_entreprise.ilike.%${searchTerm}%,invoices.document_number.ilike.%${searchTerm}%`);
         }
 
         const { data, error } = await query.order('request_date', { ascending: true }); // Order by event/delivery date
@@ -39,8 +39,14 @@ const APreparer = () => {
 
     const handleUpdateStatus = async (id, newStatus) => {
         const { error } = await supabase.from('demandes').update({ status: newStatus }).eq('id', id);
-        if (error) console.error('Error updating status:', error);
-        else fetchDemandes();
+        if (error) {
+            console.error('Error updating status:', error);
+            alert(`Erreur: ${error.message}`);
+        } else {
+            alert('Statut mis à jour !');
+            fetchDemandes();
+            setSelectedDemande(null); // Close the modal
+        }
     };
 
     const offset = currentPage * itemsPerPage;
@@ -57,7 +63,7 @@ const APreparer = () => {
             <div style={filterContainerStyle}>
                 <input 
                     type="text"
-                    placeholder="Rechercher par nom, formule..."
+                    placeholder="Rechercher par nom, formule, N° facture..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     style={inputStyle}
@@ -72,28 +78,35 @@ const APreparer = () => {
                             <th style={thStyle}>Client</th>
                             <th style={thStyle}>Ville</th>
                             <th style={{...thStyle, textAlign: 'center'}}>Type</th>
+                            <th style={thStyle}>Facture</th>
                             <th style={thStyle}>Statut</th>
                             <th style={thStyle}>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {currentDemandes.map(demande => (
-                            <tr key={demande.id}>
-                                <td style={tdStyle}>{demande.request_date ? new Date(demande.request_date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '—'}</td>
-                                <td style={tdStyle}>{demande.clients?.last_name || demande.entreprises?.nom_entreprise || '—'}</td>
-                                <td style={tdStyle}>{demande.details_json?.ville || '—'}</td>
-                                <td style={{...tdStyle, textAlign: 'center', fontSize: '18px'}}>
-                                    {demande.type === 'RESERVATION_SERVICE' && <span title="RESERVATION_SERVICE">🏠</span>}
-                                    {demande.type === 'COMMANDE_MENU' && <span title="COMMANDE_MENU">🚚</span>}
-                                </td>
-                                <td style={tdStyle}><span style={statusBadgeStyle(demande.status)}>{demande.status}</span></td>
-                                <td style={tdStyle}>
-                                    <button onClick={() => setSelectedDemande(demande)} style={detailsButtonStyle}>
-                                        Gérer
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
+                        {currentDemandes.map(demande => {
+                            const invoiceNumber = demande.invoices?.[0]?.document_number;
+                            return (
+                                <tr key={demande.id}>
+                                    <td style={tdStyle}>{demande.request_date ? new Date(demande.request_date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '—'}</td>
+                                    <td style={tdStyle}>{demande.clients?.last_name || demande.entreprises?.nom_entreprise || '—'}</td>
+                                    <td style={tdStyle}>{demande.details_json?.ville || '—'}</td>
+                                    <td style={{...tdStyle, textAlign: 'center', fontSize: '18px'}}>
+                                        {demande.type === 'RESERVATION_SERVICE' && <span title="RESERVATION_SERVICE">🏠</span>}
+                                        {demande.type === 'COMMANDE_MENU' && <span title="COMMANDE_MENU">🚚</span>}
+                                    </td>
+                                    <td style={{...tdStyle, textAlign: 'center'}}>
+                                        {invoiceNumber ? <span title={invoiceNumber}>🧾</span> : '—'}
+                                    </td>
+                                    <td style={tdStyle}><span style={statusBadgeStyle(demande.status)}>{demande.status}</span></td>
+                                    <td style={tdStyle}>
+                                        <button onClick={() => setSelectedDemande(demande)} style={detailsButtonStyle}>
+                                            Gérer
+                                        </button>
+                                    </td>
+                                </tr>
+                            );
+                        })}
                     </tbody>
                 </table>
             </div>
