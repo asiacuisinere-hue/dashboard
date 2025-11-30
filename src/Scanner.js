@@ -54,8 +54,12 @@ const Scanner = () => {
                 .select('clients(last_name, first_name), entreprises(nom_entreprise)')
                 .single();
 
+            console.log('--- [Scanner] Supabase update response ---');
+            console.log('Error object:', error);
+            console.log('Data object:', data);
+
             if (error) throw new Error(error.message);
-            if (!data) throw new Error(`Demande ${demandeId.substring(0,8)}... non trouvée.`);
+            if (!data) throw new Error(`Demande ${demandeId.substring(0,8)}... non trouvée ou mise à jour impossible.`);
 
             const clientName = data.clients?.last_name || data.entreprises?.nom_entreprise || 'Inconnu';
             setSuccessMessage(`Commande pour ${clientName} validée !`);
