@@ -23,44 +23,57 @@ const Scanner = () => {
         setScanError('');
         setScannedDemande(null);
 
-        // Expected format: demandeId|deliveryDate (YYYY-MM-DD)
-        const parts = qrCodeData.split('|');
-        if (parts.length !== 2) {
-            setScanError('Format du code QR invalide. Attendu: "ID_DEMANDE|DATE_LIVRAISON".');
-            return;
-        }
+        let demandeId = null;
+        let deliveryDateStr = null;
 
-        const demandeId = parts[0];
-        const deliveryDateStr = parts[1];
+        try {
+            // Check if the scanned data is a URL
+            if (qrCodeData.includes('asiacuisine.re/suivi')) {
+                const url = new URL(qrCodeData);
+                demandeId = url.searchParams.get('id');
+                deliveryDateStr = url.searchParams.get('date');
+            } else {
+                // Fallback to the original pipe format
+                const parts = qrCodeData.split('|');
+                if (parts.length === 2) {
+                    demandeId = parts[0];
+                    deliveryDateStr = parts[1];
+                }
+            }
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const scanDate = new Date(deliveryDateStr);
-        scanDate.setHours(0, 0, 0, 0);
+            if (!demandeId || !deliveryDateStr) {
+                setScanError(`Format du QR Code non reconnu.`);
+                return;
+            }
 
-        if (scanDate.getTime() !== today.getTime()) {
-            setScanError(`Ce code QR n'est pas valide pour aujourd'hui (${today.toLocaleDateString()}). Date attendue: ${scanDate.toLocaleDateString()}.`);
-            return;
-        }
+            // Date validation logic remains the same
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const scanDate = new Date(deliveryDateStr);
+            scanDate.setHours(0, 0, 0, 0);
 
-        const { data, error } = await supabase
-            .from('demandes')
-            .select(`
-                *,
-                clients (*),
-                entreprises (*)
-            `)
-            .eq('id', demandeId)
-            .single();
+            if (scanDate.getTime() !== today.getTime()) {
+                setScanError(`Ce code QR n'est pas valide pour aujourd'hui (${today.toLocaleDateString()}). Date attendue: ${scanDate.toLocaleDateString()}.`);
+                return;
+            }
 
-        if (error) {
-            console.error('Error fetching demande:', error);
-            setScanError(`Erreur lors de la récupération de la demande: ${error.message}. ID: ${demandeId}`);
-        } else if (!data) {
-            setScanError(`Aucune demande trouvée pour l'ID: ${demandeId}.`);
-        } else {
-            setScannedDemande(data);
-            setScanError('');
+            const { data, error } = await supabase
+                .from('demandes')
+                .select(`*, clients (*), entreprises (*)`)
+                .eq('id', demandeId)
+                .single();
+
+            if (error) {
+                console.error('Error fetching demande:', error);
+                setScanError(`Erreur lors de la récupération de la demande: ${error.message}. ID: ${demandeId}`);
+            } else if (!data) {
+                setScanError(`Aucune demande trouvée pour l'ID: ${demandeId}.`);
+            } else {
+                setScannedDemande(data);
+                setScanError('');
+            }
+        } catch (e) {
+            setScanError(`Erreur lors de l'analyse du QR code: ${e.message}`);
         }
     }, []); // fetchDemandeDetails ne dépend pas de valeurs changeantes, seulement de supabase
 
