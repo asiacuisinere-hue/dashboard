@@ -22,6 +22,7 @@ const Scanner = () => {
         let deliveryDateStr = null;
 
         try {
+            // 1. Parse QR Code data (URL or pipe format)
             if (qrCodeData.includes('asiacuisine.re/suivi')) {
                 const url = new URL(qrCodeData);
                 demandeId = url.searchParams.get('id');
@@ -38,6 +39,7 @@ const Scanner = () => {
                 throw new Error("Format du QR Code non reconnu.");
             }
 
+            // 2. Validate Date
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             const scanDate = new Date(deliveryDateStr);
@@ -46,23 +48,35 @@ const Scanner = () => {
             if (scanDate.getTime() !== today.getTime()) {
                 throw new Error(`Code QR non valide pour aujourd'hui (${today.toLocaleDateString('fr-FR')}).`);
             }
-
-            const { data, error } = await supabase
+            
+            // 3. Fetch demand to check current status BEFORE updating
+            const { data: currentDemande, error: fetchError } = await supabase
                 .from('demandes')
-                .update({ status: 'completed' })
+                .select('status, clients(last_name), entreprises(nom_entreprise)')
                 .eq('id', demandeId)
-                .select('clients(last_name, first_name), entreprises(nom_entreprise)')
                 .single();
 
-            console.log('--- [Scanner] Supabase update response ---');
-            console.log('Error object:', error);
-            console.log('Data object:', data);
+            if (fetchError || !currentDemande) {
+                throw new Error(fetchError?.message || `Demande non trouvée.`);
+            }
 
-            if (error) throw new Error(error.message);
-            if (!data) throw new Error(`Demande ${demandeId.substring(0,8)}... non trouvée ou mise à jour impossible.`);
+            // 4. Check status and provide feedback or update
+            if (currentDemande.status === 'completed') {
+                const clientName = currentDemande.clients?.last_name || currentDemande.entreprises?.nom_entreprise || 'Inconnu';
+                setSuccessMessage(`Commande pour ${clientName} déjà validée.`);
+            } else {
+                const { error: updateError } = await supabase
+                    .from('demandes')
+                    .update({ status: 'completed' })
+                    .eq('id', demandeId);
 
-            const clientName = data.clients?.last_name || data.entreprises?.nom_entreprise || 'Inconnu';
-            setSuccessMessage(`Commande pour ${clientName} validée !`);
+                if (updateError) {
+                    throw new Error(updateError.message);
+                }
+                
+                const clientName = currentDemande.clients?.last_name || currentDemande.entreprises?.nom_entreprise || 'Inconnu';
+                setSuccessMessage(`Commande pour ${clientName} validée avec succès !`);
+            }
 
         } catch (e) {
             setScanError(e.message);
