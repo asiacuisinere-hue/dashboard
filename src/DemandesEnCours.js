@@ -31,8 +31,8 @@ const DemandesEnCours = () => {
                 .in('status', ['En attente de traitement', 'confirmed']);
         } else {
             // Default view: show all in-progress demands
-                    const commandeMenuFilter = `and(type.eq.COMMANDE_MENU,status.not.in.(completed,cancelled,paid,Nouvelle,"En attente de préparation"))`;
-                    const reservationServiceFilter = `and(type.eq.RESERVATION_SERVICE,status.in.("En attente de traitement",confirmed))`;            query = query.or(`${commandeMenuFilter},${reservationServiceFilter}`);
+                            const commandeMenuFilter = `and(type.eq.COMMANDE_MENU,status.not.in.(completed,cancelled,paid,Nouvelle,"En attente de préparation","Préparation en cours"))`;
+                            const reservationServiceFilter = `and(type.eq.RESERVATION_SERVICE,status.in.("En attente de traitement",confirmed))`;            query = query.or(`${commandeMenuFilter},${reservationServiceFilter}`);
         }
         
         // --- Additional Filters ---
