@@ -206,7 +206,7 @@ const Factures = () => {
 // Modal Component for Invoice Details
 const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
     const [isEnteringDeposit, setIsEnteringDeposit] = useState(false);
-    const [depositAmountInput, setDepositAmountInput] = useState(''); // Renamed state
+    const [depositAmountInput, setDepositAmountInput] = useState('');
     const [loadingAction, setLoadingAction] = useState(false);
 
     const handleSaveDeposit = async () => {
@@ -230,7 +230,7 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
             alert(`Erreur: ${error.message}`);
         } else {
             alert('Acompte enregistré avec succès !');
-            onUpdate(); // Refresh the list and close modal
+            onUpdate();
             onClose();
         }
     };
@@ -242,44 +242,38 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
             .update({ status: newStatus })
             .eq('id', invoice.id);
         
+        setLoadingAction(false);
         if (invoiceError) {
-            setLoadingAction(false);
-            console.error('Error updating invoice status:', invoiceError);
             alert(`Erreur: ${invoiceError.message}`);
             return;
         }
 
-        // --- AUTOMATIC COMPLETION LOGIC ---
-        if (newStatus === 'paid' && invoice.demand_id) {
-            try {
-                const { data: linkedDemande, error: fetchError } = await supabase
-                    .from('demandes')
-                    .select('type')
-                    .eq('id', invoice.demand_id)
-                    .single();
-
-                if (fetchError) throw fetchError;
-
-                if (linkedDemande?.type === 'RESERVATION_SERVICE') {
-                    const { error: demandeError } = await supabase
-                        .from('demandes')
-                        .update({ status: 'En attente de préparation' })
-                        .eq('id', invoice.demand_id);
-                    
-                    if (demandeError) throw demandeError;
-                    console.log(`Demande ${invoice.demand_id} automatiquement marquée comme "En attente de préparation".`);
-                }
-            } catch (error) {
-                console.error('Failed to auto-complete linked demand:', error);
-                alert(`La facture a bien été marquée comme "Payée", mais la mise à jour automatique du statut de la demande a échoué: ${error.message}`);
-                // Do not re-throw, as the main action (invoice update) was successful.
-            }
-        }
-
-        setLoadingAction(false);
         alert(`Statut de la facture mis à jour à "${getFrenchStatus(newStatus)}"!`);
         onUpdate();
         onClose();
+    };
+
+    const handlePrepareDemand = async () => {
+        if (!invoice.demand_id) {
+            alert("Erreur: Impossible de trouver la demande liée à cette facture.");
+            return;
+        }
+        if (!window.confirm("Confirmer le passage de la demande en préparation ?")) return;
+
+        setLoadingAction(true);
+        const { error } = await supabase
+            .from('demandes')
+            .update({ status: 'En attente de préparation' })
+            .eq('id', invoice.demand_id);
+        
+        setLoadingAction(false);
+        if (error) {
+            alert(`Erreur: ${error.message}`);
+        } else {
+            alert('La demande a été envoyée en préparation.');
+            onUpdate();
+            onClose();
+        }
     };
 
     const handleSendInvoice = async () => {
@@ -311,7 +305,6 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
             setLoadingAction(false);
         }
     };
-
 
     const renderCustomerInfo = () => {
         if (invoice.clients) return <p><strong>Nom:</strong> {invoice.clients.first_name || ''} {invoice.clients.last_name || ''}</p>;
@@ -380,6 +373,11 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
                             {(invoice.status === 'pending' || invoice.status === 'deposit_paid') && (
                                 <button onClick={() => handleUpdateStatus('paid')} disabled={loadingAction} style={{...actionButtonStyle, backgroundColor: '#28a745'}}>
                                     {loadingAction ? 'Mise à jour...' : 'Marquer comme Payée'}
+                                </button>
+                            )}
+                            {invoice.status === 'paid' && invoice.demandes?.type === 'RESERVATION_SERVICE' && (
+                                <button onClick={handlePrepareDemand} disabled={loadingAction} style={{...actionButtonStyle, backgroundColor: '#6f42c1'}}>
+                                    Mettre en préparation
                                 </button>
                             )}
                             {invoice.status === 'pending' && (
