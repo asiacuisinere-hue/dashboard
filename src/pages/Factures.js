@@ -226,6 +226,13 @@ const Factures = () => {
 
 // Modal Component for Invoice Details
 const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
+    // --- START DEBUGGING LOGS ---
+    console.log('--- [InvoiceDetailModal] Checking button conditions ---');
+    console.log(`Invoice Status: ${invoice.status} (should be 'paid')`);
+    console.log(`Linked Demand Type: ${invoice.demandes?.type} (should be 'RESERVATION_SERVICE')`);
+    console.log(`Button should appear: ${invoice.status === 'paid' && invoice.demandes?.type === 'RESERVATION_SERVICE'}`);
+    // --- END DEBUGGING LOGS ---
+
     const [isEnteringDeposit, setIsEnteringDeposit] = useState(false);
     const [depositAmountInput, setDepositAmountInput] = useState('');
     const [loadingAction, setLoadingAction] = useState(false);
