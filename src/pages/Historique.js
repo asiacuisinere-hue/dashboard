@@ -17,7 +17,7 @@ const Historique = () => {
                 clients (*),
                 entreprises (*)
             `)
-            .in('status', ['Archivée', 'Refusée', 'Annulée'])
+            .in('status', ['Archivée', 'Refusée', 'Annulée', 'completed']) // Add 'completed' status
             .order('created_at', { ascending: false });
 
         if (filter.date) {
