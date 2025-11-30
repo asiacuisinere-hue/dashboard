@@ -48,15 +48,8 @@ const Factures = () => {
             query = query.eq('status', statusFilter);
         }
 
-        // --- Apply demand status filter based on current view ---
-        const searchParams = new URLSearchParams(location.search);
-        const urlPrep = searchParams.get('prep');
-        
-        const excludeDemandPrep = (statusFilter !== 'paid' || (statusFilter === 'paid' && urlPrep === 'true'));
-        
-        if (excludeDemandPrep) {
-            query = query.not('demandes.status', 'in', '("En attente de préparation","Préparation en cours","completed")');
-        }
+        // --- ALWAYS exclude demands that have been sent to preparation or completed ---
+        query = query.not('demandes.status', 'in', '("En attente de préparation","Préparation en cours","completed")');
 
         // --- Apply search term filter ---
         if (searchTerm) {
@@ -74,7 +67,6 @@ const Factures = () => {
             setInvoices(data || []);
         }
         setLoading(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchTerm, statusFilter, location.search]);
 
     useEffect(() => {
@@ -227,13 +219,6 @@ const Factures = () => {
 
 // Modal Component for Invoice Details
 const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
-    // --- START DEBUGGING LOGS ---
-    console.log('--- [InvoiceDetailModal] Checking button conditions ---');
-    console.log(`Invoice Status: ${invoice.status} (should be 'paid')`);
-    console.log(`Linked Demand Type: ${invoice.demandes?.type} (should be 'RESERVATION_SERVICE')`);
-    console.log(`Button should appear: ${invoice.status === 'paid' && invoice.demandes?.type === 'RESERVATION_SERVICE'}`);
-    // --- END DEBUGGING LOGS ---
-
     const [isEnteringDeposit, setIsEnteringDeposit] = useState(false);
     const [depositAmountInput, setDepositAmountInput] = useState('');
     const [loadingAction, setLoadingAction] = useState(false);
