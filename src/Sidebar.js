@@ -1,3 +1,7 @@
+import React, { useState } from 'react';
+import { NavLink } from 'react-router-dom';
+import { supabase } from './supabaseClient';
+
 const Sidebar = ({ newCount, inProgressCount, pendingQuotesCount, toPrepareCount, pendingInvoicesCount, depositPaidInvoicesCount, waitingForPrepCount, isMobile }) => {
   const [isOpen, setIsOpen] = useState(false);
 
