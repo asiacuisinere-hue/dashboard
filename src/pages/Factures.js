@@ -29,7 +29,7 @@ const Factures = () => {
             demand_id,
             clients (first_name, last_name, email),
             entreprises (nom_entreprise, contact_email),
-            demandes (type)
+            demandes (type, status)
         `).order('created_at', { ascending: false });
 
         if (statusFilter !== 'all') {
@@ -43,10 +43,12 @@ const Factures = () => {
             );
         }
 
-        // --- NEW FILTER: Only show invoices for RESERVATION_SERVICE demands (which have a quote_id) ---
-        query = query.not('quote_id', 'is', null);
+        // --- FILTERS ---
+        query = query
+            .not('quote_id', 'is', null) // Only RESERVATION_SERVICE
+            .not('demandes.status', 'in', '("En attente de préparation","Préparation en cours","completed")'); // Exclude if demand has moved to prep/completion
 
-        const { data, error } = await query.order('created_at', { ascending: false });
+        const { data, error } = await query;
         if (error) {
             console.error('Erreur de chargement des factures:', error);
         } else {

@@ -104,6 +104,7 @@ const DashboardLayout = () => {
     const [toPrepareCount, setToPrepareCount] = useState(0);
     const [pendingInvoicesCount, setPendingInvoicesCount] = useState(0);
     const [depositPaidInvoicesCount, setDepositPaidInvoicesCount] = useState(0);
+    const [waitingForPrepCount, setWaitingForPrepCount] = useState(0);
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
     const appStyle = {
@@ -157,6 +158,16 @@ const DashboardLayout = () => {
         console.log("DEBUG: Deposit Paid Invoices Count:", depositPaidInvoices);
         setDepositPaidInvoicesCount(depositPaidInvoices);
 
+        const { count: waitingForPrep, error: waitingError } = await supabase
+            .from('invoices')
+            .select('*, demandes!inner(status)', { count: 'exact', head: true })
+            .eq('status', 'paid')
+            .not('quote_id', 'is', null)
+            .not('demandes.status', 'in', '("En attente de préparation","Préparation en cours","completed")');
+        if(waitingError) console.error("Error fetching waiting for prep invoices:", waitingError);
+        console.log("DEBUG: Waiting for Prep Invoices Count:", waitingForPrep);
+        setWaitingForPrepCount(waitingForPrep);
+
     }, []);
 
     useEffect(() => {
@@ -194,8 +205,8 @@ const DashboardLayout = () => {
 
         const updatesChannel = supabase.channel('db-updates')
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'demandes' }, handleUpdates)
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'quotes' }, handleUpdates)
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'invoices' }, handleUpdates)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'quotes' }, handleUpdates)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, handleUpdates)
             .subscribe();
 
         // --- 4. Window resize listener ---
@@ -219,6 +230,7 @@ const DashboardLayout = () => {
                 toPrepareCount={toPrepareCount}
                 pendingInvoicesCount={pendingInvoicesCount}
                 depositPaidInvoicesCount={depositPaidInvoicesCount}
+                waitingForPrepCount={waitingForPrepCount}
                 isMobile={isMobile} 
             />
             <main style={mainContentStyle}>

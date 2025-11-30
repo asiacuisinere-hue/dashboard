@@ -1,8 +1,4 @@
-import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
-import { supabase } from './supabaseClient';
-
-const Sidebar = ({ newCount, inProgressCount, pendingQuotesCount, toPrepareCount, pendingInvoicesCount, depositPaidInvoicesCount, isMobile }) => {
+const Sidebar = ({ newCount, inProgressCount, pendingQuotesCount, toPrepareCount, pendingInvoicesCount, depositPaidInvoicesCount, waitingForPrepCount, isMobile }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -27,6 +23,7 @@ const Sidebar = ({ newCount, inProgressCount, pendingQuotesCount, toPrepareCount
   const toPrepareBadgeStyle = { ...badgeStyle, backgroundColor: '#6f42c1' }; // Violet
   const pendingInvoiceBadgeStyle = { ...badgeStyle, backgroundColor: '#fd7e14' }; // Orange
   const depositPaidInvoiceBadgeStyle = { ...badgeStyle, backgroundColor: '#20c997' }; // Teal
+  const waitingForPrepStyle = { ...badgeStyle, backgroundColor: '#007bff' }; // Strong Blue for new badge
 
   const hamburgerBadgeStyle = {
     position: 'absolute',
@@ -166,7 +163,8 @@ const Sidebar = ({ newCount, inProgressCount, pendingQuotesCount, toPrepareCount
       { to: '/devis', label: 'Devis', count: pendingQuotesCount, style: pendingQuotesBadgeStyle },
       { to: '/factures', label: 'Factures', subLinks: [
         { to: '/factures?status=pending', label: 'En attente', count: pendingInvoicesCount, style: pendingInvoiceBadgeStyle },
-        { to: '/factures?status=deposit_paid', label: 'Acompte versé', count: depositPaidInvoicesCount, style: depositPaidInvoiceBadgeStyle }
+        { to: '/factures?status=deposit_paid', label: 'Acompte versé', count: depositPaidInvoicesCount, style: depositPaidInvoiceBadgeStyle },
+        { to: '/factures?status=paid&prep=true', label: 'Payées (Prêtes)', count: waitingForPrepCount, style: waitingForPrepStyle }
       ]},
       { to: '/scanner', label: 'Scanner' },
       { to: '/services', label: 'Services' },
