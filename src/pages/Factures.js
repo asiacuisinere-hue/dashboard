@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 import ReactPaginate from 'react-paginate';
+import { useLocation } from 'react-router-dom';
 
 // Helper function to get French status
 const getFrenchStatus = (status) => {
