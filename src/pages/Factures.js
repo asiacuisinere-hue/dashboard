@@ -13,7 +13,24 @@ const getFrenchStatus = (status) => {
     }
 };
 
+import React, { useState, useEffect, useCallback } from 'react';
+import { supabase } from '../supabaseClient';
+import ReactPaginate from 'react-paginate';
+import { useLocation } from 'react-router-dom';
+
+// Helper function to get French status
+const getFrenchStatus = (status) => {
+    switch (status) {
+        case 'pending': return 'En attente';
+        case 'deposit_paid': return 'Acompte versé';
+        case 'paid': return 'Payée';
+        case 'cancelled': return 'Annulée';
+        default: return status;
+    }
+};
+
 const Factures = () => {
+    const location = useLocation();
     const [invoices, setInvoices] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -21,6 +38,12 @@ const Factures = () => {
     const [selectedInvoice, setSelectedInvoice] = useState(null);
     const [currentPage, setCurrentPage] = useState(0);
     const itemsPerPage = 10; // Items per page for pagination
+
+    useEffect(() => {
+        const searchParams = new URLSearchParams(location.search);
+        const urlStatus = searchParams.get('status');
+        setStatusFilter(urlStatus || 'all');
+    }, [location.search]);
 
     const fetchInvoices = useCallback(async () => {
         setLoading(true);
@@ -30,36 +53,46 @@ const Factures = () => {
             clients (first_name, last_name, email),
             entreprises (nom_entreprise, contact_email),
             demandes (type, status)
-        `).order('created_at', { ascending: false });
+        `);
 
+        // --- Always filter for RESERVATION_SERVICE invoices ---
+        query = query.not('quote_id', 'is', null);
+
+        // --- Apply Status Filter from state (synced with URL) ---
         if (statusFilter !== 'all') {
             query = query.eq('status', statusFilter);
         }
 
+        // --- Apply demand status filter based on current view ---
+        const searchParams = new URLSearchParams(location.search);
+        const urlPrep = searchParams.get('prep');
+        
+        const excludeDemandPrep = (statusFilter !== 'paid' || (statusFilter === 'paid' && urlPrep === 'true'));
+        
+        if (excludeDemandPrep) {
+            query = query.not('demandes.status', 'in', '("En attente de préparation","Préparation en cours","completed")');
+        }
+
+        // --- Apply search term filter ---
         if (searchTerm) {
             const searchPattern = `%${searchTerm}%`;
             query = query.or(
-                `document_number.ilike.${searchPattern},clients.first_name.ilike.${searchPattern},clients.last_name.ilike.${searchPattern},entreprises.nom_entreprise.ilike.${searchPattern}`
+                `document_number.ilike.${searchPattern},clients.first_name.ilike.%${searchPattern},clients.last_name.ilike.%${searchPattern},entreprises.nom_entreprise.ilike.%${searchPattern}`
             );
         }
 
-        // --- FILTERS ---
-        query = query
-            .not('quote_id', 'is', null) // Only RESERVATION_SERVICE
-            .not('demandes.status', 'in', '("En attente de préparation","Préparation en cours","completed")'); // Exclude if demand has moved to prep/completion
+        const { data, error } = await query.order('created_at', { ascending: false });
 
-        const { data, error } = await query;
         if (error) {
             console.error('Erreur de chargement des factures:', error);
         } else {
-            console.log('--- [Factures] Fetched Invoices (with demand status):', data); // Debugging log
             setInvoices(data || []);
         }
         setLoading(false);
-    }, [searchTerm, statusFilter]);
+    }, [searchTerm, statusFilter, location.search]);
 
     useEffect(() => {
-        const timer = setTimeout(() => { // Debounce search term
+        const timer = setTimeout(() => {
             fetchInvoices();
         }, 300);
         return () => clearTimeout(timer);
