@@ -74,6 +74,7 @@ const Factures = () => {
             setInvoices(data || []);
         }
         setLoading(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchTerm, statusFilter, location.search]);
 
     useEffect(() => {
