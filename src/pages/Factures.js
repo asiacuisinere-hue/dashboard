@@ -52,10 +52,11 @@ const Factures = () => {
         if (error) {
             console.error('Erreur de chargement des factures:', error);
         } else {
+            console.log('--- [Factures] Fetched Invoices (with demand status):', data); // Debugging log
             setInvoices(data || []);
         }
         setLoading(false);
-    }, [searchTerm, statusFilter]);
+    }, [searchTerm, statusFilter, location.search]);
 
     useEffect(() => {
         const timer = setTimeout(() => { // Debounce search term
