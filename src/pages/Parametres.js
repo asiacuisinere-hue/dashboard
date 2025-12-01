@@ -44,14 +44,22 @@ const Parametres = () => {
     ];
 
     // Fonction générique pour sauvegarder un paramètre unique
-    const saveSetting = async (key, value) => {
-        setStatus({ message: 'Enregistrement...', type: 'info' });
+    const saveSetting = async (key, value, suppressStatus = false) => {
+        if (!suppressStatus) {
+            setStatus({ message: 'Enregistrement...', type: 'info' });
+        }
         const { error } = await supabase.from('settings').upsert({ key, value }, { onConflict: 'key' });
         if (error) {
-            setStatus({ message: `Erreur: ${error.message}`, type: 'error' });
+            if (!suppressStatus) {
+                setStatus({ message: `Erreur: ${error.message}`, type: 'error' });
+            }
+            return { error: true, message: error.message };
         } else {
-            setStatus({ message: `Paramètre '${key}' enregistré !`, type: 'success' });
-            setTimeout(() => setStatus({ message: '', type: 'info' }), 3000);
+            if (!suppressStatus) {
+                setStatus({ message: `Paramètre '${key}' enregistré !`, type: 'success' });
+                setTimeout(() => setStatus({ message: '', type: 'info' }), 3000);
+            }
+            return { error: false };
         }
     };
 
@@ -160,15 +168,23 @@ const Parametres = () => {
     const handleSaveAnnouncement = async () => {
         setStatus({ message: 'Enregistrement...', type: 'info' });
         try {
-            await Promise.all([
-                saveSetting('announcement_message', announcementMessage),
-                saveSetting('announcement_style', announcementStyle),
-                saveSetting('announcement_enabled', String(announcementEnabled)),
+            const results = await Promise.all([
+                saveSetting('announcement_message', announcementMessage, true),
+                saveSetting('announcement_style', announcementStyle, true),
+                saveSetting('announcement_enabled', String(announcementEnabled), true),
             ]);
-            setStatus({ message: 'Annonce enregistrée !', type: 'success' });
-            setTimeout(() => setStatus({ message: '', type: 'info' }), 3000);
+
+            const hasError = results.some(result => result.error);
+
+            if (hasError) {
+                const errorMessage = results.map(result => result.error ? result.message : '').filter(Boolean).join('; ');
+                setStatus({ message: `Erreur lors de l'enregistrement de l'annonce : ${errorMessage}`, type: 'error' });
+            } else {
+                setStatus({ message: 'Annonce enregistrée avec succès !', type: 'success' });
+                setTimeout(() => setStatus({ message: '', type: 'info' }), 3000);
+            }
         } catch (error) {
-            setStatus({ message: 'Erreur lors de l\'enregistrement', type: 'error' });
+            setStatus({ message: 'Erreur lors de l\'enregistrement de l\'annonce.', type: 'error' });
         }
     };
 
