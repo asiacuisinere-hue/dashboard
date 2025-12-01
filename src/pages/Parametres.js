@@ -29,6 +29,12 @@ const Parametres = () => {
     const [menuOverrideEnabled, setMenuOverrideEnabled] = useState(false);
     const [isMenuLoading, setIsMenuLoading] = useState(true);
 
+    // --- États pour les prix des menus ---
+    const [menuDecouvertePrice, setMenuDecouvertePrice] = useState('');
+    const [menuStandardPrice, setMenuStandardPrice] = useState('');
+    const [menuConfortPrice, setMenuConfortPrice] = useState('');
+    const [menuDuoPrice, setMenuDuoPrice] = useState('');
+
     // --- États pour les annonces ---
     const [announcementMessage, setAnnouncementMessage] = useState('');
     const [announcementStyle, setAnnouncementStyle] = useState('info');
@@ -104,6 +110,12 @@ const Parametres = () => {
             setMenuOverrideMessage(settingsMap.menu_override_message || '');
             setMenuOverrideEnabled(settingsMap.menu_override_enabled === 'true');
             
+            // Charger les prix
+            setMenuDecouvertePrice(settingsMap.menu_decouverte_price || '39');
+            setMenuStandardPrice(settingsMap.menu_standard_price || '49');
+            setMenuConfortPrice(settingsMap.menu_confort_price || '59');
+            setMenuDuoPrice(settingsMap.menu_duo_price || '94');
+
             // Charger les annonces
             setAnnouncementMessage(settingsMap.announcement_message || '');
             setAnnouncementStyle(settingsMap.announcement_style || 'info');
@@ -157,10 +169,15 @@ const Parametres = () => {
                 saveSetting('menu_duo', menuDuo),
                 saveSetting('menu_override_message', menuOverrideMessage),
                 saveSetting('menu_override_enabled', String(menuOverrideEnabled)),
+                // Sauvegarder les prix
+                saveSetting('menu_decouverte_price', menuDecouvertePrice),
+                saveSetting('menu_standard_price', menuStandardPrice),
+                saveSetting('menu_confort_price', menuConfortPrice),
+                saveSetting('menu_duo_price', menuDuoPrice),
             ]);
         } finally {
             setIsMenuLoading(false);
-            setStatus({ message: 'Menus enregistrés !', type: 'success' });
+            setStatus({ message: 'Menus et prix enregistrés !', type: 'success' });
             setTimeout(() => setStatus({ message: '', type: 'info' }), 3000);
         }
     };
@@ -178,7 +195,7 @@ const Parametres = () => {
 
             if (hasError) {
                 const errorMessage = results.map(result => result.error ? result.message : '').filter(Boolean).join('; ');
-                setStatus({ message: `Erreur lors de l'enregistrement de l'annonce : ${errorMessage}`, type: 'error' });
+                setStatus({ message: `Erreur lors de l\'enregistrement de l\'annonce : ${errorMessage}`, type: 'error' });
             } else {
                 setStatus({ message: 'Annonce enregistrée avec succès !', type: 'success' });
                 setTimeout(() => setStatus({ message: '', type: 'info' }), 3000);
@@ -208,7 +225,7 @@ const Parametres = () => {
 
             <div style={gridStyle}>
                 <Link to="/calendrier" style={cardStyle}><h2>Gestion du Calendrier</h2><p>Bloquer des dates et des jours.</p></Link>
-                <Link to="/abonnements" style={cardStyle}><h2>Gestion des Abonnements</h2><p>Gérer les demandes d'abonnements.</p></Link>
+                <Link to="/abonnements" style={cardStyle}><h2>Gestion des Abonnements</h2><p>Gérer les demandes d\'abonnements.</p></Link>
                 <Link to="/admin-account" style={cardStyle}><h2>Compte Administrateur</h2><p>Gérer les informations de connexion.</p></Link>
             </div>
 
@@ -295,7 +312,7 @@ const Parametres = () => {
                                     value={announcementMessage} 
                                     onChange={(e) => setAnnouncementMessage(e.target.value)} 
                                     style={{...inputStyle, height: '120px', backgroundColor: announcementEnabled ? '#fff' : '#f9f9f9', fontFamily: 'monospace'}} 
-                                    placeholder="**Exemple**: Profitez de nos offres spéciales pour Noël ! 🎄&#10;&#10;- 10% de réduction sur tous les menus&#10;- Livraison gratuite jusqu'au 31/12"
+                                    placeholder="**Exemple**: Profitez de nos offres spéciales pour Noël ! 🎄&#10;&#10;- 10% de réduction sur tous les menus&#10;- Livraison gratuite jusqu\'au 31/12"
                                     disabled={!announcementEnabled}
                                 />
                                 <small style={{ color: '#666', display: 'block', marginTop: '5px' }}>
@@ -310,7 +327,7 @@ const Parametres = () => {
                                         <div dangerouslySetInnerHTML={{ __html: announcementMessage.replace(/\n/g, '<br>') }} />
                                     </div>
                                     <small style={{ color: '#999', display: 'block', marginTop: '5px' }}>
-                                        Note : L'aperçu réel avec Markdown sera visible sur la page Menu
+                                        Note : L\'aperçu réel avec Markdown sera visible sur la page Menu
                                     </small>
                                 </div>
                             )}
@@ -334,6 +351,16 @@ const Parametres = () => {
                         </div>
 
                         <div style={{ marginTop: '20px' }}>
+                            <h3 style={{ marginTop: 0, fontSize: '1.1rem' }}>Prix des formules (€)</h3>
+                            <div style={formGridStyle}>
+                                <InputField label="Prix Découverte" name="menu_decouverte_price" type="number" value={menuDecouvertePrice} onChange={(e) => setMenuDecouvertePrice(e.target.value)} />
+                                <InputField label="Prix Standard" name="menu_standard_price" type="number" value={menuStandardPrice} onChange={(e) => setMenuStandardPrice(e.target.value)} />
+                                <InputField label="Prix Confort" name="menu_confort_price" type="number" value={menuConfortPrice} onChange={(e) => setMenuConfortPrice(e.target.value)} />
+                                <InputField label="Prix Duo" name="menu_duo_price" type="number" value={menuDuoPrice} onChange={(e) => setMenuDuoPrice(e.target.value)} />
+                            </div>
+                        </div>
+
+                        <div style={{ marginTop: '20px' }}>
                             <h3 style={{ marginTop: 0, fontSize: '1.1rem' }}>Contenu des formules</h3>
                             <div style={formGridStyle}>
                                 <div><label style={labelStyle}>Formule Découverte</label><textarea value={menuDecouverte} onChange={(e) => setMenuDecouverte(e.target.value)} style={{...inputStyle, height: '120px'}} /></div>
@@ -342,7 +369,7 @@ const Parametres = () => {
                                 <div><label style={labelStyle}>Option Duo</label><textarea value={menuDuo} onChange={(e) => setMenuDuo(e.target.value)} style={{...inputStyle, height: '120px'}} /></div>
                             </div>
                         </div>
-                        <button onClick={handleSaveMenus} style={saveButtonStyle}>Enregistrer les Menus</button>
+                        <button onClick={handleSaveMenus} style={saveButtonStyle}>Enregistrer les Menus et Prix</button>
                     </>
                 )}
             </div>
