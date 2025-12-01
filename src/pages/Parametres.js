@@ -10,10 +10,10 @@ const Parametres = () => {
     const [companySettings, setCompanySettings] = useState({
         id: null, name: '', owner: '', address: '', city: '', phone: '', email: '',
         website: '', siret: '', tva_message: '', logo_url: '',
-        order_cutoff_days: 2, // Ajout du champ avec valeur par défaut
-        order_cutoff_hour: 11,  // Ajout du champ avec valeur par défaut
-        payment_conditions: '', // Ajout du champ avec valeur par défaut
-        payment_methods: '' // Ajout du champ avec valeur par défaut
+        order_cutoff_days: 2,
+        order_cutoff_hour: 11,
+        payment_conditions: '',
+        payment_methods: ''
     });
     const [isCompanyLoading, setIsCompanyLoading] = useState(true);
 
@@ -29,6 +29,19 @@ const Parametres = () => {
     const [menuOverrideEnabled, setMenuOverrideEnabled] = useState(false);
     const [isMenuLoading, setIsMenuLoading] = useState(true);
 
+    // --- États pour les annonces ---
+    const [announcementMessage, setAnnouncementMessage] = useState('');
+    const [announcementStyle, setAnnouncementStyle] = useState('info');
+    const [announcementEnabled, setAnnouncementEnabled] = useState(false);
+
+    // Styles disponibles pour les annonces
+    const announcementStyles = [
+        { value: 'info', label: '📘 Info (bleu)', color: '#e3f2fd', border: '#2196f3' },
+        { value: 'attention', label: '⚠️ Attention (jaune)', color: '#fff9e6', border: '#ff9800' },
+        { value: 'fete', label: '🎉 Fête (festif)', color: '#ffebee', border: '#e91e63' },
+        { value: 'promotion', label: '⭐ Promotion (doré)', color: '#fffaf0', border: '#d4af37' },
+        { value: 'annonce', label: '📢 Annonce (violet)', color: '#f3e5f5', border: '#9c27b0' }
+    ];
 
     // Fonction générique pour sauvegarder un paramètre unique
     const saveSetting = async (key, value) => {
@@ -54,7 +67,6 @@ const Parametres = () => {
             setCompanySettings(prev => ({
                 ...prev,
                 ...companyDataArray[0],
-                // Assurer que les valeurs sont des nombres, avec fallback
                 order_cutoff_days: companyDataArray[0].order_cutoff_days ?? 2,
                 order_cutoff_hour: companyDataArray[0].order_cutoff_hour ?? 11,
                 payment_conditions: companyDataArray[0].payment_conditions ?? '',
@@ -63,7 +75,7 @@ const Parametres = () => {
         }
         setIsCompanyLoading(false);
 
-        // 2. Charger les autres paramètres (welcome, menus, etc.)
+        // 2. Charger les autres paramètres (welcome, menus, annonces, etc.)
         setIsOtherSettingsLoading(true);
         setIsMenuLoading(true);
         const { data: settingsData, error: settingsError } = await supabase.from('settings').select('key, value');
@@ -83,6 +95,11 @@ const Parametres = () => {
             setMenuDuo(settingsMap.menu_duo || '');
             setMenuOverrideMessage(settingsMap.menu_override_message || '');
             setMenuOverrideEnabled(settingsMap.menu_override_enabled === 'true');
+            
+            // Charger les annonces
+            setAnnouncementMessage(settingsMap.announcement_message || '');
+            setAnnouncementStyle(settingsMap.announcement_style || 'info');
+            setAnnouncementEnabled(settingsMap.announcement_enabled === 'true');
         }
         setIsOtherSettingsLoading(false);
         setIsMenuLoading(false);
@@ -102,7 +119,6 @@ const Parametres = () => {
         e.preventDefault();
         setStatus({ message: 'Enregistrement...', type: 'info' });
         
-        // Assurer que les valeurs sont bien des nombres
         const payload = {
             ...companySettings,
             order_cutoff_days: parseInt(companySettings.order_cutoff_days, 10) || 2,
@@ -140,6 +156,33 @@ const Parametres = () => {
             setTimeout(() => setStatus({ message: '', type: 'info' }), 3000);
         }
     };
+
+    const handleSaveAnnouncement = async () => {
+        setStatus({ message: 'Enregistrement...', type: 'info' });
+        try {
+            await Promise.all([
+                saveSetting('announcement_message', announcementMessage),
+                saveSetting('announcement_style', announcementStyle),
+                saveSetting('announcement_enabled', String(announcementEnabled)),
+            ]);
+            setStatus({ message: 'Annonce enregistrée !', type: 'success' });
+            setTimeout(() => setStatus({ message: '', type: 'info' }), 3000);
+        } catch (error) {
+            setStatus({ message: 'Erreur lors de l\'enregistrement', type: 'error' });
+        }
+    };
+
+    // Aperçu de l\'annonce
+    const getAnnouncementPreviewStyle = () => {
+        const style = announcementStyles.find(s => s.value === announcementStyle);
+        return {
+            padding: '1.5rem',
+            backgroundColor: style?.color || '#f9f9f9',
+            borderLeft: `4px solid ${style?.border || '#999'}`, 
+            borderRadius: '4px',
+            marginTop: '1rem'
+        };
+    };
     
     return (
         <div style={containerStyle}>
@@ -149,7 +192,7 @@ const Parametres = () => {
 
             <div style={gridStyle}>
                 <Link to="/calendrier" style={cardStyle}><h2>Gestion du Calendrier</h2><p>Bloquer des dates et des jours.</p></Link>
-                <Link to="/abonnements" style={cardStyle}><h2>Gestion des Abonnements</h2><p>Gérer les demandes d\'abonnements.</p></Link>
+                <Link to="/abonnements" style={cardStyle}><h2>Gestion des Abonnements</h2><p>Gérer les demandes d'abonnements.</p></Link>
                 <Link to="/admin-account" style={cardStyle}><h2>Compte Administrateur</h2><p>Gérer les informations de connexion.</p></Link>
             </div>
 
@@ -173,7 +216,6 @@ const Parametres = () => {
                             <InputField label="Heure limite de commande (0-23)" name="order_cutoff_hour" type="number" value={companySettings.order_cutoff_hour} onChange={handleCompanyInputChange} />
                             <InputField label="Conditions de paiement" name="payment_conditions" value={companySettings.payment_conditions} onChange={handleCompanyInputChange} />
                             <InputField label="Moyens de paiement" name="payment_methods" value={companySettings.payment_methods} onChange={handleCompanyInputChange} />
-
                         </div>
                         <button type="submit" style={saveButtonStyle}>Enregistrer les informations</button>
                     </form>
@@ -196,6 +238,68 @@ const Parametres = () => {
                     <>
                         <textarea value={refusalTemplate} onChange={(e) => setRefusalTemplate(e.target.value)} style={{...inputStyle, height: '150px'}} placeholder="Saisissez le modèle d\'e-mail de refus ici..."/>
                         <button onClick={() => saveSetting('refusalEmailTemplate', refusalTemplate)} style={{...saveButtonStyle, alignSelf: 'flex-start', fontSize: '14px'}}>Enregistrer le modèle</button>
+                    </>
+                )}
+            </div>
+
+            {/* NOUVELLE SECTION : Annonces */}
+            <div style={sectionStyle}>
+                <h2>Message d\'annonce (affiché sur la page Menu)</h2>
+                {isOtherSettingsLoading ? <p>Chargement...</p> : (
+                    <>
+                        <div style={{ marginBottom: '20px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '15px' }}>
+                                <input 
+                                    type="checkbox" 
+                                    id="announcement-enabled" 
+                                    checked={announcementEnabled} 
+                                    onChange={(e) => setAnnouncementEnabled(e.target.checked)} 
+                                    style={{ marginRight: '10px', height: '18px', width: '18px' }} 
+                                />
+                                <label htmlFor="announcement-enabled" style={{ fontWeight: 'bold' }}>Activer le message d\'annonce</label>
+                            </div>
+
+                            <div style={{ marginBottom: '15px' }}>
+                                <label style={labelStyle}>Style du message</label>
+                                <select 
+                                    value={announcementStyle} 
+                                    onChange={(e) => setAnnouncementStyle(e.target.value)}
+                                    style={inputStyle}
+                                    disabled={!announcementEnabled}
+                                >
+                                    {announcementStyles.map(style => (
+                                        <option key={style.value} value={style.value}>{style.label}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div style={{ marginBottom: '15px' }}>
+                                <label style={labelStyle}>Message (Markdown supporté)</label>
+                                <textarea 
+                                    value={announcementMessage} 
+                                    onChange={(e) => setAnnouncementMessage(e.target.value)} 
+                                    style={{...inputStyle, height: '120px', backgroundColor: announcementEnabled ? '#fff' : '#f9f9f9', fontFamily: 'monospace'}} 
+                                    placeholder="**Exemple**: Profitez de nos offres spéciales pour Noël ! 🎄&#10;&#10;- 10% de réduction sur tous les menus&#10;- Livraison gratuite jusqu'au 31/12"
+                                    disabled={!announcementEnabled}
+                                />
+                                <small style={{ color: '#666', display: 'block', marginTop: '5px' }}>
+                                    Syntaxe Markdown : **gras**, *italique*, # Titre, - liste, [lien](url)
+                                </small>
+                            </div>
+
+                            {announcementEnabled && announcementMessage && (
+                                <div>
+                                    <label style={{ ...labelStyle, marginTop: '15px', display: 'block' }}>Aperçu :</label>
+                                    <div style={getAnnouncementPreviewStyle()}>
+                                        <div dangerouslySetInnerHTML={{ __html: announcementMessage.replace(/\n/g, '<br>') }} />
+                                    </div>
+                                    <small style={{ color: '#999', display: 'block', marginTop: '5px' }}>
+                                        Note : L'aperçu réel avec Markdown sera visible sur la page Menu
+                                    </small>
+                                </div>
+                            )}
+                        </div>
+                        <button onClick={handleSaveAnnouncement} style={saveButtonStyle}>Enregistrer l\'annonce</button>
                     </>
                 )}
             </div>
