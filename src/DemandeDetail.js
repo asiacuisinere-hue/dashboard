@@ -52,7 +52,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
             type: demande.clients ? 'client' : 'entreprise' 
         } : null;
 
-        if (demande.type === 'COMMANDE_MENU' && (demande.status === 'confirmed' || demande.status === 'En attente de traitement')) {
+        if ((demande.type === 'COMMANDE_MENU' || demande.type === 'COMMANDE_SPECIALE') && (demande.status === 'confirmed' || demande.status === 'En attente de traitement')) {
             if (!window.confirm("Cette action va générer la facture, l'envoyer au client, et la télécharger. Continuer ?")) return;
 
             setIsGenerating(true);
