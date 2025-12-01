@@ -39,6 +39,11 @@ const Parametres = () => {
     const [announcementMessage, setAnnouncementMessage] = useState('');
     const [announcementStyle, setAnnouncementStyle] = useState('info');
     const [announcementEnabled, setAnnouncementEnabled] = useState(false);
+    
+    // --- États pour l'offre spéciale ---
+    const [specialOfferEnabled, setSpecialOfferEnabled] = useState(false);
+    const [specialOffer, setSpecialOffer] = useState({ title: '', description: '', dishes: [] });
+
 
     // Styles disponibles pour les annonces
     const announcementStyles = [
@@ -120,6 +125,24 @@ const Parametres = () => {
             setAnnouncementMessage(settingsMap.announcement_message || '');
             setAnnouncementStyle(settingsMap.announcement_style || 'info');
             setAnnouncementEnabled(settingsMap.announcement_enabled === 'true');
+            
+            // Charger l'offre spéciale
+            setSpecialOfferEnabled(settingsMap.special_offer_enabled === 'true');
+            if (settingsMap.special_offer_details) {
+                try {
+                    const parsedOffer = JSON.parse(settingsMap.special_offer_details);
+                    // Ensure dishes is always an array
+                    if (!Array.isArray(parsedOffer.dishes)) {
+                        parsedOffer.dishes = [];
+                    }
+                    setSpecialOffer(parsedOffer);
+                } catch (e) {
+                    console.error("Erreur au parsing des détails de l'offre spéciale:", e);
+                    setSpecialOffer({ title: '', description: '', dishes: [] });
+                }
+            } else {
+                 setSpecialOffer({ title: '', description: '', dishes: [] });
+            }
         }
         setIsOtherSettingsLoading(false);
         setIsMenuLoading(false);
@@ -205,6 +228,45 @@ const Parametres = () => {
         }
     };
 
+    const handleSpecialOfferChange = (e) => {
+        const { name, value } = e.target;
+        setSpecialOffer(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleDishChange = (index, e) => {
+        const { name, value } = e.target;
+        const newDishes = [...specialOffer.dishes];
+        newDishes[index] = { ...newDishes[index], [name]: value };
+        setSpecialOffer(prev => ({ ...prev, dishes: newDishes }));
+    };
+
+    const addDish = () => {
+        setSpecialOffer(prev => ({
+            ...prev,
+            dishes: [...(prev.dishes || []), { name: '', price250: '', price500: '' }]
+        }));
+    };
+
+    const removeDish = (index) => {
+        const newDishes = [...specialOffer.dishes];
+        newDishes.splice(index, 1);
+        setSpecialOffer(prev => ({ ...prev, dishes: newDishes }));
+    };
+    
+    const handleSaveSpecialOffer = async () => {
+        setStatus({ message: "Enregistrement de l'offre spéciale...", type: 'info' });
+        try {
+            await Promise.all([
+                saveSetting('special_offer_enabled', String(specialOfferEnabled), true),
+                saveSetting('special_offer_details', JSON.stringify(specialOffer), true),
+            ]);
+            setStatus({ message: 'Offre spéciale enregistrée avec succès !', type: 'success' });
+            setTimeout(() => setStatus({ message: '', type: 'info' }), 3000);
+        } catch (error) {
+             setStatus({ message: "Erreur lors de l'enregistrement de l'offre spéciale.", type: 'error' });
+        }
+    };
+
     // Aperçu de l'annonce
     const getAnnouncementPreviewStyle = () => {
         const style = announcementStyles.find(s => s.value === announcementStyle);
@@ -252,6 +314,54 @@ const Parametres = () => {
                         </div>
                         <button type="submit" style={saveButtonStyle}>Enregistrer les informations</button>
                     </form>
+                )}
+            </div>
+
+            {/* Offre Spéciale Section */}
+            <div style={sectionStyle}>
+                <h2>Gestion de l'Offre Spéciale</h2>
+                {isOtherSettingsLoading ? <p>Chargement...</p> : (
+                <>
+                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
+                        <input
+                            type="checkbox"
+                            id="special-offer-enabled"
+                            checked={specialOfferEnabled}
+                            onChange={(e) => setSpecialOfferEnabled(e.target.checked)}
+                            style={{ marginRight: '10px', height: '18px', width: '18px' }}
+                        />
+                        <label htmlFor="special-offer-enabled" style={{ fontWeight: 'bold' }}>Activer l'offre spéciale</label>
+                    </div>
+
+                    <div style={{ opacity: specialOfferEnabled ? 1 : 0.5, pointerEvents: specialOfferEnabled ? 'auto' : 'none' }}>
+                        <InputField label="Titre de l'offre" name="title" value={specialOffer.title} onChange={handleSpecialOfferChange} />
+                        <div>
+                            <label style={labelStyle}>Description de l'offre</label>
+                            <textarea
+                                name="description"
+                                value={specialOffer.description}
+                                onChange={handleSpecialOfferChange}
+                                style={{ ...inputStyle, height: '80px' }}
+                                placeholder="ex: Composez votre menu de fête avec nos plats d'exception..."
+                            />
+                        </div>
+                        
+                        <h3 style={{ marginTop: '20px', fontSize: '1.1rem' }}>Plats de l'offre</h3>
+                        {(specialOffer.dishes || []).map((dish, index) => (
+                            <div key={index} style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '15px', marginTop: '15px', position: 'relative' }}>
+                                <button onClick={() => removeDish(index)} style={removeButtonStyle}>&times;</button>
+                                <div style={formGridStyle}>
+                                    <InputField label={`Nom du plat #${index + 1}`} name="name" value={dish.name} onChange={(e) => handleDishChange(index, e)} />
+                                    <InputField label="Prix 250g (€)" name="price250" type="number" value={dish.price250} onChange={(e) => handleDishChange(index, e)} />
+                                    <InputField label="Prix 500g (€)" name="price500" type="number" value={dish.price500} onChange={(e) => handleDishChange(index, e)} />
+                                </div>
+                            </div>
+                        ))}
+                        <button type="button" onClick={addDish} style={{...saveButtonStyle, marginTop: '15px', backgroundColor: '#555'}}>Ajouter un plat</button>
+                    </div>
+                    
+                    <button onClick={handleSaveSpecialOffer} style={saveButtonStyle}>Enregistrer l'Offre Spéciale</button>
+                </>
                 )}
             </div>
 
@@ -349,7 +459,7 @@ const Parametres = () => {
                             </div>
                             <textarea value={menuOverrideMessage} onChange={(e) => setMenuOverrideMessage(e.target.value)} style={{...inputStyle, height: '80px', backgroundColor: menuOverrideEnabled ? '#fff' : '#f9f9f9' }} placeholder="Ex: Les livraisons reprendront le 2 janvier." disabled={!menuOverrideEnabled}/>
                         </div>
-
+                        
                         <div style={{ marginTop: '20px' }}>
                             <h3 style={{ marginTop: 0, fontSize: '1.1rem' }}>Prix des formules (€)</h3>
                             <div style={formGridStyle}>
@@ -395,6 +505,7 @@ const inputGroupStyle = { display: 'flex', flexDirection: 'column', marginBottom
 const labelStyle = { marginBottom: '5px', fontWeight: 'bold', color: '#333' };
 const inputStyle = { padding: '10px', borderRadius: '4px', border: '1px solid #ddd', boxSizing: 'border-box', width: '100%' };
 const saveButtonStyle = { marginTop: '20px', padding: '12px 25px', backgroundColor: '#d4af37', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold' };
+const removeButtonStyle = { position: 'absolute', top: '10px', right: '10px', background: '#ff4d4d', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', fontSize: '16px', lineHeight: '24px', textAlign: 'center' };
 const statusStyle = (type) => ({ padding: '15px', marginBottom: '20px', borderRadius: '5px', color: 'white', backgroundColor: type === 'success' ? '#28a745' : (type === 'error' ? '#dc3545' : '#17a2b8') });
 
 export default Parametres;
