@@ -38,13 +38,13 @@ const Parametres = () => {
     // --- États pour les annonces ---
     const [announcementMessage, setAnnouncementMessage] = useState('');
     const [announcementStyle, setAnnouncementStyle] = useState('info');
-    const [announcementEnabled, setAnnouncementEnabled] = useState(false);
+        const [announcementEnabled, setAnnouncementEnabled] = useState(false);
     
-    // --- États pour l'offre spéciale ---
-    const [specialOfferEnabled, setSpecialOfferEnabled] = useState(false);
-    const [specialOffer, setSpecialOffer] = useState({ title: '', description: '', dishes: [] });
-
-
+        // --- États pour l'offre spéciale ---
+        const [specialOfferEnabled, setSpecialOfferEnabled] = useState(false);
+        const [specialOffer, setSpecialOffer] = useState({ title: '', description: '', dishes: [] });
+        const [specialOfferDisablesFormulas, setSpecialOfferDisablesFormulas] = useState(true);
+    
     // Styles disponibles pour les annonces
     const announcementStyles = [
         { value: 'info', label: '📘 Info (bleu)', color: '#e3f2fd', border: '#2196f3' },
@@ -128,6 +128,7 @@ const Parametres = () => {
             
             // Charger l'offre spéciale
             setSpecialOfferEnabled(settingsMap.special_offer_enabled === 'true');
+            setSpecialOfferDisablesFormulas(settingsMap.special_offer_disables_formulas === 'true');
             if (settingsMap.special_offer_details) {
                 try {
                     const parsedOffer = JSON.parse(settingsMap.special_offer_details);
@@ -259,6 +260,7 @@ const Parametres = () => {
             await Promise.all([
                 saveSetting('special_offer_enabled', String(specialOfferEnabled), true),
                 saveSetting('special_offer_details', JSON.stringify(specialOffer), true),
+                saveSetting('special_offer_disables_formulas', String(specialOfferDisablesFormulas), true),
             ]);
             setStatus({ message: 'Offre spéciale enregistrée avec succès !', type: 'success' });
             setTimeout(() => setStatus({ message: '', type: 'info' }), 3000);
@@ -317,54 +319,66 @@ const Parametres = () => {
                 )}
             </div>
 
-            {/* Offre Spéciale Section */}
-            <div style={sectionStyle}>
-                <h2>Gestion de l'Offre Spéciale</h2>
-                {isOtherSettingsLoading ? <p>Chargement...</p> : (
-                <>
-                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
-                        <input
-                            type="checkbox"
-                            id="special-offer-enabled"
-                            checked={specialOfferEnabled}
-                            onChange={(e) => setSpecialOfferEnabled(e.target.checked)}
-                            style={{ marginRight: '10px', height: '18px', width: '18px' }}
-                        />
-                        <label htmlFor="special-offer-enabled" style={{ fontWeight: 'bold' }}>Activer l'offre spéciale</label>
-                    </div>
-
-                    <div style={{ opacity: specialOfferEnabled ? 1 : 0.5, pointerEvents: specialOfferEnabled ? 'auto' : 'none' }}>
-                        <InputField label="Titre de l'offre" name="title" value={specialOffer.title} onChange={handleSpecialOfferChange} />
-                        <div>
-                            <label style={labelStyle}>Description de l'offre</label>
-                            <textarea
-                                name="description"
-                                value={specialOffer.description}
-                                onChange={handleSpecialOfferChange}
-                                style={{ ...inputStyle, height: '80px' }}
-                                placeholder="ex: Composez votre menu de fête avec nos plats d'exception..."
-                            />
-                        </div>
-                        
-                        <h3 style={{ marginTop: '20px', fontSize: '1.1rem' }}>Plats de l'offre</h3>
-                        {(specialOffer.dishes || []).map((dish, index) => (
-                            <div key={index} style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '15px', marginTop: '15px', position: 'relative' }}>
-                                <button onClick={() => removeDish(index)} style={removeButtonStyle}>&times;</button>
-                                <div style={formGridStyle}>
-                                    <InputField label={`Nom du plat #${index + 1}`} name="name" value={dish.name} onChange={(e) => handleDishChange(index, e)} />
-                                    <InputField label="Prix 250g (€)" name="price250" type="number" value={dish.price250} onChange={(e) => handleDishChange(index, e)} />
-                                    <InputField label="Prix 500g (€)" name="price500" type="number" value={dish.price500} onChange={(e) => handleDishChange(index, e)} />
+                        {/* Offre Spéciale Section */}
+                        <div style={sectionStyle}>
+                            <h2>Gestion de l'Offre Spéciale</h2>
+                            {isOtherSettingsLoading ? <p>Chargement...</p> : (
+                            <>
+                                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
+                                    <input
+                                        type="checkbox"
+                                        id="special-offer-enabled"
+                                        checked={specialOfferEnabled}
+                                        onChange={(e) => setSpecialOfferEnabled(e.target.checked)}
+                                        style={{ marginRight: '10px', height: '18px', width: '18px' }}
+                                    />
+                                    <label htmlFor="special-offer-enabled" style={{ fontWeight: 'bold' }}>Activer l'offre spéciale</label>
                                 </div>
-                            </div>
-                        ))}
-                        <button type="button" onClick={addDish} style={{...saveButtonStyle, marginTop: '15px', backgroundColor: '#555'}}>Ajouter un plat</button>
-                    </div>
-                    
-                    <button onClick={handleSaveSpecialOffer} style={saveButtonStyle}>Enregistrer l'Offre Spéciale</button>
-                </>
-                )}
-            </div>
-
+            
+                                <div style={{ opacity: specialOfferEnabled ? 1 : 0.5, pointerEvents: specialOfferEnabled ? 'auto' : 'none' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0' }}>
+                                        <input
+                                            type="checkbox"
+                                            id="special-offer-disables-formulas"
+                                            checked={specialOfferDisablesFormulas}
+                                            onChange={(e) => setSpecialOfferDisablesFormulas(e.target.checked)}
+                                            style={{ marginRight: '10px', height: '18px', width: '18px' }}
+                                        />
+                                        <label htmlFor="special-offer-disables-formulas">
+                                            Désactiver les formules habituelles lorsque l'offre spéciale est active
+                                        </label>
+                                    </div>
+                                    
+                                    <InputField label="Titre de l'offre" name="title" value={specialOffer.title} onChange={handleSpecialOfferChange} />
+                                    <div>
+                                        <label style={labelStyle}>Description de l'offre</label>
+                                        <textarea
+                                            name="description"
+                                            value={specialOffer.description}
+                                            onChange={handleSpecialOfferChange}
+                                            style={{ ...inputStyle, height: '80px' }}
+                                            placeholder="ex: Composez votre menu de fête avec nos plats d'exception..."
+                                        />
+                                    </div>
+            
+                                    <h3 style={{ marginTop: '20px', fontSize: '1.1rem' }}>Plats de l'offre</h3>
+                                    {(specialOffer.dishes || []).map((dish, index) => (
+                                        <div key={index} style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '15px', marginTop: '15px', position: 'relative' }}>
+                                            <button onClick={() => removeDish(index)} style={removeButtonStyle}>&times;</button>
+                                            <div style={formGridStyle}>
+                                                <InputField label={`Nom du plat #${index + 1}`} name="name" value={dish.name} onChange={(e) => handleDishChange(index, e)} />
+                                                <InputField label="Prix 250g (€)" name="price250" type="number" value={dish.price250} onChange={(e) => handleDishChange(index, e)} />
+                                                <InputField label="Prix 500g (€)" name="price500" type="number" value={dish.price500} onChange={(e) => handleDishChange(index, e)} />
+                                            </div>
+                                        </div>
+                                    ))}
+                                    <button type="button" onClick={addDish} style={{...saveButtonStyle, marginTop: '15px', backgroundColor: '#555'}}>Ajouter un plat</button>
+                                </div>
+            
+                                <button onClick={handleSaveSpecialOffer} style={saveButtonStyle}>Enregistrer l'Offre Spéciale</button>
+                            </>
+                            )}
+                        </div>
             <div style={sectionStyle}>
                 <h2>Message d'accueil (Popup)</h2>
                 {isOtherSettingsLoading ? <p>Chargement...</p> : (
