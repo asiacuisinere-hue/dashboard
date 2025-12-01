@@ -25,6 +25,10 @@ const DemandesEnCours = () => {
             query = query
                 .eq('type', 'COMMANDE_MENU')
                 .not('status', 'in', '(completed,cancelled,paid,Nouvelle)');
+        } else if (filter.type === 'COMMANDE_SPECIALE') {
+            query = query
+                .eq('type', 'COMMANDE_SPECIALE')
+                .not('status', 'in', '(completed,cancelled,paid,Nouvelle)');
         } else if (filter.type === 'RESERVATION_SERVICE') {
             query = query
                 .eq('type', 'RESERVATION_SERVICE')
@@ -110,13 +114,18 @@ const DemandesEnCours = () => {
                     title="Filtrer par Réservation Service">
                     🏠
                 </button>
-                <button 
-                    onClick={() => handleTypeFilter('COMMANDE_MENU')} 
-                    style={filter.type === 'COMMANDE_MENU' ? activeIconButtonStyle : iconButtonStyle} 
-                    title="Filtrer par Commande Menu">
-                    🚚
-                </button>
-                
+                                <button
+                                    onClick={() => handleTypeFilter('COMMANDE_MENU')}
+                                    style={filter.type === 'COMMANDE_MENU' ? activeIconButtonStyle : iconButtonStyle}
+                                    title="Filtrer par Commande Menu">
+                                    🚚
+                                </button>
+                                <button
+                                    onClick={() => handleTypeFilter('COMMANDE_SPECIALE')}
+                                    style={filter.type === 'COMMANDE_SPECIALE' ? activeIconButtonStyle : iconButtonStyle}
+                                    title="Filtrer par Commande Spéciale">
+                                    ⭐
+                                </button>                
                 <input 
                     type="date" 
                     name="date" 
@@ -176,14 +185,14 @@ const DemandesEnCours = () => {
                                     {demande.type === 'COMMANDE_SPECIALE' && <span title="COMMANDE_SPECIALE">⭐</span>}
                                 </td>
                                 <td style={tdStyle}>{demande.clients?.last_name || demande.entreprises?.nom_entreprise || '—'}</td>
-                                <td style={tdStyle}>{demande.details_json?.ville || '—'}</td>
+                                <td style={tdStyle}>{demande.details_json?.deliveryCity || '—'}</td>
                                 <td style={tdStyle}>
                                     {demande.type === 'RESERVATION_SERVICE' && demande.request_date
                                         ? new Date(demande.request_date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })
                                         : '—'}
                                 </td>
                                 <td style={tdStyle}>
-                                    {demande.type === 'COMMANDE_MENU' && demande.request_date
+                                    {(demande.type === 'COMMANDE_MENU' || demande.type === 'COMMANDE_SPECIALE') && demande.request_date
                                         ? new Date(demande.request_date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })
                                         : '—'}
                                 </td>
