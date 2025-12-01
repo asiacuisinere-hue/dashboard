@@ -90,10 +90,11 @@ const APreparer = () => {
                                 <tr key={demande.id}>
                                     <td style={tdStyle}>{demande.request_date ? new Date(demande.request_date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '—'}</td>
                                     <td style={tdStyle}>{demande.clients?.last_name || demande.entreprises?.nom_entreprise || '—'}</td>
-                                    <td style={tdStyle}>{demande.details_json?.ville || '—'}</td>
+                                    <td style={tdStyle}>{demande.details_json?.deliveryCity || '—'}</td>
                                     <td style={{...tdStyle, textAlign: 'center', fontSize: '18px'}}>
                                         {demande.type === 'RESERVATION_SERVICE' && <span title="RESERVATION_SERVICE">🏠</span>}
                                         {demande.type === 'COMMANDE_MENU' && <span title="COMMANDE_MENU">🚚</span>}
+                                        {demande.type === 'COMMANDE_SPECIALE' && <span title="COMMANDE_SPECIALE">⭐</span>}
                                     </td>
                                     <td style={{...tdStyle, textAlign: 'center'}}>
                                         {invoiceNumber ? <span title={invoiceNumber}>🧾</span> : '—'}

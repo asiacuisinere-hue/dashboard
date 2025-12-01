@@ -323,7 +323,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                                 Créer Devis
                             </button>
                         )}
-                        {(demande.type === 'COMMANDE_MENU' && (demande.status === 'confirmed' || demande.status === 'En attente de traitement')) && (
+                        {(demande.type === 'COMMANDE_MENU' || demande.type === 'COMMANDE_SPECIALE') && (demande.status === 'confirmed' || demande.status === 'En attente de traitement') && (
                             <button 
                                 onClick={handleAction} 
                                 disabled={isGenerating} 
