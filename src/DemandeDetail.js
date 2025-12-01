@@ -210,8 +210,32 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
             return (
                 <>
                     <p><strong>Formule:</strong> {d.formulaName || 'N/A'}</p>
-                    <p><strong>Nombre de personnes:</strong> {d.numberOfPeople || 'N/A'}</p>
+                    <p><strong>Option:</strong> {d.formulaOption || 'N/A'}</p>
+                    <p><strong>Ville de livraison:</strong> {d.deliveryCity || 'N/A'}</p>
                 </>
+            );
+        }
+        if (demande.type === 'COMMANDE_SPECIALE') {
+            if (!d.items || !Array.isArray(d.items)) return <p>Détails de la commande non disponibles.</p>;
+            
+            const total = d.total || d.items.reduce((acc, item) => acc + (item.quantity * item.price), 0);
+
+            return (
+                <div>
+                    <ul style={{ listStyleType: 'none', padding: 0, marginBottom: '10px' }}>
+                        {d.items.map((item, index) => (
+                            <li key={index} style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
+                                <span>{item.quantity} x {item.name} ({item.portion})</span>
+                                <span>{(item.quantity * item.price).toFixed(2)} €</span>
+                            </li>
+                        ))}
+                    </ul>
+                    <hr style={{ margin: '10px 0' }} />
+                    <p style={{ textAlign: 'right', fontWeight: 'bold', fontSize: '1.1rem' }}>
+                        <strong>Total:</strong> {parseFloat(total).toFixed(2)} €
+                    </p>
+                    {d.deliveryCity && <p style={{marginTop: '10px'}}><strong>Ville de livraison:</strong> {d.deliveryCity}</p>}
+                </div>
             );
         }
         return (

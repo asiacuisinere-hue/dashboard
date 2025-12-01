@@ -31,7 +31,7 @@ const DemandesEnCours = () => {
                 .in('status', ['En attente de traitement', 'confirmed']);
         } else {
             // Default view: show all in-progress demands
-                            const commandeMenuFilter = `and(type.eq.COMMANDE_MENU,status.not.in.(completed,cancelled,paid,Nouvelle,"En attente de préparation","Préparation en cours"))`;
+                            const commandeMenuFilter = `and(type.in.("COMMANDE_MENU","COMMANDE_SPECIALE"),status.not.in.(completed,cancelled,paid,Nouvelle,"En attente de préparation","Préparation en cours"))`;
                             const reservationServiceFilter = `and(type.eq.RESERVATION_SERVICE,status.in.("En attente de traitement",confirmed))`;            query = query.or(`${commandeMenuFilter},${reservationServiceFilter}`);
         }
         
@@ -171,8 +171,9 @@ const DemandesEnCours = () => {
                             <tr key={demande.id}>
                                 <td style={tdStyle}>{new Date(demande.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })}</td>
                                 <td style={{...tdStyle, textAlign: 'center', fontSize: '18px'}}>
-                                    {demande.type === 'RESERVATION_SERVICE' && <span title="RESERVATION_SERVICE">🏠</span>}
+                                    {demande.type === 'RESERVATION_SERVICE' && <span title="RESERVATION_SERVICE">🍽️</span>}
                                     {demande.type === 'COMMANDE_MENU' && <span title="COMMANDE_MENU">🚚</span>}
+                                    {demande.type === 'COMMANDE_SPECIALE' && <span title="COMMANDE_SPECIALE">⭐</span>}
                                 </td>
                                 <td style={tdStyle}>{demande.clients?.last_name || demande.entreprises?.nom_entreprise || '—'}</td>
                                 <td style={tdStyle}>{demande.details_json?.ville || '—'}</td>
