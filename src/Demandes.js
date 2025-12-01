@@ -6,6 +6,29 @@ import { supabase } from './supabaseClient';
 const DetailsRenderer = ({ details }) => {
     if (!details) return null;
 
+    // Handle COMMANDE_SPECIALE
+    if (details.items && Array.isArray(details.items)) {
+        const total = details.total || details.items.reduce((acc, item) => acc + (item.quantity * item.price), 0);
+
+        return (
+            <div>
+                <ul style={{ listStyleType: 'none', padding: 0, marginBottom: '10px' }}>
+                    {details.items.map((item, index) => (
+                        <li key={index} style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
+                            <span>{item.quantity} x {item.name} ({item.portion})</span>
+                            <span>{(item.quantity * item.price).toFixed(2)} €</span>
+                        </li>
+                    ))}
+                </ul>
+                <hr style={{ margin: '10px 0' }} />
+                <p style={{ textAlign: 'right', fontWeight: 'bold', fontSize: '1.1rem' }}>
+                    <strong>Total:</strong> {parseFloat(total).toFixed(2)} €
+                </p>
+                {details.deliveryCity && <p style={{marginTop: '10px'}}><strong>Ville de livraison:</strong> {details.deliveryCity}</p>}
+            </div>
+        );
+    }
+
     const keyMap = {
         customerType: 'Type de client',
         serviceType: 'Type de service',
@@ -24,7 +47,7 @@ const DetailsRenderer = ({ details }) => {
                 return (
                     <li key={key} style={{ marginBottom: '8px' }}>
                         <strong style={{ color: '#333' }}>{label}:</strong>
-                        <span style={{ marginLeft: '8px', color: '#555' }}>{value}</span>
+                        <span style={{ marginLeft: '8px', color: '#555' }}>{String(value)}</span>
                     </li>
                 );
             })}
@@ -183,6 +206,7 @@ const Demandes = () => {
                                 <td style={{...tdStyle, textAlign: 'center', fontSize: '18px'}}>
                                     {demande.type === 'RESERVATION_SERVICE' && <span title="RESERVATION_SERVICE">🏠</span>}
                                     {demande.type === 'COMMANDE_MENU' && <span title="COMMANDE_MENU">🚚</span>}
+                                    {demande.type === 'COMMANDE_SPECIALE' && <span title="COMMANDE_SPECIALE">⭐</span>}
                                 </td>
                                 <td style={tdStyle}>{new Date(demande.request_date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })}</td>
                                 <td style={tdStyle}>
