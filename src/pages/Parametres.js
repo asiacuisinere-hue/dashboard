@@ -153,7 +153,7 @@ const Parametres = () => {
             console.error('Erreur sauvegarde infos entreprise:', error);
             setStatus({ message: `Erreur: ${error.message}`, type: 'error' });
         } else {
-            setStatus({ message: 'Informations de l\'entreprise enregistrées avec succès !', type: 'success' });
+            setStatus({ message: "Informations de l'entreprise enregistrées avec succès !", type: 'success' });
             fetchAllSettings();
         }
     };
@@ -195,17 +195,17 @@ const Parametres = () => {
 
             if (hasError) {
                 const errorMessage = results.map(result => result.error ? result.message : '').filter(Boolean).join('; ');
-                setStatus({ message: `Erreur lors de l\'enregistrement de l\'annonce : ${errorMessage}`, type: 'error' });
+                setStatus({ message: `Erreur lors de l'enregistrement de l'annonce : ${errorMessage}`, type: 'error' });
             } else {
                 setStatus({ message: 'Annonce enregistrée avec succès !', type: 'success' });
                 setTimeout(() => setStatus({ message: '', type: 'info' }), 3000);
             }
         } catch (error) {
-            setStatus({ message: 'Erreur lors de l\'enregistrement de l\'annonce.', type: 'error' });
+            setStatus({ message: "Erreur lors de l'enregistrement de l'annonce.", type: 'error' });
         }
     };
 
-    // Aperçu de l\'annonce
+    // Aperçu de l'annonce
     const getAnnouncementPreviewStyle = () => {
         const style = announcementStyles.find(s => s.value === announcementStyle);
         return {
@@ -225,16 +225,16 @@ const Parametres = () => {
 
             <div style={gridStyle}>
                 <Link to="/calendrier" style={cardStyle}><h2>Gestion du Calendrier</h2><p>Bloquer des dates et des jours.</p></Link>
-                <Link to="/abonnements" style={cardStyle}><h2>Gestion des Abonnements</h2><p>Gérer les demandes d\'abonnements.</p></Link>
+                <Link to="/abonnements" style={cardStyle}><h2>Gestion des Abonnements</h2><p>Gérer les demandes d'abonnements.</p></Link>
                 <Link to="/admin-account" style={cardStyle}><h2>Compte Administrateur</h2><p>Gérer les informations de connexion.</p></Link>
             </div>
 
             <div style={sectionStyle}>
-                <h2>Informations de l\'entreprise</h2>
+                <h2>Informations de l'entreprise</h2>
                 {isCompanyLoading ? <p>Chargement...</p> : (
                     <form onSubmit={handleSaveCompanySettings}>
                         <div style={formGridStyle}>
-                            <InputField label="Nom de l\'entreprise" name="name" value={companySettings.name} onChange={handleCompanyInputChange} />
+                            <InputField label="Nom de l'entreprise" name="name" value={companySettings.name} onChange={handleCompanyInputChange} />
                             <InputField label="Nom du propriétaire" name="owner" value={companySettings.owner} onChange={handleCompanyInputChange} />
                             <InputField label="Adresse" name="address" value={companySettings.address} onChange={handleCompanyInputChange} />
                             <InputField label="Ville" name="city" value={companySettings.city} onChange={handleCompanyInputChange} />
@@ -256,7 +256,7 @@ const Parametres = () => {
             </div>
 
             <div style={sectionStyle}>
-                <h2>Message d\'accueil (Popup)</h2>
+                <h2>Message d'accueil (Popup)</h2>
                 {isOtherSettingsLoading ? <p>Chargement...</p> : (
                     <>
                         <textarea value={welcomeMessage} onChange={(e) => setWelcomeMessage(e.target.value)} style={{...inputStyle, height: '100px'}} placeholder="Saisissez le message ici..."/>
@@ -269,7 +269,7 @@ const Parametres = () => {
                 <h2>Modèle e-mail de refus</h2>
                 {isOtherSettingsLoading ? <p>Chargement...</p> : (
                     <>
-                        <textarea value={refusalTemplate} onChange={(e) => setRefusalTemplate(e.target.value)} style={{...inputStyle, height: '150px'}} placeholder="Saisissez le modèle d\'e-mail de refus ici..."/>
+                        <textarea value={refusalTemplate} onChange={(e) => setRefusalTemplate(e.target.value)} style={{...inputStyle, height: '150px'}} placeholder="Saisissez le modèle d'e-mail de refus ici..."/>
                         <button onClick={() => saveSetting('refusalEmailTemplate', refusalTemplate)} style={{...saveButtonStyle, alignSelf: 'flex-start', fontSize: '14px'}}>Enregistrer le modèle</button>
                     </>
                 )}
@@ -277,7 +277,7 @@ const Parametres = () => {
 
             {/* NOUVELLE SECTION : Annonces */}
             <div style={sectionStyle}>
-                <h2>Message d\'annonce (affiché sur la page Menu)</h2>
+                <h2>Message d'annonce (affiché sur la page Menu)</h2>
                 {isOtherSettingsLoading ? <p>Chargement...</p> : (
                     <>
                         <div style={{ marginBottom: '20px' }}>
@@ -289,7 +289,7 @@ const Parametres = () => {
                                     onChange={(e) => setAnnouncementEnabled(e.target.checked)} 
                                     style={{ marginRight: '10px', height: '18px', width: '18px' }} 
                                 />
-                                <label htmlFor="announcement-enabled" style={{ fontWeight: 'bold' }}>Activer le message d\'annonce</label>
+                                <label htmlFor="announcement-enabled" style={{ fontWeight: 'bold' }}>Activer le message d'annonce</label>
                             </div>
 
                             <div style={{ marginBottom: '15px' }}>
@@ -312,7 +312,7 @@ const Parametres = () => {
                                     value={announcementMessage} 
                                     onChange={(e) => setAnnouncementMessage(e.target.value)} 
                                     style={{...inputStyle, height: '120px', backgroundColor: announcementEnabled ? '#fff' : '#f9f9f9', fontFamily: 'monospace'}} 
-                                    placeholder="**Exemple**: Profitez de nos offres spéciales pour Noël ! 🎄&#10;&#10;- 10% de réduction sur tous les menus&#10;- Livraison gratuite jusqu\'au 31/12"
+                                    placeholder="**Exemple**: Profitez de nos offres spéciales pour Noël ! 🎄&#10;&#10;- 10% de réduction sur tous les menus&#10;- Livraison gratuite jusqu'au 31/12"
                                     disabled={!announcementEnabled}
                                 />
                                 <small style={{ color: '#666', display: 'block', marginTop: '5px' }}>
@@ -327,12 +327,12 @@ const Parametres = () => {
                                         <div dangerouslySetInnerHTML={{ __html: announcementMessage.replace(/\n/g, '<br>') }} />
                                     </div>
                                     <small style={{ color: '#999', display: 'block', marginTop: '5px' }}>
-                                        Note : L\'aperçu réel avec Markdown sera visible sur la page Menu
+                                        Note : L'aperçu réel avec Markdown sera visible sur la page Menu
                                     </small>
                                 </div>
                             )}
                         </div>
-                        <button onClick={handleSaveAnnouncement} style={saveButtonStyle}>Enregistrer l\'annonce</button>
+                        <button onClick={handleSaveAnnouncement} style={saveButtonStyle}>Enregistrer l'annonce</button>
                     </>
                 )}
             </div>
