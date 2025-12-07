@@ -165,7 +165,7 @@ const CalendarSettings = () => {
                     {loading ? <p>Chargement...</p> : (
                         <ul>{specificDates.map(d => (
                             <li key={d.id} style={listItemStyle}>
-                                <span>{new Date(d.date).toLocaleDateString('fr-FR')} - {d.reason || 'N/A'}</span>
+                                <span>{new Date(d.date + 'T00:00').toLocaleDateString('fr-FR')} - {d.reason || 'N/A'}</span>
                                 <button onClick={() => handleDelete(d.id)} style={deleteButtonStyle}>X</button>
                             </li>
                         ))}</ul>
