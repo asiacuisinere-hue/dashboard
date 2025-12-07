@@ -492,6 +492,9 @@ const Parametres = () => {
                                 <div><label style={labelStyle}>Formule Confort</label><textarea value={menuConfort} onChange={(e) => setMenuConfort(e.target.value)} style={{...inputStyle, height: '120px'}} /></div>
                                 <div><label style={labelStyle}>Option Duo</label><textarea value={menuDuo} onChange={(e) => setMenuDuo(e.target.value)} style={{...inputStyle, height: '120px'}} /></div>
                             </div>
+                            <small style={{ color: '#666', display: 'block', marginTop: '10px' }}>
+                                Syntaxe Markdown supportée : **gras**, *italique*, - liste.
+                            </small>
                         </div>
                         <button onClick={handleSaveMenus} style={saveButtonStyle}>Enregistrer les Menus et Prix</button>
                     </>
