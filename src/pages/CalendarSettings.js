@@ -38,22 +38,27 @@ const CalendarSettings = () => {
         fetchUnavailableEntries();
     }, [fetchUnavailableEntries]);
 
-    const handleAddDate = async (e) => {
-        e.preventDefault();
-        const dateString = selectedDate.toISOString().split('T')[0];
-        const { error } = await supabase.from('indisponibilites').insert([{ 
-            date: dateString, 
-            reason: reason,
-            service_type: activeTab
-        }]);
-        if (error) alert(`Erreur: ${error.message}`);
-        else {
-            alert('Date ajoutée !');
-            setReason('');
-            fetchUnavailableEntries();
-        }
-    };
-
+        const handleAddDate = async (e) => {
+            e.preventDefault();
+            
+            // Manually construct the date string to avoid timezone shifts from toISOString()
+            const year = selectedDate.getFullYear();
+            const month = String(selectedDate.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+            const day = String(selectedDate.getDate()).padStart(2, '0');
+            const dateString = `${year}-${month}-${day}`;
+    
+            const { error } = await supabase.from('indisponibilites').insert([{
+                date: dateString,
+                reason: reason,
+                service_type: activeTab
+            }]);
+            if (error) alert(`Erreur: ${error.message}`);
+            else {
+                alert('Date ajoutée !');
+                setReason('');
+                fetchUnavailableEntries();
+            }
+        };
     const handleAddRecurringDay = async (e) => {
         e.preventDefault();
         if (recurringDay === '') {
