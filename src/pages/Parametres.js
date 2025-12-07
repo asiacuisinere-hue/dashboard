@@ -244,7 +244,7 @@ const Parametres = () => {
     const addDish = () => {
         setSpecialOffer(prev => ({
             ...prev,
-            dishes: [...(prev.dishes || []), { name: '', price250: '', price500: '' }]
+            dishes: [...(prev.dishes || []), { name: '', price500: '', price1000: '' }]
         }));
     };
 
@@ -367,8 +367,8 @@ const Parametres = () => {
                                             <button onClick={() => removeDish(index)} style={removeButtonStyle}>&times;</button>
                                             <div style={formGridStyle}>
                                                 <InputField label={`Nom du plat #${index + 1}`} name="name" value={dish.name} onChange={(e) => handleDishChange(index, e)} />
-                                                <InputField label="Prix 250g (€)" name="price250" type="number" value={dish.price250} onChange={(e) => handleDishChange(index, e)} />
                                                 <InputField label="Prix 500g (€)" name="price500" type="number" value={dish.price500} onChange={(e) => handleDishChange(index, e)} />
+                                                <InputField label="Prix 1000g (€)" name="price1000" type="number" value={dish.price1000} onChange={(e) => handleDishChange(index, e)} />
                                             </div>
                                         </div>
                                     ))}
