@@ -65,7 +65,7 @@ const Abonnements = () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) throw new Error("Utilisateur non authentifié.");
 
-            const response = await fetch('/generate-recurring-invoice', {
+            const response = await fetch('/generate-recurring-invoice/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
