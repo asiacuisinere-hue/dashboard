@@ -33,10 +33,14 @@ const DemandesEnCours = () => {
             query = query
                 .eq('type', 'RESERVATION_SERVICE')
                 .in('status', ['En attente de traitement', 'confirmed']);
+        } else if (filter.type === 'SOUSCRIPTION_ABONNEMENT') {
+            query = query
+                .eq('type', 'SOUSCRIPTION_ABONNEMENT')
+                .in('status', ['En attente de traitement', 'confirmed']);
         } else {
             // Default view: show all in-progress demands
                             const commandeMenuFilter = `and(type.in.("COMMANDE_MENU","COMMANDE_SPECIALE"),status.not.in.(completed,cancelled,paid,Nouvelle,"En attente de préparation","Préparation en cours"))`;
-                            const reservationServiceFilter = `and(type.eq.RESERVATION_SERVICE,status.in.("En attente de traitement",confirmed))`;            query = query.or(`${commandeMenuFilter},${reservationServiceFilter}`);
+                            const reservationServiceFilter = `and(type.in.("RESERVATION_SERVICE","SOUSCRIPTION_ABONNEMENT"),status.in.("En attente de traitement",confirmed))`;            query = query.or(`${commandeMenuFilter},${reservationServiceFilter}`);
         }
         
         // --- Additional Filters ---
@@ -125,6 +129,12 @@ const DemandesEnCours = () => {
                                     style={filter.type === 'COMMANDE_SPECIALE' ? activeIconButtonStyle : iconButtonStyle}
                                     title="Filtrer par Commande Spéciale">
                                     ⭐
+                                </button>
+                                <button
+                                    onClick={() => handleTypeFilter('SOUSCRIPTION_ABONNEMENT')}
+                                    style={filter.type === 'SOUSCRIPTION_ABONNEMENT' ? activeIconButtonStyle : iconButtonStyle}
+                                    title="Filtrer par Abonnement">
+                                    🔄
                                 </button>                
                 <input 
                     type="date" 
@@ -183,6 +193,7 @@ const DemandesEnCours = () => {
                                     {demande.type === 'RESERVATION_SERVICE' && <span title="RESERVATION_SERVICE">🍽️</span>}
                                     {demande.type === 'COMMANDE_MENU' && <span title="COMMANDE_MENU">🚚</span>}
                                     {demande.type === 'COMMANDE_SPECIALE' && <span title="COMMANDE_SPECIALE">⭐</span>}
+                                    {demande.type === 'SOUSCRIPTION_ABONNEMENT' && <span title="SOUSCRIPTION_ABONNEMENT">🔄</span>}
                                 </td>
                                 <td style={tdStyle}>{demande.clients?.last_name || demande.entreprises?.nom_entreprise || '—'}</td>
                                 <td style={tdStyle}>{demande.details_json?.deliveryCity || '—'}</td>

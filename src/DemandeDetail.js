@@ -95,7 +95,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                 setIsGenerating(false);
             }
 
-        } else if (demande.type === 'RESERVATION_SERVICE' && demande.status === 'confirmed') {
+        } else if ((demande.type === 'RESERVATION_SERVICE' || demande.type === 'SOUSCRIPTION_ABONNEMENT') && demande.status === 'confirmed') {
             if (clientInfoWithTag) {
                 navigate('/devis', { state: { customer: clientInfoWithTag, demandeId: demande.id } });
                 onClose();
@@ -215,30 +215,37 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                 </>
             );
         }
-        if (demande.type === 'COMMANDE_SPECIALE') {
-            if (!d.items || !Array.isArray(d.items)) return <p>Détails de la commande non disponibles.</p>;
-            
-            const total = d.total || d.items.reduce((acc, item) => acc + (item.quantity * item.price), 0);
-
-            return (
-                <div>
-                    <ul style={{ listStyleType: 'none', padding: 0, marginBottom: '10px' }}>
-                        {d.items.map((item, index) => (
-                            <li key={index} style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
-                                <span>{item.quantity} x {item.name} ({item.portion})</span>
-                                <span>{(item.quantity * item.price).toFixed(2)} €</span>
-                            </li>
-                        ))}
-                    </ul>
-                    <hr style={{ margin: '10px 0' }} />
-                    <p style={{ textAlign: 'right', fontWeight: 'bold', fontSize: '1.1rem' }}>
-                        <strong>Total:</strong> {parseFloat(total).toFixed(2)} €
-                    </p>
-                    {d.deliveryCity && <p style={{marginTop: '10px'}}><strong>Ville de livraison:</strong> {d.deliveryCity}</p>}
-                </div>
-            );
-        }
-        return (
+                if (demande.type === 'COMMANDE_SPECIALE') {
+                    if (!d.items || !Array.isArray(d.items)) return <p>Détails de la commande non disponibles.</p>;
+        
+                    const total = d.total || d.items.reduce((acc, item) => acc + (item.quantity * item.price), 0);
+        
+                    return (
+                        <div>
+                            <ul style={{ listStyleType: 'none', padding: 0, marginBottom: '10px' }}>
+                                {d.items.map((item, index) => (
+                                    <li key={index} style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
+                                        <span>{item.quantity} x {item.name} ({item.portion})</span>
+                                        <span>{(item.quantity * item.price).toFixed(2)} €</span>
+                                    </li>
+                                ))}
+                            </ul>
+                            <hr style={{ margin: '10px 0' }} />
+                            <p style={{ textAlign: 'right', fontWeight: 'bold', fontSize: '1.1rem' }}>
+                                <strong>Total:</strong> {parseFloat(total).toFixed(2)} €
+                            </p>
+                            {d.deliveryCity && <p style={{marginTop: '10px'}}><strong>Ville de livraison:</strong> {d.deliveryCity}</p>}
+                        </div>
+                    );
+                }
+                if (demande.type === 'SOUSCRIPTION_ABONNEMENT') {
+                    return (
+                        <>
+                            <p><strong>Formule :</strong> {d.formula || 'N/A'}</p>
+                            <p><strong>Notes :</strong> {d.notes || 'Aucune'}</p>
+                        </>
+                    );
+                }        return (
             <>
                 {Object.entries(d).map(([key, value]) => (
                     <p key={key}><strong>{key}:</strong> {String(value)}</p>
@@ -315,7 +322,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                                 Mettre en préparation
                             </button>
                         )}
-                        {(demande.status === 'confirmed' && demande.type === 'RESERVATION_SERVICE') && (
+                        {(demande.status === 'confirmed' && (demande.type === 'RESERVATION_SERVICE' || demande.type === 'SOUSCRIPTION_ABONNEMENT')) && (
                             <button 
                                 onClick={handleAction} 
                                 style={{ ...actionButtonStyle, backgroundColor: '#007bff' }}

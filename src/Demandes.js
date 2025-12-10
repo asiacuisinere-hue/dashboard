@@ -28,6 +28,29 @@ const DetailsRenderer = ({ details }) => {
             </div>
         );
     }
+    
+    // Handle SOUSCRIPTION_ABONNEMENT
+    if (details.formula) {
+         const keyMap = {
+            formula: 'Formule d\'abonnement',
+            notes: 'Notes du client',
+            customerName: 'Client'
+        };
+        return (
+            <ul style={{ listStyleType: 'none', padding: 0 }}>
+                {Object.entries(details).map(([key, value]) => {
+                    if (!value) return null;
+                    const label = keyMap[key] || key;
+                    return (
+                        <li key={key} style={{ marginBottom: '8px' }}>
+                            <strong style={{ color: '#333' }}>{label}:</strong>
+                            <span style={{ marginLeft: '8px', color: '#555' }}>{String(value)}</span>
+                        </li>
+                    );
+                })}
+            </ul>
+        );
+    }
 
     const keyMap = {
         customerType: 'Type de client',
@@ -207,6 +230,7 @@ const Demandes = () => {
                                     {demande.type === 'RESERVATION_SERVICE' && <span title="RESERVATION_SERVICE">🏠</span>}
                                     {demande.type === 'COMMANDE_MENU' && <span title="COMMANDE_MENU">🚚</span>}
                                     {demande.type === 'COMMANDE_SPECIALE' && <span title="COMMANDE_SPECIALE">⭐</span>}
+                                    {demande.type === 'SOUSCRIPTION_ABONNEMENT' && <span title="SOUSCRIPTION_ABONNEMENT">🔄</span>}
                                 </td>
                                 <td style={tdStyle}>{new Date(demande.request_date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })}</td>
                                 <td style={tdStyle}>

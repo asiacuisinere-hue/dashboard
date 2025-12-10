@@ -73,7 +73,7 @@ const Abonnements = () => {
     return (
         <div style={containerStyle}>
             <h1>Gestion des Abonnements</h1>
-            <p>Liste et gestion des demandes d'abonnement.</p>
+            <p>Liste et gestion des abonnements actifs, en pause ou terminés.</p>
 
             <div style={filterContainerStyle}>
                 <select
@@ -83,7 +83,6 @@ const Abonnements = () => {
                     style={filterInputStyle}
                 >
                     <option value="">Tous les statuts</option>
-                    <option value="en_attente">En attente</option>
                     <option value="actif">Actif</option>
                     <option value="en_pause">En pause</option>
                     <option value="termine">Terminé</option>
@@ -207,9 +206,6 @@ const AbonnementDetailModal = ({ abonnement, onClose, onUpdate }) => {
 
                 <div style={modalActionsStyle}>
                     <h3 style={detailTitleStyle}>Changer le statut</h3>
-                    {abonnement.status === 'en_attente' && (
-                        <button onClick={() => handleUpdateStatus('actif')} style={{ ...actionButtonStyle, backgroundColor: '#28a745' }}>Marquer comme Actif</button>
-                    )}
                     {abonnement.status === 'actif' && (
                         <button onClick={() => handleUpdateStatus('en_pause')} style={{ ...actionButtonStyle, backgroundColor: '#ffc107' }}>Mettre en pause</button>
                     )}

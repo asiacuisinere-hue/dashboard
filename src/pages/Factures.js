@@ -37,7 +37,7 @@ const Factures = () => {
             demand_id,
             clients (first_name, last_name, email),
             entreprises (nom_entreprise, contact_email),
-            demandes (type, status)
+            demandes (type, status, details_json)
         `);
 
         // --- Always filter for RESERVATION_SERVICE invoices ---
@@ -251,24 +251,45 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
         }
     };
     
-    const handleUpdateStatus = async (newStatus) => {
-        setLoadingAction(true);
-        const { error: invoiceError } = await supabase
-            .from('invoices')
-            .update({ status: newStatus })
-            .eq('id', invoice.id);
-        
-        setLoadingAction(false);
-        if (invoiceError) {
-            alert(`Erreur: ${invoiceError.message}`);
-            return;
-        }
-
-        alert(`Statut de la facture mis à jour à "${getFrenchStatus(newStatus)}"!`);
-        onUpdate();
-        onClose();
-    };
-
+        const handleUpdateStatus = async (newStatus) => {
+            setLoadingAction(true);
+            const { error: invoiceError } = await supabase
+                .from('invoices')
+                .update({ status: newStatus })
+                .eq('id', invoice.id);
+    
+            if (invoiceError) {
+                setLoadingAction(false);
+                alert(`Erreur: ${invoiceError.message}`);
+                return;
+            }
+    
+            // If the invoice is marked as paid and is linked to a subscription demand, create the subscription
+            if (newStatus === 'paid' && invoice.demandes?.type === 'SOUSCRIPTION_ABONNEMENT') {
+                const subscriptionPayload = {
+                    client_id: invoice.client_id,
+                    entreprise_id: invoice.entreprise_id,
+                    formule_base: invoice.demandes.details_json?.formula || 'N/A',
+                    notes: invoice.demandes.details_json?.notes || '',
+                    status: 'actif',
+                    start_date: new Date().toISOString(),
+                };
+    
+                const { error: subError } = await supabase.from('abonnements').insert([subscriptionPayload]);
+    
+                if (subError) {
+                    alert(`Erreur lors de la création de l'abonnement: ${subError.message}`);
+                    // Note: The invoice status was still updated. You might want to handle this case.
+                } else {
+                    alert('Abonnement activé avec succès !');
+                }
+            }
+            
+            setLoadingAction(false);
+            alert(`Statut de la facture mis à jour à "${getFrenchStatus(newStatus)}"!`);
+            onUpdate();
+            onClose();
+        };
     const handlePrepareDemand = async () => {
         if (!invoice.demand_id) {
             alert("Erreur: Impossible de trouver la demande liée à cette facture.");
