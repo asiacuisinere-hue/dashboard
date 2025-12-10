@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 
-const Sidebar = ({ newCount, inProgressCount, pendingQuotesCount, toPrepareCount, pendingInvoicesCount, depositPaidInvoicesCount, waitingForPrepCount, isMobile }) => {
+const Sidebar = ({ newCount, inProgressCount, pendingQuotesCount, toPrepareCount, pendingInvoicesCount, depositPaidInvoicesCount, waitingForPrepCount, activeSubscriptionsCount, isMobile }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -28,7 +28,7 @@ const Sidebar = ({ newCount, inProgressCount, pendingQuotesCount, toPrepareCount
   const pendingInvoiceBadgeStyle = { ...badgeStyle, backgroundColor: '#fd7e14' }; // Orange
   const depositPaidInvoiceBadgeStyle = { ...badgeStyle, backgroundColor: '#20c997' }; // Teal
   const waitingForPrepStyle = { ...badgeStyle, backgroundColor: '#007bff' }; // Strong Blue for new badge
-
+  const activeSubscriptionsBadgeStyle = { ...badgeStyle, backgroundColor: '#6610f2' }; // Indigo
   const hamburgerBadgeStyle = {
     position: 'absolute',
     top: '5px',
@@ -172,7 +172,7 @@ const Sidebar = ({ newCount, inProgressCount, pendingQuotesCount, toPrepareCount
       ]},
       { to: '/scanner', label: 'Scanner' },
       { to: '/services', label: 'Services' },
-      { to: '/abonnements', label: 'Abonnements' },
+      { to: '/abonnements', label: 'Abonnements', count: activeSubscriptionsCount, style: activeSubscriptionsBadgeStyle },
       { to: '/parametres', label: 'Paramètres' },
       { to: '/admin-account', label: 'Compte Administrateur' },
     ];

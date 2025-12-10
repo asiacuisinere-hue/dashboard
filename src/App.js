@@ -105,6 +105,7 @@ const DashboardLayout = () => {
     const [pendingInvoicesCount, setPendingInvoicesCount] = useState(0);
     const [depositPaidInvoicesCount, setDepositPaidInvoicesCount] = useState(0);
     const [waitingForPrepCount, setWaitingForPrepCount] = useState(0);
+    const [activeSubscriptionsCount, setActiveSubscriptionsCount] = useState(0);
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
     const appStyle = {
@@ -168,6 +169,14 @@ const DashboardLayout = () => {
         console.log("DEBUG: Waiting for Prep Invoices Count:", waitingForPrep);
         setWaitingForPrepCount(waitingForPrep);
 
+        // Abonnements
+        const { count: activeSubsCount, error: subsError } = await supabase
+            .from('abonnements')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'actif');
+        if(subsError) console.error("Error fetching active subscriptions:", subsError);
+        setActiveSubscriptionsCount(activeSubsCount);
+
     }, []);
 
     useEffect(() => {
@@ -207,6 +216,7 @@ const DashboardLayout = () => {
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'demandes' }, handleUpdates)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'quotes' }, handleUpdates)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, handleUpdates)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'abonnements' }, handleUpdates)
             .subscribe();
 
         // --- 4. Window resize listener ---
@@ -229,11 +239,11 @@ const DashboardLayout = () => {
                 pendingQuotesCount={pendingQuotesCount} 
                 toPrepareCount={toPrepareCount}
                 pendingInvoicesCount={pendingInvoicesCount}
-                depositPaidInvoicesCount={depositPaidInvoicesCount}
-                waitingForPrepCount={waitingForPrepCount}
-                isMobile={isMobile} 
-            />
-            <main style={mainContentStyle}>
+                                depositPaidInvoicesCount={depositPaidInvoicesCount}
+                                waitingForPrepCount={waitingForPrepCount}
+                                activeSubscriptionsCount={activeSubscriptionsCount}
+                                isMobile={isMobile}
+                            />            <main style={mainContentStyle}>
                 <Routes>
                     <Route path="/" element={<Demandes />} />
                     <Route path="/demandes-en-cours" element={<DemandesEnCours />} />
