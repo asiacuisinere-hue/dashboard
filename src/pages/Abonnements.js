@@ -6,6 +6,7 @@ const Abonnements = () => {
     const [loading, setLoading] = useState(true);
     const [selectedAbonnement, setSelectedAbonnement] = useState(null);
     const [filter, setFilter] = useState({ status: '' });
+    const [isGenerating, setIsGenerating] = useState(null); // To track loading state for each button
 
     const fetchAbonnements = useCallback(async () => {
         setLoading(true);
@@ -44,7 +45,7 @@ const Abonnements = () => {
     const handleUpdateAbonnement = async (abonnementId, updates) => {
         const { error } = await supabase
             .from('abonnements')
-            .update({ ...updates, updated_at: new Date().toISOString() }) // Utiliser new Date().toISOString()
+            .update({ ...updates, updated_at: new Date().toISOString() })
             .eq('id', abonnementId);
 
         if (error) {
@@ -53,6 +54,39 @@ const Abonnements = () => {
             alert(`Abonnement ${abonnementId.substring(0, 8)} mis à jour.`);
             fetchAbonnements(); // Rafraîchir la liste
             setSelectedAbonnement(null); // Fermer les détails si ouverts
+        }
+    };
+
+    const handleGenerateInvoice = async (abonnementId) => {
+        if (!window.confirm("Confirmer la génération d'une nouvelle facture pour cet abonnement ?")) return;
+
+        setIsGenerating(abonnementId);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) throw new Error("Utilisateur non authentifié.");
+
+            const response = await fetch('/generate-recurring-invoice', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify({ abonnementId }),
+            });
+
+            const result = await response.json();
+            if (!response.ok) {
+                throw new Error(result.error || result.details || 'Erreur inconnue lors de la génération de la facture.');
+            }
+
+            alert(result.message || 'Facture générée avec succès !');
+            fetchAbonnements(); // Refresh data to show new invoice date etc.
+
+        } catch (error) {
+            console.error('Error generating recurring invoice:', error);
+            alert(`Erreur: ${error.message}`);
+        } finally {
+            setIsGenerating(null);
         }
     };
 
@@ -98,6 +132,7 @@ const Abonnements = () => {
                             <th style={thStyle}>Formule de base</th>
                             <th style={thStyle}>Statut</th>
                             <th style={thStyle}>Date de début</th>
+                            <th style={thStyle}>Facturation</th>
                             <th style={thStyle}>Actions</th>
                         </tr>
                     </thead>
@@ -109,6 +144,17 @@ const Abonnements = () => {
                                 <td style={tdStyle}>{abonnement.formule_base}</td>
                                 <td style={tdStyle}><span style={statusBadgeStyle(abonnement.status)}>{abonnement.status}</span></td>
                                 <td style={tdStyle}>{abonnement.start_date ? new Date(abonnement.start_date).toLocaleDateString('fr-FR') : 'N/A'}</td>
+                                <td style={tdStyle}>
+                                    {abonnement.status === 'actif' && (
+                                        <button 
+                                            onClick={() => handleGenerateInvoice(abonnement.id)} 
+                                            style={{...detailsButtonStyle, backgroundColor: '#28a745', opacity: isGenerating === abonnement.id ? 0.7 : 1}}
+                                            disabled={isGenerating === abonnement.id}
+                                        >
+                                            {isGenerating === abonnement.id ? 'Génération...' : 'Générer Facture'}
+                                        </button>
+                                    )}
+                                </td>
                                 <td style={tdStyle}>
                                     <button onClick={() => setSelectedAbonnement(abonnement)} style={detailsButtonStyle}>Voir Détails</button>
                                 </td>
@@ -138,73 +184,85 @@ const AbonnementDetailModal = ({ abonnement, onClose, onUpdate }) => {
         setEditedAbonnement(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleSave = () => {
-        const updates = {
-            notes: editedAbonnement.notes,
-            start_date: editedAbonnement.start_date,
-            end_date: editedAbonnement.end_date,
+        const handleSave = () => {
+            const updates = {
+                notes: editedAbonnement.notes,
+                start_date: editedAbonnement.start_date,
+                end_date: editedAbonnement.end_date,
+                monthly_price: editedAbonnement.monthly_price,
+                next_billing_date: editedAbonnement.next_billing_date,
+            };
+            onUpdate(abonnement.id, updates);
         };
-        onUpdate(abonnement.id, updates);
-    };
-
-    const handleUpdateStatus = (newStatus) => {
-        onUpdate(abonnement.id, { status: newStatus });
-    };
-
-    const renderCustomerInfo = () => {
-        if (abonnement.clients) {
-            return (
-                <>
-                    <p><strong>Nom:</strong> {abonnement.clients.last_name} {abonnement.clients.first_name}</p>
-                    <p><strong>Email:</strong> {abonnement.clients.email}</p>
-                    <p><strong>Téléphone:</strong> {abonnement.clients.phone}</p>
-                </>
-            );
-        } else if (abonnement.entreprises) {
-            return (
-                <>
-                    <p><strong>Nom de l'entreprise:</strong> {abonnement.entreprises.nom_entreprise}</p>
-                    <p><strong>Contact:</strong> {abonnement.entreprises.contact_name}</p>
-                    <p><strong>Email du contact:</strong> {abonnement.entreprises.contact_email}</p>
-                    <p><strong>Téléphone du contact:</strong> {abonnement.entreprises.contact_phone}</p>
-                </>
-            );
-        }
-        return <p>Informations client non disponibles.</p>;
-    };
-
-    return (
-        <div style={modalOverlayStyle}>
-            <div style={modalContentStyle}>
-                <button onClick={onClose} style={closeButtonStyle}>&times;</button>
-                <h2 style={{ borderBottom: '2px solid #eee', paddingBottom: '10px', marginBottom: '20px' }}>Détails Abonnement #{abonnement.id.substring(0, 8)}</h2>
-                
-                <div style={detailSectionStyle}>
-                    <h3 style={detailTitleStyle}>Client / Entreprise</h3>
-                    {renderCustomerInfo()}
-                </div>
-
-                <div style={detailSectionStyle}>
-                    <h3 style={detailTitleStyle}>Informations de l'Abonnement</h3>
-                    <p><strong>Formule:</strong> {abonnement.formule_base}</p>
-                    <p><strong>Statut:</strong> <span style={statusBadgeStyle(abonnement.status)}>{abonnement.status}</span></p>
-
-                    <div style={formGroupStyle}>
-                        <label style={labelStyle}>Date de début:</label>
-                        <input type="date" name="start_date" value={editedAbonnement.start_date || ''} onChange={handleFieldChange} style={inputStyle} />
+    
+        const handleUpdateStatus = (newStatus) => {
+            onUpdate(abonnement.id, { status: newStatus });
+        };
+    
+        const renderCustomerInfo = () => {
+            if (abonnement.clients) {
+                return (
+                    <>
+                        <p><strong>Nom:</strong> {abonnement.clients.last_name} {abonnement.clients.first_name}</p>
+                        <p><strong>Email:</strong> {abonnement.clients.email}</p>
+                        <p><strong>Téléphone:</strong> {abonnement.clients.phone}</p>
+                    </>
+                );
+            } else if (abonnement.entreprises) {
+                return (
+                    <>
+                        <p><strong>Nom de l'entreprise:</strong> {abonnement.entreprises.nom_entreprise}</p>
+                        <p><strong>Contact:</strong> {abonnement.entreprises.contact_name}</p>
+                        <p><strong>Email du contact:</strong> {abonnement.entreprises.contact_email}</p>
+                        <p><strong>Téléphone du contact:</strong> {abonnement.entreprises.contact_phone}</p>
+                    </>
+                );
+            }
+            return <p>Informations client non disponibles.</p>;
+        };
+    
+        return (
+            <div style={modalOverlayStyle}>
+                <div style={modalContentStyle}>
+                    <button onClick={onClose} style={closeButtonStyle}>&times;</button>
+                    <h2 style={{ borderBottom: '2px solid #eee', paddingBottom: '10px', marginBottom: '20px' }}>Détails Abonnement #{abonnement.id.substring(0, 8)}</h2>
+    
+                    <div style={detailSectionStyle}>
+                        <h3 style={detailTitleStyle}>Client / Entreprise</h3>
+                        {renderCustomerInfo()}
                     </div>
-                    <div style={formGroupStyle}>
-                        <label style={labelStyle}>Date de fin:</label>
-                        <input type="date" name="end_date" value={editedAbonnement.end_date || ''} onChange={handleFieldChange} style={inputStyle} />
+    
+                    <div style={detailSectionStyle}>
+                        <h3 style={detailTitleStyle}>Informations de l'Abonnement</h3>
+                        <p><strong>Formule:</strong> {abonnement.formule_base}</p>
+                        <p><strong>Statut:</strong> <span style={statusBadgeStyle(abonnement.status)}>{abonnement.status}</span></p>
+                        {abonnement.last_invoice_date && <p><strong>Dernière facture:</strong> {new Date(abonnement.last_invoice_date).toLocaleDateString('fr-FR')}</p>}
+    
+                        <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px'}}>
+                            <div style={formGroupStyle}>
+                                <label style={labelStyle}>Prix Mensuel (€):</label>
+                                <input type="number" name="monthly_price" value={editedAbonnement.monthly_price || ''} onChange={handleFieldChange} style={inputStyle} />
+                            </div>
+                            <div style={formGroupStyle}>
+                                <label style={labelStyle}>Prochaine facturation:</label>
+                                <input type="date" name="next_billing_date" value={editedAbonnement.next_billing_date || ''} onChange={handleFieldChange} style={inputStyle} />
+                            </div>
+                            <div style={formGroupStyle}>
+                                <label style={labelStyle}>Date de début:</label>
+                                <input type="date" name="start_date" value={editedAbonnement.start_date || ''} onChange={handleFieldChange} style={inputStyle} />
+                            </div>
+                            <div style={formGroupStyle}>
+                                <label style={labelStyle}>Date de fin:</label>
+                                <input type="date" name="end_date" value={editedAbonnement.end_date || ''} onChange={handleFieldChange} style={inputStyle} />
+                            </div>
+                        </div>
+                        <div style={formGroupStyle}>
+                            <label style={labelStyle}>Notes:</label>
+                            <textarea name="notes" value={editedAbonnement.notes || ''} onChange={handleFieldChange} style={{...inputStyle, minHeight: '80px'}}></textarea>
+                        </div>
+                        <button onClick={handleSave} style={{...actionButtonStyle, backgroundColor: '#007bff', marginTop: '10px' }}>Enregistrer les modifications</button>
                     </div>
-                    <div style={formGroupStyle}>
-                        <label style={labelStyle}>Notes:</label>
-                        <textarea name="notes" value={editedAbonnement.notes || ''} onChange={handleFieldChange} style={{...inputStyle, minHeight: '80px'}}></textarea>
-                    </div>
-                    <button onClick={handleSave} style={{...actionButtonStyle, backgroundColor: '#007bff', marginTop: '10px' }}>Enregistrer les modifications</button>
-                </div>
-
-                <div style={modalActionsStyle}>
+                    <div style={modalActionsStyle}>
                     <h3 style={detailTitleStyle}>Changer le statut</h3>
                     {abonnement.status === 'actif' && (
                         <button onClick={() => handleUpdateStatus('en_pause')} style={{ ...actionButtonStyle, backgroundColor: '#ffc107' }}>Mettre en pause</button>
