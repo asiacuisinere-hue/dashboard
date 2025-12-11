@@ -65,7 +65,8 @@ const Abonnements = () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) throw new Error("Utilisateur non authentifié.");
 
-            const response = await fetch('/generate-recurring-invoice/', {
+            // Use Supabase Edge Function URL
+            const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/generate-recurring-invoice`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -74,11 +75,23 @@ const Abonnements = () => {
                 body: JSON.stringify({ abonnementId }),
             });
 
-            const result = await response.json();
+            // Check if response is ok before parsing JSON
             if (!response.ok) {
-                throw new Error(result.error || result.details || 'Erreur inconnue lors de la génération de la facture.');
+                const contentType = response.headers.get('content-type');
+                let errorMessage = 'Erreur inconnue lors de la génération de la facture.';
+                
+                if (contentType && contentType.includes('application/json')) {
+                    const result = await response.json();
+                    errorMessage = result.error || result.details || errorMessage;
+                } else {
+                    const text = await response.text();
+                    errorMessage = text || `Erreur HTTP ${response.status}`;
+                }
+                
+                throw new Error(errorMessage);
             }
 
+            const result = await response.json();
             alert(result.message || 'Facture générée avec succès !');
             fetchAbonnements(); // Refresh data to show new invoice date etc.
 
