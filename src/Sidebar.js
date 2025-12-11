@@ -182,6 +182,7 @@ const Sidebar = ({ newCount, inProgressCount, pendingQuotesCount, toPrepareCount
         secondStyle: needsAttentionBadgeStyle
       },
       { to: '/parametres', label: 'Paramètres' },
+      { to: '/statistiques', label: 'Statistiques' },
       { to: '/admin-account', label: 'Compte Administrateur' },
     ];
 
