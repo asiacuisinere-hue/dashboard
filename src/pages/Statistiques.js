@@ -38,15 +38,40 @@ const Statistiques = () => {
     const [period, setPeriod] = useState('last30days');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [debugInfo, setDebugInfo] = useState([]);
+
+    const addDebug = (message) => {
+        console.log(message);
+        setDebugInfo(prev => [...prev, `${new Date().toISOString()}: ${message}`]);
+    };
 
     useEffect(() => {
+        console.log('=== COMPONENT MOUNTED ===');
+        addDebug('Component mounted');
+        
         const fetchKpis = async () => {
             setLoading(true);
             setError(null);
-            console.log(`[Statistiques] Fetching KPIs for period: ${period}`);
+            setDebugInfo([]);
+            addDebug(`Fetching KPIs for period: ${period}`);
             
             try {
+                // Vérifier si supabase est disponible
+                if (!supabase) {
+                    throw new Error("Supabase client non disponible");
+                }
+                addDebug('Supabase client OK');
+
+                // Vérifier l'URL de l'environnement
+                const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+                addDebug(`Supabase URL: ${supabaseUrl ? supabaseUrl.substring(0, 30) + '...' : 'UNDEFINED'}`);
+                
+                if (!supabaseUrl) {
+                    throw new Error("REACT_APP_SUPABASE_URL n'est pas défini dans les variables d'environnement");
+                }
+
                 // Get the current session
+                addDebug('Getting session...');
                 const { data: { session }, error: sessionError } = await supabase.auth.getSession();
                 
                 if (sessionError) {
@@ -57,21 +82,22 @@ const Statistiques = () => {
                     throw new Error("Utilisateur non authentifié");
                 }
 
-                console.log('[Statistiques] Session found, making request...');
+                addDebug(`Session found - User ID: ${session.user?.id}`);
+                
+                // Construct URL
+                const functionUrl = `${supabaseUrl}/functions/v1/get-kpis?period=${period}`;
+                addDebug(`Calling: ${functionUrl}`);
                 
                 // Call the Edge Function with Authorization header
-                const response = await fetch(
-                    `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/get-kpis?period=${period}`,
-                    {
-                        method: 'GET',
-                        headers: {
-                            'Authorization': `Bearer ${session.access_token}`,
-                            'Content-Type': 'application/json',
-                        }
+                const response = await fetch(functionUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${session.access_token}`,
+                        'Content-Type': 'application/json',
                     }
-                );
+                });
 
-                console.log('[Statistiques] Response status:', response.status);
+                addDebug(`Response status: ${response.status}`);
 
                 if (!response.ok) {
                     const contentType = response.headers.get('content-type');
@@ -79,11 +105,11 @@ const Statistiques = () => {
                     
                     if (contentType && contentType.includes('application/json')) {
                         const errorData = await response.json();
-                        console.error('[Statistiques] Error response:', errorData);
+                        addDebug(`Error response: ${JSON.stringify(errorData)}`);
                         errorMessage = errorData.details || errorData.error || errorMessage;
                     } else {
                         const errorText = await response.text();
-                        console.error('[Statistiques] Error text:', errorText);
+                        addDebug(`Error text: ${errorText}`);
                         errorMessage = errorText || errorMessage;
                     }
                     
@@ -91,16 +117,20 @@ const Statistiques = () => {
                 }
 
                 const data = await response.json();
-                console.log('[Statistiques] KPIs data received:', data);
+                addDebug(`KPIs data received: ${JSON.stringify(data)}`);
                 
                 setKpis({
                     revenue: `${data.revenue}€`,
                     totalOrders: data.totalOrders,
                     newClients: data.newClients
                 });
+                
+                addDebug('KPIs set successfully');
             } catch (error) {
+                const errorMsg = error.message || 'Erreur inconnue';
+                addDebug(`ERROR: ${errorMsg}`);
                 console.error('[Statistiques] Error:', error);
-                setError(error.message);
+                setError(errorMsg);
                 setKpis({ 
                     revenue: 'N/A', 
                     totalOrders: 'N/A', 
@@ -108,6 +138,7 @@ const Statistiques = () => {
                 });
             } finally {
                 setLoading(false);
+                addDebug('Loading complete');
             }
         };
 
@@ -163,6 +194,18 @@ const Statistiques = () => {
         color: '#721c24'
     };
 
+    const debugBoxStyle = {
+        backgroundColor: '#f0f0f0',
+        border: '1px solid #ccc',
+        borderRadius: '8px',
+        padding: '15px',
+        marginTop: '20px',
+        maxHeight: '300px',
+        overflow: 'auto',
+        fontSize: '0.85rem',
+        fontFamily: 'monospace'
+    };
+
     return (
         <div style={containerStyle}>
             <div style={headerStyle}>
@@ -207,6 +250,18 @@ const Statistiques = () => {
                     value={kpis.newClients} 
                     isLoading={loading} 
                 />
+            </div>
+
+            {/* Debug Panel */}
+            <div style={debugBoxStyle}>
+                <h3 style={{ marginTop: 0 }}>Debug Logs:</h3>
+                {debugInfo.length === 0 ? (
+                    <p>Aucun log disponible</p>
+                ) : (
+                    debugInfo.map((log, idx) => (
+                        <div key={idx}>{log}</div>
+                    ))
+                )}
             </div>
         </div>
     );
