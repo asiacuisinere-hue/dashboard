@@ -5,26 +5,26 @@ import Sidebar from './Sidebar';
 import Scanner from './Scanner';
 import Demandes from './Demandes';
 import DemandesEnCours from './DemandesEnCours';
-import Historique from './pages/Historique'; // Importation
+import Historique from './pages/Historique';
 import Particuliers from './pages/Particuliers';
 import Entreprises from './pages/Entreprises';
 import Devis from './pages/Devis';
 import Factures from './pages/Factures';
 import Parametres from './pages/Parametres';
-import Services from './pages/Services'; // Importation de la page Services
-import CalendarSettings from './pages/CalendarSettings'; // Importation de la page CalendarSettings
-import Abonnements from './pages/Abonnements'; // Importation de la page Abonnements
-import AdminAccountSettings from './pages/AdminAccountSettings'; // Importation de la page Compte Administrateur
+import Services from './pages/Services';
+import CalendarSettings from './pages/CalendarSettings';
+import Abonnements from './pages/Abonnements';
+import AdminAccountSettings from './pages/AdminAccountSettings';
 import APreparer from './pages/APreparer';
-import Validation from './pages/Validation'; // Importation de la page Validation
+import Validation from './pages/Validation';
+import Statistiques from './pages/Statistiques'; // AJOUT DE L'IMPORT
 
 // --- Composants ---
 
 const Login = () => {
-  // ... (contenu inchangé)
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false); // Ajout de l'état
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [isError, setIsError] = useState(false);
@@ -69,15 +69,15 @@ const Login = () => {
                 position: 'absolute',
                 right: '10px',
                 top: '50%',
-                transform: 'translateY(15%)', // Centrer verticalement
+                transform: 'translateY(15%)',
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
-                fontSize: '18px', // Augmenter la taille pour l'icône
+                fontSize: '18px',
                 color: '#666',
               }}
             >
-              {showPassword ? '👁️' : '🔒'} {/* Icône d'œil ouvert / Icône de cadenas */}
+              {showPassword ? '👁️' : '🔒'}
             </button>
           </div>
           <button type="submit" disabled={loading} style={{ width: '100%', padding: '12px', backgroundColor: '#d4af37', color: 'white', border: 'none', borderRadius: '4px', fontSize: '16px', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
@@ -119,7 +119,6 @@ const DashboardLayout = () => {
     const fetchCounts = useCallback(async () => {
         console.log("--- [DEBUG] Fetching all counts ---");
         
-        // Demandes
         const { count: newDemandsCount, error: newError } = await supabase.from('demandes').select('*', { count: 'exact', head: true }).eq('status', 'Nouvelle');
         if(newError) console.error("Error fetching new demands:", newError);
         console.log("DEBUG: New Demands Count:", newDemandsCount);
@@ -128,26 +127,23 @@ const DashboardLayout = () => {
         const { count: inProgressDemandsCount } = await supabase
             .from('demandes')
             .select('*', { count: 'exact', head: true })
-            .or(`and(type.in.("COMMANDE_MENU","COMMANDE_SPECIALE"),status.not.in.("completed","cancelled","paid","Nouvelle","En attente de préparation","Préparation en cours")),and(type.eq.RESERVATION_SERVICE,status.in.("En attente de traitement","confirmed"))`);
+            .or(`and(type.in.("COMMANDE_MENU","COMMANDE_SPECIALE"),status.not.in.("completed","cancelled","paid","Nouvelle","En attente de préparation","Préparation en cours")),and(type.eq.RESERVATION_SERVICE,status.in.("En attente de traitement",confirmed))`);
         setInProgressCount(inProgressDemandsCount);
         
-        // Devis
         const { count: sentQuotesCount, error: quotesError } = await supabase.from('quotes').select('*', { count: 'exact', head: true }).eq('status', 'sent');
         if(quotesError) console.error("Error fetching quotes:", quotesError);
         console.log("DEBUG: Sent Quotes Count:", sentQuotesCount);
         setPendingQuotesCount(sentQuotesCount);
 
-        // Commandes à préparer
         const { count: toPrepareDemandsCount, error: toPrepareError } = await supabase.from('demandes').select('*', { count: 'exact', head: true }).in('status', ['En attente de préparation', 'Préparation en cours']);
         if(toPrepareError) console.error("Error fetching to-prepare demands:", toPrepareError);
         console.log("DEBUG: To Prepare Demands Count:", toPrepareDemandsCount);
         setToPrepareCount(toPrepareDemandsCount);
 
-        // Factures
         const { count: pendingInvoices, error: pendingInvError } = await supabase.from('invoices')
             .select('*', { count: 'exact', head: true })
             .eq('status', 'pending')
-            .not('quote_id', 'is', null); // NEW FILTER
+            .not('quote_id', 'is', null);
         if(pendingInvError) console.error("Error fetching pending invoices:", pendingInvError);
         console.log("DEBUG: Pending Invoices Count:", pendingInvoices);
         setPendingInvoicesCount(pendingInvoices);
@@ -155,7 +151,7 @@ const DashboardLayout = () => {
         const { count: depositPaidInvoices, error: depositInvError } = await supabase.from('invoices')
             .select('*', { count: 'exact', head: true })
             .eq('status', 'deposit_paid')
-            .not('quote_id', 'is', null); // NEW FILTER
+            .not('quote_id', 'is', null);
         if(depositInvError) console.error("Error fetching deposit paid invoices:", depositInvError);
         console.log("DEBUG: Deposit Paid Invoices Count:", depositPaidInvoices);
         setDepositPaidInvoicesCount(depositPaidInvoices);
@@ -170,69 +166,60 @@ const DashboardLayout = () => {
         console.log("DEBUG: Waiting for Prep Invoices Count:", waitingForPrep);
         setWaitingForPrepCount(waitingForPrep);
 
-        // Abonnements
         const { count: activeSubsCount, error: subsError } = await supabase
             .from('abonnements')
             .select('*', { count: 'exact', head: true })
             .eq('status', 'actif');
         if(subsError) console.error("Error fetching active subscriptions:", subsError);
-        setActiveSubscriptionsCount(activeSubsCount);
+        setActiveSubscriptionsCount(activeSubsCount || 0);
 
-        // Abonnements nécessitant attention (actifs mais sans prix mensuel)
         const { data: needsAttentionSubs, error: attentionError } = await supabase
             .from('abonnements')
             .select('id, monthly_price')
             .eq('status', 'actif');
         if(attentionError) console.error("Error fetching attention subscriptions:", attentionError);
-        const needsAttentionCount = needsAttentionSubs?.filter(sub => 
-            !sub.monthly_price || sub.monthly_price <= 0
-        ).length || 0;
+        const needsAttentionCount = needsAttentionSubs?.filter(sub => !sub.monthly_price || sub.monthly_price <= 0).length || 0;
         setSubscriptionsNeedAttentionCount(needsAttentionCount);
 
     }, []);
 
-        useEffect(() => {
-            // --- 1. Initial fetch and notification permission request ---
-            fetchCounts();
-            if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
-                Notification.requestPermission();
-            }
-    
-            // --- 2. Combined Realtime Listener ---
-            const handleDbChanges = (payload) => {
-                console.log(`--- [REALTIME] Event '${payload.eventType}' on table '${payload.table}' detected.`);
-                
-                // If it's a new demand, show a notification
-                if (payload.table === 'demandes' && payload.eventType === 'INSERT') {
-                    if (Notification.permission === 'granted') {
-                        new Notification('Nouvelle demande reçue !', {
-                            body: 'Une nouvelle demande est en attente de traitement.',
-                            icon: '/logo.svg'
-                        });
-                    }
+    useEffect(() => {
+        fetchCounts();
+        if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+            Notification.requestPermission();
+        }
+
+        const handleDbChanges = (payload) => {
+            console.log(`--- [REALTIME] Event '${payload.eventType}' on table '${payload.table}' detected.`);
+            
+            if (payload.table === 'demandes' && payload.eventType === 'INSERT') {
+                if (Notification.permission === 'granted') {
+                    new Notification('Nouvelle demande reçue !', {
+                        body: 'Une nouvelle demande est en attente de traitement.',
+                        icon: '/logo.svg'
+                    });
                 }
-                
-                // In all cases, refetch the counts
-                fetchCounts();
-            };
-    
-            const allUpdatesChannel = supabase.channel('all-db-changes')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'demandes' }, handleDbChanges)
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'quotes' }, handleDbChanges)
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, handleDbChanges)
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'abonnements' }, handleDbChanges)
-                .subscribe();
-    
-            // --- 3. Window resize listener ---
-            const handleResize = () => setIsMobile(window.innerWidth <= 768);
-            window.addEventListener('resize', handleResize);
-    
-            // --- 4. Cleanup ---
-            return () => {
-                supabase.removeChannel(allUpdatesChannel);
-                window.removeEventListener('resize', handleResize);
-            };
-        }, [fetchCounts]);
+            }
+            
+            fetchCounts();
+        };
+
+        const allUpdatesChannel = supabase.channel('all-db-changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'demandes' }, handleDbChanges)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'quotes' }, handleDbChanges)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, handleDbChanges)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'abonnements' }, handleDbChanges)
+            .subscribe();
+
+        const handleResize = () => setIsMobile(window.innerWidth <= 768);
+        window.addEventListener('resize', handleResize);
+
+        return () => {
+            supabase.removeChannel(allUpdatesChannel);
+            window.removeEventListener('resize', handleResize);
+        };
+    }, [fetchCounts]);
+
     return (
         <div style={appStyle}>
             <Sidebar 
@@ -241,12 +228,13 @@ const DashboardLayout = () => {
                 pendingQuotesCount={pendingQuotesCount} 
                 toPrepareCount={toPrepareCount}
                 pendingInvoicesCount={pendingInvoicesCount}
-                                depositPaidInvoicesCount={depositPaidInvoicesCount}
-                                waitingForPrepCount={waitingForPrepCount}
-                                activeSubscriptionsCount={activeSubscriptionsCount}
-                                subscriptionsNeedAttentionCount={subscriptionsNeedAttentionCount}
-                                isMobile={isMobile}
-                            />            <main style={mainContentStyle}>
+                depositPaidInvoicesCount={depositPaidInvoicesCount}
+                waitingForPrepCount={waitingForPrepCount}
+                activeSubscriptionsCount={activeSubscriptionsCount}
+                subscriptionsNeedAttentionCount={subscriptionsNeedAttentionCount}
+                isMobile={isMobile}
+            />
+            <main style={mainContentStyle}>
                 <Routes>
                     <Route path="/" element={<Demandes />} />
                     <Route path="/demandes-en-cours" element={<DemandesEnCours />} />
@@ -258,11 +246,12 @@ const DashboardLayout = () => {
                     <Route path="/factures" element={<Factures />} />
                     <Route path="/scanner" element={<Scanner />} />
                     <Route path="/parametres" element={<Parametres />} />
-                    <Route path="/validation" element={<Validation />} /> 
+                    <Route path="/validation" element={<Validation />} />
                     <Route path="/services" element={<Services />} />
                     <Route path="/calendrier" element={<CalendarSettings />} />
                     <Route path="/abonnements" element={<Abonnements />} />
                     <Route path="/admin-account" element={<AdminAccountSettings />} />
+                    <Route path="/statistiques" element={<Statistiques />} /> {/* AJOUT DE LA ROUTE */}
                 </Routes>
             </main>
         </div>
