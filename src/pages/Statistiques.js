@@ -39,33 +39,39 @@ const Statistiques = () => {
     const [loading, setLoading] = useState(true);
 
     // This will be replaced by a call to a serverless function
-        useEffect(() => {
-            const fetchKpis = async () => {
-                setLoading(true);
-                try {
-                    const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/get-kpis?period=${period}`);
-                    if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.details || errorData.error || 'Erreur lors du chargement des KPIs.');
+            useEffect(() => {
+                const fetchKpis = async () => {
+                    setLoading(true);
+                    console.log(`[Statistiques] Fetching KPIs for period: ${period}`);
+                    try {
+                        const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/get-kpis?period=${period}`);
+                        console.log('[Statistiques] Response received:', response);
+        
+                        if (!response.ok) {
+                            const errorText = await response.text();
+                            console.error('[Statistiques] Response not OK. Body:', errorText);
+                            throw new Error(`Erreur du serveur (status ${response.status}): ${errorText}`);
+                        }
+        
+                        const data = await response.json();
+                        console.log('[Statistiques] KPIs data received:', data);
+                        
+                        setKpis({
+                            revenue: `${data.revenue}€`,
+                            totalOrders: data.totalOrders,
+                            newClients: data.newClients
+                        });
+                    } catch (error) {
+                        console.error('Error fetching or parsing KPIs:', error);
+                        alert(`Erreur: ${error.message}`);
+                        setKpis({ revenue: 'N/A', totalOrders: 'N/A', newClients: 'N/A' });
+                    } finally {
+                        setLoading(false);
                     }
-                    const data = await response.json();
-                    setKpis({
-                        revenue: `${data.revenue}€`,
-                        totalOrders: data.totalOrders,
-                        newClients: data.newClients
-                    });
-                } catch (error) {
-                    console.error('Error fetching KPIs:', error);
-                    alert(`Erreur: ${error.message}`);
-                    setKpis({ revenue: 'N/A', totalOrders: 'N/A', newClients: 'N/A' });
-                } finally {
-                    setLoading(false);
-                }
-            };
-    
-            fetchKpis();
-        }, [period]);
-    
+                };
+        
+                fetchKpis();
+            }, [period]);    
         const containerStyle = { padding: '20px', maxWidth: '1200px', margin: '0 auto' };
         const headerStyle = { marginBottom: '30px' };
         const gridStyle = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' };
