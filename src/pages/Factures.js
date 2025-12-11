@@ -265,26 +265,26 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
             }
     
             // If the invoice is marked as paid and is linked to a subscription demand, create the subscription
-            if (newStatus === 'paid' && invoice.demandes?.type === 'SOUSCRIPTION_ABONNEMENT') {
-                const subscriptionPayload = {
-                    client_id: invoice.client_id,
-                    entreprise_id: invoice.entreprise_id,
-                    formule_base: invoice.demandes.details_json?.formula || 'N/A',
-                    notes: invoice.demandes.details_json?.notes || '',
-                    status: 'actif',
-                    start_date: new Date().toISOString(),
-                };
-    
-                const { error: subError } = await supabase.from('abonnements').insert([subscriptionPayload]);
-    
-                if (subError) {
-                    alert(`Erreur lors de la création de l'abonnement: ${subError.message}`);
-                    // Note: The invoice status was still updated. You might want to handle this case.
-                } else {
-                    alert('Abonnement activé avec succès !');
-                }
-            }
+                        if (newStatus === 'paid' && invoice.demandes?.type === 'SOUSCRIPTION_ABONNEMENT') {
+                            const subscriptionPayload = {
+                                client_id: invoice.client_id,
+                                entreprise_id: invoice.entreprise_id,
+                                formule_base: invoice.demandes.details_json?.formula || 'N/A',
+                                notes: invoice.demandes.details_json?.notes || '',
+                                status: 'actif',
+                                start_date: new Date().toISOString(),
+                                original_demand_id: invoice.demand_id // Link to the original demand
+                            };
             
+                            const { error: subError } = await supabase.from('abonnements').insert([subscriptionPayload]);
+                
+                            if (subError) {
+                                alert(`Erreur lors de la création de l'abonnement: ${subError.message}`);
+                                // Note: The invoice status was still updated. You might want to handle this case.
+                            } else {
+                                alert('Abonnement activé avec succès !');
+                            }
+                        }            
             setLoadingAction(false);
             alert(`Statut de la facture mis à jour à "${getFrenchStatus(newStatus)}"!`);
             onUpdate();
