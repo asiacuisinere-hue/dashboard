@@ -179,58 +179,48 @@ const DashboardLayout = () => {
 
     }, []);
 
-    useEffect(() => {
-        // --- 1. Initial fetch and notification permission request ---
-        fetchCounts();
-        if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
-            Notification.requestPermission();
-        }
-
-        // --- 2. Realtime listener for NEW demands (for notifications) ---
-        const showNotification = () => {
-            if (Notification.permission === 'granted') {
-                new Notification('Nouvelle demande reçue !', {
-                    body: 'Une nouvelle demande est en attente de traitement.',
-                    icon: '/logo.svg' // Assurez-vous que ce fichier est dans votre dossier public
-                });
-            }
-        };
-
-        const handleNewDemand = (payload) => {
-            console.log('--- [REALTIME] New demand INSERT detected.', payload);
-            showNotification();
-            fetchCounts(); // Refetch all counts to update UI
-        };
-        
-        const newDemandsChannel = supabase.channel('nouvelles-demandes-insert')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'demandes' }, handleNewDemand)
-            .subscribe();
-
-        // --- 3. Realtime listener for OTHER updates (silent UI refresh) ---
-        const handleUpdates = (payload) => {
-            console.log(`--- [REALTIME] UPDATE detected on table, refetching counts.`, payload.table);
+        useEffect(() => {
+            // --- 1. Initial fetch and notification permission request ---
             fetchCounts();
-        };
-
-        const updatesChannel = supabase.channel('db-updates')
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'demandes' }, handleUpdates)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'quotes' }, handleUpdates)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, handleUpdates)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'abonnements' }, handleUpdates)
-            .subscribe();
-
-        // --- 4. Window resize listener ---
-        const handleResize = () => setIsMobile(window.innerWidth <= 768);
-        window.addEventListener('resize', handleResize);
-
-        // --- 5. Cleanup ---
-        return () => {
-            supabase.removeChannel(newDemandsChannel);
-            supabase.removeChannel(updatesChannel);
-            window.removeEventListener('resize', handleResize);
-        };
-    }, [fetchCounts]);
-
+            if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+                Notification.requestPermission();
+            }
+    
+            // --- 2. Combined Realtime Listener ---
+            const handleDbChanges = (payload) => {
+                console.log(`--- [REALTIME] Event '${payload.eventType}' on table '${payload.table}' detected.`);
+                
+                // If it's a new demand, show a notification
+                if (payload.table === 'demandes' && payload.eventType === 'INSERT') {
+                    if (Notification.permission === 'granted') {
+                        new Notification('Nouvelle demande reçue !', {
+                            body: 'Une nouvelle demande est en attente de traitement.',
+                            icon: '/logo.svg'
+                        });
+                    }
+                }
+                
+                // In all cases, refetch the counts
+                fetchCounts();
+            };
+    
+            const allUpdatesChannel = supabase.channel('all-db-changes')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'demandes' }, handleDbChanges)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'quotes' }, handleDbChanges)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, handleDbChanges)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'abonnements' }, handleDbChanges)
+                .subscribe();
+    
+            // --- 3. Window resize listener ---
+            const handleResize = () => setIsMobile(window.innerWidth <= 768);
+            window.addEventListener('resize', handleResize);
+    
+            // --- 4. Cleanup ---
+            return () => {
+                supabase.removeChannel(allUpdatesChannel);
+                window.removeEventListener('resize', handleResize);
+            };
+        }, [fetchCounts]);
     return (
         <div style={appStyle}>
             <Sidebar 
