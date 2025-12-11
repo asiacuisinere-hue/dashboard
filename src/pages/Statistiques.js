@@ -43,7 +43,7 @@ const Statistiques = () => {
             const fetchKpis = async () => {
                 setLoading(true);
                 try {
-                    const response = await fetch(`/get-kpis?period=${period}`);
+                    const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/get-kpis?period=${period}`);
                     if (!response.ok) {
                         const errorData = await response.json();
                         throw new Error(errorData.details || errorData.error || 'Erreur lors du chargement des KPIs.');
