@@ -57,52 +57,65 @@ const Abonnements = () => {
         }
     };
 
-    const handleGenerateInvoice = async (abonnementId) => {
-        if (!window.confirm("Confirmer la génération d'une nouvelle facture pour cet abonnement ?")) return;
-
-        setIsGenerating(abonnementId);
-        try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) throw new Error("Utilisateur non authentifié.");
-
-            // Use Supabase Edge Function URL
-            const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/generate-recurring-invoice`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session.access_token}`,
-                },
-                body: JSON.stringify({ abonnementId }),
-            });
-
-            // Check if response is ok before parsing JSON
-            if (!response.ok) {
-                const contentType = response.headers.get('content-type');
-                let errorMessage = 'Erreur inconnue lors de la génération de la facture.';
-                
-                if (contentType && contentType.includes('application/json')) {
-                    const result = await response.json();
-                    errorMessage = result.error || result.details || errorMessage;
-                } else {
-                    const text = await response.text();
-                    errorMessage = text || `Erreur HTTP ${response.status}`;
-                }
-                
-                throw new Error(errorMessage);
+        const handleGenerateInvoice = async (abonnementId) => {
+            // Find the abonnement to check monthly_price
+            const abonnement = abonnements.find(a => a.id === abonnementId);
+            
+            if (!abonnement) {
+                alert("Abonnement introuvable.");
+                return;
             }
-
-            const result = await response.json();
-            alert(result.message || 'Facture générée avec succès !');
-            fetchAbonnements(); // Refresh data to show new invoice date etc.
-
-        } catch (error) {
-            console.error('Error generating recurring invoice:', error);
-            alert(`Erreur: ${error.message}`);
-        } finally {
-            setIsGenerating(null);
-        }
-    };
-
+    
+            if (!abonnement.monthly_price || abonnement.monthly_price <= 0) {
+                alert("Veuillez d'abord définir un prix mensuel pour cet abonnement avant de générer une facture.");
+                setSelectedAbonnement(abonnement); // Open the detail modal
+                return;
+            }
+    
+            if (!window.confirm(`Confirmer la génération d'une facture de ${abonnement.monthly_price}€ pour cet abonnement ?`)) return;
+    
+            setIsGenerating(abonnementId);
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session) throw new Error("Utilisateur non authentifié.");
+    
+                // Use Supabase Edge Function URL
+                const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/generate-recurring-invoice`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session.access_token}`,
+                    },
+                    body: JSON.stringify({ abonnementId }),
+                });
+    
+                // Check if response is ok before parsing JSON
+                if (!response.ok) {
+                    const contentType = response.headers.get('content-type');
+                    let errorMessage = 'Erreur inconnue lors de la génération de la facture.';
+                    
+                    if (contentType && contentType.includes('application/json')) {
+                        const result = await response.json();
+                        errorMessage = result.details || result.error || errorMessage;
+                    } else {
+                        const text = await response.text();
+                        errorMessage = text || `Erreur HTTP ${response.status}`;
+                    }
+                    
+                    throw new Error(errorMessage);
+                }
+    
+                const result = await response.json();
+                alert(result.message || 'Facture générée avec succès !');
+                fetchAbonnements(); // Refresh data to show new invoice date etc.
+    
+            } catch (error) {
+                console.error('Error generating recurring invoice:', error);
+                alert(`Erreur: ${error.message}`);
+            } finally {
+                setIsGenerating(null);
+            }
+        };
 
     const renderCustomerName = (abonnement) => {
         if (abonnement.clients) {
@@ -149,32 +162,41 @@ const Abonnements = () => {
                             <th style={thStyle}>Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        {abonnements.map(abonnement => (
-                            <tr key={abonnement.id}>
-                                <td style={tdStyle}>{abonnement.id.substring(0, 8)}</td>
-                                <td style={tdStyle}>{renderCustomerName(abonnement)}</td>
-                                <td style={tdStyle}>{abonnement.formule_base}</td>
-                                <td style={tdStyle}><span style={statusBadgeStyle(abonnement.status)}>{abonnement.status}</span></td>
-                                <td style={tdStyle}>{abonnement.start_date ? new Date(abonnement.start_date).toLocaleDateString('fr-FR') : 'N/A'}</td>
-                                <td style={tdStyle}>
-                                    {abonnement.status === 'actif' && (
-                                        <button 
-                                            onClick={() => handleGenerateInvoice(abonnement.id)} 
-                                            style={{...detailsButtonStyle, backgroundColor: '#28a745', opacity: isGenerating === abonnement.id ? 0.7 : 1}}
-                                            disabled={isGenerating === abonnement.id}
-                                        >
-                                            {isGenerating === abonnement.id ? 'Génération...' : 'Générer Facture'}
-                                        </button>
-                                    )}
-                                </td>
-                                <td style={tdStyle}>
-                                    <button onClick={() => setSelectedAbonnement(abonnement)} style={detailsButtonStyle}>Voir Détails</button>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+                                        <tbody>
+                                            {abonnements.map(abonnement => {
+                                                const hasPrice = abonnement.monthly_price && abonnement.monthly_price > 0;
+                                                return (
+                                                    <tr key={abonnement.id}>
+                                                        <td style={tdStyle}>{abonnement.id.substring(0, 8)}</td>
+                                                        <td style={tdStyle}>{renderCustomerName(abonnement)}</td>
+                                                        <td style={tdStyle}>
+                                                            {abonnement.formule_base}
+                                                            {hasPrice ? (
+                                                                <span style={{display: 'block', fontSize: '12px', color: '#28a745', fontWeight: 'bold'}}>{abonnement.monthly_price} €/mois</span>
+                                                            ) : (
+                                                                <span style={{display: 'block', fontSize: '12px', color: '#dc3545'}}>⚠️ Prix non défini</span>
+                                                            )}
+                                                        </td>
+                                                        <td style={tdStyle}><span style={statusBadgeStyle(abonnement.status)}>{abonnement.status}</span></td>
+                                                        <td style={tdStyle}>{abonnement.start_date ? new Date(abonnement.start_date + 'T00:00').toLocaleDateString('fr-FR') : 'N/A'}</td>
+                                                        <td style={tdStyle}>
+                                                            {abonnement.status === 'actif' && (
+                                                                <button 
+                                                                    onClick={() => handleGenerateInvoice(abonnement.id)} 
+                                                                    style={{...detailsButtonStyle, backgroundColor: hasPrice ? '#28a745' : '#ffc107', color: hasPrice ? 'white' : 'black', opacity: isGenerating === abonnement.id ? 0.7 : 1}}
+                                                                    disabled={isGenerating === abonnement.id}
+                                                                >
+                                                                    {isGenerating === abonnement.id ? 'Génération...' : (hasPrice ? `Facturer ${abonnement.monthly_price}€` : '⚠️ Définir prix')}
+                                                                </button>
+                                                            )}
+                                                        </td>
+                                                        <td style={tdStyle}>
+                                                            <button onClick={() => setSelectedAbonnement(abonnement)} style={detailsButtonStyle}>Voir Détails</button>
+                                                        </td>
+                                                    </tr>
+                                                )
+                                            })}
+                                        </tbody>                </table>
             </div>
 
             {selectedAbonnement && (
@@ -253,8 +275,20 @@ const AbonnementDetailModal = ({ abonnement, onClose, onUpdate }) => {
     
                         <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px'}}>
                             <div style={formGroupStyle}>
-                                <label style={labelStyle}>Prix Mensuel (€):</label>
-                                <input type="number" name="monthly_price" value={editedAbonnement.monthly_price || ''} onChange={handleFieldChange} style={inputStyle} />
+                                <label style={labelStyle}>
+                                    Prix Mensuel (€) 
+                                    {!editedAbonnement.monthly_price && <span style={{color: '#dc3545'}}> ⚠️ Requis</span>}
+                                </label>
+                                <input 
+                                    type="number" 
+                                    name="monthly_price" 
+                                    value={editedAbonnement.monthly_price || ''} 
+                                    onChange={handleFieldChange} 
+                                    style={{...inputStyle, border: !editedAbonnement.monthly_price ? '2px solid #dc3545' : '1px solid #ddd'}}
+                                    placeholder="ex: 180"
+                                    min="0"
+                                    step="1"
+                                />
                             </div>
                             <div style={formGroupStyle}>
                                 <label style={labelStyle}>Prochaine facturation:</label>
