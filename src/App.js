@@ -106,6 +106,7 @@ const DashboardLayout = () => {
     const [depositPaidInvoicesCount, setDepositPaidInvoicesCount] = useState(0);
     const [waitingForPrepCount, setWaitingForPrepCount] = useState(0);
     const [activeSubscriptionsCount, setActiveSubscriptionsCount] = useState(0);
+    const [subscriptionsNeedAttentionCount, setSubscriptionsNeedAttentionCount] = useState(0);
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
     const appStyle = {
@@ -177,6 +178,17 @@ const DashboardLayout = () => {
         if(subsError) console.error("Error fetching active subscriptions:", subsError);
         setActiveSubscriptionsCount(activeSubsCount);
 
+        // Abonnements nécessitant attention (actifs mais sans prix mensuel)
+        const { data: needsAttentionSubs, error: attentionError } = await supabase
+            .from('abonnements')
+            .select('id, monthly_price')
+            .eq('status', 'actif');
+        if(attentionError) console.error("Error fetching attention subscriptions:", attentionError);
+        const needsAttentionCount = needsAttentionSubs?.filter(sub => 
+            !sub.monthly_price || sub.monthly_price <= 0
+        ).length || 0;
+        setSubscriptionsNeedAttentionCount(needsAttentionCount);
+
     }, []);
 
         useEffect(() => {
@@ -232,6 +244,7 @@ const DashboardLayout = () => {
                                 depositPaidInvoicesCount={depositPaidInvoicesCount}
                                 waitingForPrepCount={waitingForPrepCount}
                                 activeSubscriptionsCount={activeSubscriptionsCount}
+                                subscriptionsNeedAttentionCount={subscriptionsNeedAttentionCount}
                                 isMobile={isMobile}
                             />            <main style={mainContentStyle}>
                 <Routes>

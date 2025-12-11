@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 
-const Sidebar = ({ newCount, inProgressCount, pendingQuotesCount, toPrepareCount, pendingInvoicesCount, depositPaidInvoicesCount, waitingForPrepCount, activeSubscriptionsCount, isMobile }) => {
+const Sidebar = ({ newCount, inProgressCount, pendingQuotesCount, toPrepareCount, pendingInvoicesCount, depositPaidInvoicesCount, waitingForPrepCount, activeSubscriptionsCount, subscriptionsNeedAttentionCount, isMobile }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -29,6 +29,7 @@ const Sidebar = ({ newCount, inProgressCount, pendingQuotesCount, toPrepareCount
   const depositPaidInvoiceBadgeStyle = { ...badgeStyle, backgroundColor: '#20c997' }; // Teal
   const waitingForPrepStyle = { ...badgeStyle, backgroundColor: '#007bff' }; // Strong Blue for new badge
   const activeSubscriptionsBadgeStyle = { ...badgeStyle, backgroundColor: '#6610f2' }; // Indigo
+  const needsAttentionBadgeStyle = { ...badgeStyle, backgroundColor: '#ffc107', color: '#333' }; // Jaune
   const hamburgerBadgeStyle = {
     position: 'absolute',
     top: '5px',
@@ -172,7 +173,14 @@ const Sidebar = ({ newCount, inProgressCount, pendingQuotesCount, toPrepareCount
       ]},
       { to: '/scanner', label: 'Scanner' },
       { to: '/services', label: 'Services' },
-      { to: '/abonnements', label: 'Abonnements', count: activeSubscriptionsCount, style: activeSubscriptionsBadgeStyle },
+      { 
+        to: '/abonnements', 
+        label: 'Abonnements', 
+        count: activeSubscriptionsCount, 
+        style: activeSubscriptionsBadgeStyle,
+        secondCount: subscriptionsNeedAttentionCount,
+        secondStyle: needsAttentionBadgeStyle
+      },
       { to: '/parametres', label: 'Paramètres' },
       { to: '/admin-account', label: 'Compte Administrateur' },
     ];
@@ -192,29 +200,31 @@ const Sidebar = ({ newCount, inProgressCount, pendingQuotesCount, toPrepareCount
               }
               onClick={handleClick}
             >
-              <div style={contentStyle}>
-                <span>{link.label}</span>
-                {link.count > 0 && <span style={link.style}>{link.count}</span>}
-              </div>
-            </NavLink>
-            {link.subLinks && link.subLinks.map(subLink => (
-              <NavLink
-                key={subLink.to}
-                to={subLink.to}
-                style={({ isActive }) => 
-                  mobile 
-                    ? ({ ...mobileLinkStyle, paddingLeft: '40px', fontSize: '16px', color: isActive ? '#d4af37' : 'white' })
-                    : ({ ...desktopLinkStyle, paddingLeft: '40px', fontSize: '14px', color: isActive ? '#d4af37' : '#ccc' })
-                }
-                onClick={handleClick}
-              >
-                <div style={contentStyle}>
-                  <span>{subLink.label}</span>
-                  {subLink.count > 0 && <span style={subLink.style}>{subLink.count}</span>}
-                </div>
-              </NavLink>
-            ))}
-          </React.Fragment>
+                            <div style={contentStyle}>
+                              <span>{link.label}</span>
+                              <div style={{ display: 'flex', gap: '5px' }}>
+                                  {link.count > 0 && <span style={link.style}>{link.count}</span>}
+                                  {link.secondCount > 0 && <span style={link.secondStyle}>⚠️ {link.secondCount}</span>}
+                              </div>
+                            </div>
+                          </NavLink>
+                          {link.subLinks && link.subLinks.map(subLink => (
+                            <NavLink
+                              key={subLink.to}
+                              to={subLink.to}
+                              style={({ isActive }) =>
+                                mobile
+                                  ? ({ ...mobileLinkStyle, paddingLeft: '40px', fontSize: '16px', color: isActive ? '#d4af37' : 'white' })
+                                  : ({ ...desktopLinkStyle, paddingLeft: '40px', fontSize: '14px', color: isActive ? '#d4af37' : '#ccc' })
+                              }
+                              onClick={handleClick}
+                            >
+                              <div style={contentStyle}>
+                                <span>{subLink.label}</span>
+                                {subLink.count > 0 && <span style={subLink.style}>{subLink.count}</span>}
+                              </div>
+                            </NavLink>
+                          ))}          </React.Fragment>
         ))}
       </nav>
     );
@@ -249,7 +259,7 @@ const Sidebar = ({ newCount, inProgressCount, pendingQuotesCount, toPrepareCount
           <h2 style={{ margin: 0, fontSize: '20px' }}>Asiacuisine.re</h2>
           <div style={hamburgerStyle} onClick={() => setIsOpen(true)}>
             ☰
-            {(newCount > 0 || inProgressCount > 0 || pendingQuotesCount > 0 || toPrepareCount > 0 || pendingInvoicesCount > 0 || depositPaidInvoicesCount > 0) && <span style={hamburgerBadgeStyle}></span>}
+            {(newCount > 0 || inProgressCount > 0 || pendingQuotesCount > 0 || toPrepareCount > 0 || pendingInvoicesCount > 0 || depositPaidInvoicesCount > 0 || subscriptionsNeedAttentionCount > 0) && <span style={hamburgerBadgeStyle}></span>}
           </div>
         </header>
         {isOpen && (
