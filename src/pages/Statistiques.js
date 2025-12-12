@@ -1,5 +1,4 @@
-/* eslint-disable no-unused-vars */
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { TrendingUp, TrendingDown, Users, ShoppingCart, DollarSign, Package, Clock, Star } from 'lucide-react';
 import { supabase } from '../supabaseClient';
@@ -28,40 +27,69 @@ const Statistiques = () => {
     const [period, setPeriod] = useState('last30days');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [kpis, setKpis] = useState({});
+    
+    // State for KPIs
+    const [kpis, setKpis] = useState({
+        revenue: '0.00',
+        revenueChange: 0,
+        orders: 0,
+        ordersChange: 0,
+        newClients: 0,
+        clientsChange: 0,
+        avgOrderValue: '0.00',
+    });
+
+    // State for Chart Data
     const [revenueData, setRevenueData] = useState([]);
-    const [orderTypeData, setOrderTypeData] = useState([]);
     const [orderTypeData, setOrderTypeData] = useState([]);
     const [weekdayData, setWeekdayData] = useState([]);
     const [topProducts, setTopProducts] = useState([]);
+
 
     useEffect(() => {
         const fetchKpis = async () => {
             setLoading(true);
             setError(null);
+            
             try {
-                const { data: { session } } = await supabase.auth.getSession();
-                if (!session) throw new Error("Utilisateur non authentifié.");
+                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+                if (sessionError) throw new Error(`Erreur de session: ${sessionError.message}`);
+                if (!session) throw new Error("Utilisateur non authentifié");
 
-                const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/get-kpis?period=${period}`, {
-                    headers: { 'Authorization': `Bearer ${session.access_token}` }
-                });
+                const response = await fetch(
+                    `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/get-kpis?period=${period}`,
+                    {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${session.access_token}`,
+                            'Content-Type': 'application/json',
+                        }
+                    }
+                );
 
                 if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(errorText || `Erreur du serveur (status ${response.status})`);
+                    const contentType = response.headers.get('content-type');
+                    let errorMessage = `Erreur du serveur (status ${response.status})`;
+                    if (contentType && contentType.includes('application/json')) {
+                        const errorData = await response.json();
+                        errorMessage = errorData.details || errorData.error || errorMessage;
+                    } else {
+                        const errorText = await response.text();
+                        errorMessage = errorText || errorMessage;
+                    }
+                    throw new Error(errorMessage);
                 }
 
                 const data = await response.json();
-
+                
                 setKpis({
-                    revenue: data.revenue,
-                    revenueChange: data.revenueChange,
-                    orders: data.orders,
-                    ordersChange: data.ordersChange,
-                    newClients: data.newClients,
-                    clientsChange: data.clientsChange,
-                    avgOrderValue: data.avgOrderValue,
+                    revenue: data.revenue || '0.00',
+                    revenueChange: data.revenueChange || 0,
+                    orders: data.totalOrders || 0,
+                    ordersChange: data.ordersChange || 0,
+                    newClients: data.newClients || 0,
+                    clientsChange: data.clientsChange || 0,
+                    avgOrderValue: data.avgOrderValue || '0.00',
                 });
 
                 const formattedRevenueData = (data.revenueData || []).map(item => ({
@@ -98,8 +126,22 @@ const Statistiques = () => {
                 }));
                 setTopProducts(formattedTopProducts);
 
+
             } catch (err) {
                 setError(err.message);
+                setKpis({ 
+                    revenue: '0.00', 
+                    revenueChange: 0, 
+                    orders: 0, 
+                    ordersChange: 0, 
+                    newClients: 0, 
+                    clientsChange: 0, 
+                    avgOrderValue: '0.00' 
+                });
+                setRevenueData([]);
+                setOrderTypeData([]);
+                setWeekdayData([]);
+                setTopProducts([]);
             } finally {
                 setLoading(false);
             }
@@ -111,38 +153,65 @@ const Statistiques = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
+        {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">Statistiques</h1>
           <p className="text-gray-600">Aperçu complet de la performance de votre activité</p>
         </div>
 
+        {/* Filtres de période */}
         <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex gap-2">
             {['last7days', 'last30days', 'currentMonth', 'currentYear'].map((p) => (
               <button
                 key={p}
                 onClick={() => setPeriod(p)}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${period === p ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  period === p
+                    ? 'bg-amber-500 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
               >
-                {p === 'last7days' && '7 jours'}
-                {p === 'last30days' && '30 jours'}
+                {p === 'last7days' && '7 derniers jours'}
+                {p === 'last30days' && '30 derniers jours'}
                 {p === 'currentMonth' && 'Ce mois'}
                 {p === 'currentYear' && 'Cette année'}
               </button>
             ))}
           </div>
         </div>
-        
+
         {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-6" role="alert">{error}</div>}
 
+        {/* KPIs principaux */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          <StatCard title="Chiffre d'affaires" value={`${kpis.revenue || 0}€`} change={kpis.revenueChange} icon={DollarSign} color="text-green-600" isLoading={loading} />
+          <StatCard title="Chiffre d'affaires" value={`${kpis.revenue || '0.00'}€`} change={kpis.revenueChange} icon={DollarSign} color="text-green-600" isLoading={loading} />
           <StatCard title="Nombre de commandes" value={kpis.orders || 0} change={kpis.ordersChange} icon={ShoppingCart} color="text-blue-600" isLoading={loading} />
           <StatCard title="Nouveaux clients" value={kpis.newClients || 0} change={kpis.clientsChange} icon={Users} color="text-purple-600" isLoading={loading} />
-          <StatCard title="Panier moyen" value={`${kpis.avgOrderValue || 0}€`} change={null} icon={Package} color="text-orange-600" isLoading={loading} />
+          <StatCard title="Panier moyen" value={`${kpis.avgOrderValue || '0.00'}€`} change={null} icon={Package} color="text-orange-600" isLoading={loading} />
         </div>
 
+        {/* Métriques secondaires (static for now) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Taux de complétion</h3>
+            <Clock className="w-5 h-5 text-blue-600" />
+            <div className="text-3xl font-bold text-gray-800">N/A%</div>
+            <p className="text-sm text-gray-600 mt-2">Commandes livrées à temps</p>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Satisfaction client</h3>
+            <Star className="w-5 h-5 text-yellow-500" />
+            <div className="text-3xl font-bold text-gray-800">N/A/5</div>
+            <p className="text-sm text-gray-600 mt-2">Note moyenne sur les avis</p>
+          </div>
+        </div>
+
+
+        {/* Graphiques */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          {/* Évolution du CA */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Évolution du chiffre d'affaires</h3>
             <ResponsiveContainer width="100%" height={300}>
@@ -159,6 +228,7 @@ const Statistiques = () => {
             </ResponsiveContainer>
           </div>
 
+          {/* Répartition par type */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Répartition par type de demande</h3>
             <ResponsiveContainer width="100%" height={300}>
@@ -175,6 +245,7 @@ const Statistiques = () => {
           </div>
         </div>
         
+        {/* Performance par jour */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Performance par jour de la semaine</h3>
           <ResponsiveContainer width="100%" height={300}>
@@ -193,6 +264,7 @@ const Statistiques = () => {
           </ResponsiveContainer>
         </div>
 
+        {/* Top produits/services */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Top produits/services</h3>
           <div className="overflow-x-auto">
