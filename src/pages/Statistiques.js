@@ -1,21 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { TrendingUp, TrendingDown, Users, ShoppingCart, DollarSign, Package, Clock, Star } from 'lucide-react';
+import { TrendingUp, TrendingDown, Users, ShoppingCart, DollarSign, Package, Clock, Star, AlertCircle } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
 const StatCard = ({ title, value, change, icon: Icon, color, isLoading }) => (
-  <div className="bg-white rounded-lg shadow-md p-6">
+  <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
     <div className="flex items-center justify-between mb-2">
       <span className="text-gray-600 text-sm font-medium">{title}</span>
       <Icon className={`w-5 h-5 ${color}`} />
     </div>
-    {isLoading ? <div className="h-12 w-3/4 bg-gray-200 animate-pulse rounded-md mt-2"></div> : (
+    {isLoading ? (
+      <div className="space-y-2">
+        <div className="h-8 w-3/4 bg-gray-200 animate-pulse rounded-md"></div>
+        <div className="h-4 w-1/2 bg-gray-200 animate-pulse rounded-md"></div>
+      </div>
+    ) : (
       <>
         <div className="text-3xl font-bold text-gray-800 mb-1">{value}</div>
-        {change && (
-          <div className={`flex items-center text-sm ${change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {change >= 0 ? <TrendingUp className="w-4 h-4 mr-1" /> : <TrendingDown className="w-4 h-4 mr-1" />}
-            <span>{Math.abs(change)}% vs période précédente</span>
+        {change !== null && change !== undefined && (
+          <div className={`flex items-center text-sm ${parseFloat(change) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {parseFloat(change) >= 0 ? <TrendingUp className="w-4 h-4 mr-1" /> : <TrendingDown className="w-4 h-4 mr-1" />}
+            <span>{Math.abs(parseFloat(change)).toFixed(1)}% vs période précédente</span>
           </div>
         )}
       </>
@@ -28,7 +33,6 @@ const Statistiques = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     
-    // State for KPIs
     const [kpis, setKpis] = useState({
         revenue: '0.00',
         revenueChange: 0,
@@ -39,12 +43,10 @@ const Statistiques = () => {
         avgOrderValue: '0.00',
     });
 
-    // State for Chart Data
     const [revenueData, setRevenueData] = useState([]);
     const [orderTypeData, setOrderTypeData] = useState([]);
     const [weekdayData, setWeekdayData] = useState([]);
     const [topProducts, setTopProducts] = useState([]);
-
 
     useEffect(() => {
         const fetchKpis = async () => {
@@ -92,12 +94,20 @@ const Statistiques = () => {
                     avgOrderValue: data.avgOrderValue || '0.00',
                 });
 
+                // Format revenue evolution data
                 const formattedRevenueData = (data.revenueData || []).map(item => ({
                     name: new Date(item.day).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
                     ca: parseFloat(item.revenue),
                 }));
                 setRevenueData(formattedRevenueData);
                 
+                // Format order type data
+                const typeLabels = {
+                    'COMMANDE_MENU': 'Menus',
+                    'COMMANDE_SPECIALE': 'Commandes Spéciales',
+                    'RESERVATION_SERVICE': 'Réservations',
+                    'SOUSCRIPTION_ABONNEMENT': 'Abonnements'
+                };
                 const colorMapping = {
                     'COMMANDE_MENU': '#3b82f6',
                     'COMMANDE_SPECIALE': '#10b981',
@@ -105,12 +115,13 @@ const Statistiques = () => {
                     'SOUSCRIPTION_ABONNEMENT': '#8b5cf6'
                 };
                 const formattedOrderTypeData = (data.orderTypeData || []).map(item => ({
-                    name: item.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                    name: typeLabels[item.type] || item.type,
                     value: Number(item.count),
                     color: colorMapping[item.type] || '#6b7280'
                 }));
                 setOrderTypeData(formattedOrderTypeData);
 
+                // Format weekday data
                 const formattedWeekdayData = (data.weekdayData || []).map(item => ({
                     day: item.day_name,
                     commandes: item.total_orders,
@@ -118,6 +129,7 @@ const Statistiques = () => {
                 }));
                 setWeekdayData(formattedWeekdayData);
 
+                // Format top products
                 const formattedTopProducts = (data.topProductsData || []).map(item => ({
                     name: item.item_name,
                     orders: item.total_orders,
@@ -126,8 +138,8 @@ const Statistiques = () => {
                 }));
                 setTopProducts(formattedTopProducts);
 
-
             } catch (err) {
+                console.error('Error fetching KPIs:', err);
                 setError(err.message);
                 setKpis({ 
                     revenue: '0.00', 
@@ -150,157 +162,247 @@ const Statistiques = () => {
         fetchKpis();
     }, [period]);
 
-  return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Statistiques</h1>
-          <p className="text-gray-600">Aperçu complet de la performance de votre activité</p>
-        </div>
-
-        {/* Filtres de période */}
-        <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-          <div className="flex gap-2">
-            {['last7days', 'last30days', 'currentMonth', 'currentYear'].map((p) => (
-              <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  period === p
-                    ? 'bg-amber-500 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {p === 'last7days' && '7 derniers jours'}
-                {p === 'last30days' && '30 derniers jours'}
-                {p === 'currentMonth' && 'Ce mois'}
-                {p === 'currentYear' && 'Cette année'}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-6" role="alert">{error}</div>}
-
-        {/* KPIs principaux */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          <StatCard title="Chiffre d'affaires" value={`${kpis.revenue || '0.00'}€`} change={kpis.revenueChange} icon={DollarSign} color="text-green-600" isLoading={loading} />
-          <StatCard title="Nombre de commandes" value={kpis.orders || 0} change={kpis.ordersChange} icon={ShoppingCart} color="text-blue-600" isLoading={loading} />
-          <StatCard title="Nouveaux clients" value={kpis.newClients || 0} change={kpis.clientsChange} icon={Users} color="text-purple-600" isLoading={loading} />
-          <StatCard title="Panier moyen" value={`${kpis.avgOrderValue || '0.00'}€`} change={null} icon={Package} color="text-orange-600" isLoading={loading} />
-        </div>
-
-        {/* Métriques secondaires (static for now) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">Taux de complétion</h3>
-              <Clock className="w-5 h-5 text-blue-600" />
-            </div>
-            <div className="text-3xl font-bold text-gray-800">N/A%</div>
-            <p className="text-sm text-gray-600 mt-2">Commandes livrées à temps</p>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">Satisfaction client</h3>
-              <Star className="w-5 h-5 text-yellow-500" />
-            </div>
-            <div className="text-3xl font-bold text-gray-800">N/A/5</div>
-            <p className="text-sm text-gray-600 mt-2">Note moyenne sur les avis</p>
-          </div>
-        </div>
-
-
-        {/* Graphiques */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Évolution du CA */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Évolution du chiffre d'affaires</h3>
-            <ResponsiveContainer width="100%" height={300}>
-                {loading ? <p>Chargement...</p> : 
-                    <LineChart data={revenueData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" />
-                        <YAxis />
-                        <Tooltip formatter={(value) => `${value}€`} />
-                        <Legend />
-                        <Line type="monotone" dataKey="ca" stroke="#3b82f6" strokeWidth={2} name="CA (€)" />
-                    </LineChart>
-                }
-            </ResponsiveContainer>
-          </div>
-
-          {/* Répartition par type */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Répartition par type de demande</h3>
-            <ResponsiveContainer width="100%" height={300}>
-                {loading ? <p>Chargement...</p> : 
-                    <PieChart>
-                        <Pie data={orderTypeData} cx="50%" cy="50%" labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} outerRadius={100} fill="#8884d8" dataKey="value">
-                        {orderTypeData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
-                        </Pie>
-                        <Tooltip formatter={(value, name) => [value, name]}/>
-                        <Legend />
-                    </PieChart>
-                }
-            </ResponsiveContainer>
-          </div>
-        </div>
-        
-        {/* Performance par jour */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Performance par jour de la semaine</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            {loading ? <p>Chargement...</p> :
-                <BarChart data={weekdayData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="day" />
-                  <YAxis yAxisId="left" />
-                  <YAxis yAxisId="right" orientation="right" />
-                  <Tooltip />
-                  <Legend />
-                  <Bar yAxisId="left" dataKey="commandes" fill="#3b82f6" name="Commandes" />
-                  <Bar yAxisId="right" dataKey="ca" fill="#10b981" name="CA (€)" />
-                </BarChart>
-            }
-          </ResponsiveContainer>
-        </div>
-
-        {/* Top produits/services */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Top produits/services</h3>
-          <div className="overflow-x-auto">
-            {loading ? <p>Chargement...</p> :
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-3 px-4 text-gray-700 font-semibold">Produit/Service</th>
-                      <th className="text-right py-3 px-4 text-gray-700 font-semibold">Commandes</th>
-                      <th className="text-right py-3 px-4 text-gray-700 font-semibold">CA généré</th>
-                      <th className="text-right py-3 px-4 text-gray-700 font-semibold">CA moyen</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {topProducts.map((product, idx) => (
-                      <tr key={idx} className="border-b hover:bg-gray-50">
-                        <td className="py-3 px-4 text-gray-800">{product.name}</td>
-                        <td className="text-right py-3 px-4 text-gray-600">{product.orders}</td>
-                        <td className="text-right py-3 px-4 text-gray-800 font-semibold">{product.revenue.toFixed(2)}€</td>
-                        <td className="text-right py-3 px-4 text-gray-600">
-                          {product.avgRevenue.toFixed(2)}€
-                        </td>
-                      </tr>
+    const CustomTooltip = ({ active, payload, label }) => {
+        if (active && payload && payload.length) {
+            return (
+                <div className="bg-white p-3 border border-gray-300 rounded-lg shadow-lg">
+                    <p className="font-semibold text-gray-800">{label}</p>
+                    {payload.map((entry, index) => (
+                        <p key={index} style={{ color: entry.color }}>
+                            {entry.name}: {typeof entry.value === 'number' ? entry.value.toFixed(2) : entry.value}
+                            {entry.name.includes('CA') && '€'}
+                        </p>
                     ))}
-                  </tbody>
-                </table>
-            }
-          </div>
+                </div>
+            );
+        }
+        return null;
+    };
+
+    return (
+        <div className="min-h-screen bg-gray-50 p-6">
+            <div className="max-w-7xl mx-auto">
+                {/* Header */}
+                <div className="mb-8">
+                    <h1 className="text-3xl font-bold text-gray-800 mb-2">Statistiques</h1>
+                    <p className="text-gray-600">Aperçu complet de la performance de votre activité</p>
+                </div>
+
+                {/* Filtres de période */}
+                <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+                    <div className="flex flex-wrap gap-2">
+                        {[
+                            { value: 'last7days', label: '7 derniers jours' },
+                            { value: 'last30days', label: '30 derniers jours' },
+                            { value: 'currentMonth', label: 'Ce mois' },
+                            { value: 'currentYear', label: 'Cette année' }
+                        ].map((p) => (
+                            <button
+                                key={p.value}
+                                onClick={() => setPeriod(p.value)}
+                                disabled={loading}
+                                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                                    period === p.value
+                                        ? 'bg-amber-500 text-white shadow-md'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            >
+                                {p.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Error message */}
+                {error && (
+                    <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-lg flex items-start">
+                        <AlertCircle className="w-5 h-5 text-red-500 mr-3 mt-0.5 flex-shrink-0" />
+                        <div>
+                            <h3 className="text-red-800 font-semibold">Erreur de chargement</h3>
+                            <p className="text-red-700 text-sm mt-1">{error}</p>
+                        </div>
+                    </div>
+                )}
+
+                {/* KPIs principaux */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                    <StatCard 
+                        title="Chiffre d'affaires" 
+                        value={`${parseFloat(kpis.revenue).toFixed(2)}€`}
+                        change={kpis.revenueChange} 
+                        icon={DollarSign} 
+                        color="text-green-600" 
+                        isLoading={loading} 
+                    />
+                    <StatCard 
+                        title="Nombre de commandes" 
+                        value={kpis.orders} 
+                        change={kpis.ordersChange} 
+                        icon={ShoppingCart} 
+                        color="text-blue-600" 
+                        isLoading={loading} 
+                    />
+                    <StatCard 
+                        title="Nouveaux clients" 
+                        value={kpis.newClients} 
+                        change={kpis.clientsChange} 
+                        icon={Users} 
+                        color="text-purple-600" 
+                        isLoading={loading} 
+                    />
+                    <StatCard 
+                        title="Panier moyen" 
+                        value={`${parseFloat(kpis.avgOrderValue).toFixed(2)}€`}
+                        change={null} 
+                        icon={Package} 
+                        color="text-orange-600" 
+                        isLoading={loading} 
+                    />
+                </div>
+
+                {/* Graphiques */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    {/* Évolution du CA */}
+                    <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Évolution du chiffre d'affaires</h3>
+                        {loading ? (
+                            <div className="h-[300px] flex items-center justify-center">
+                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
+                            </div>
+                        ) : revenueData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height={300}>
+                                <LineChart data={revenueData}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                    <XAxis dataKey="name" stroke="#6b7280" />
+                                    <YAxis stroke="#6b7280" />
+                                    <Tooltip content={<CustomTooltip />} />
+                                    <Legend />
+                                    <Line 
+                                        type="monotone" 
+                                        dataKey="ca" 
+                                        stroke="#3b82f6" 
+                                        strokeWidth={2} 
+                                        name="CA (€)"
+                                        dot={{ fill: '#3b82f6', r: 4 }}
+                                        activeDot={{ r: 6 }}
+                                    />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="h-[300px] flex items-center justify-center text-gray-500">
+                                Aucune donnée disponible pour cette période
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Répartition par type */}
+                    <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Répartition par type de demande</h3>
+                        {loading ? (
+                            <div className="h-[300px] flex items-center justify-center">
+                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
+                            </div>
+                        ) : orderTypeData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height={300}>
+                                <PieChart>
+                                    <Pie 
+                                        data={orderTypeData} 
+                                        cx="50%" 
+                                        cy="50%" 
+                                        labelLine={false} 
+                                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                        outerRadius={100} 
+                                        fill="#8884d8" 
+                                        dataKey="value"
+                                    >
+                                        {orderTypeData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={entry.color} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip />
+                                    <Legend />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="h-[300px] flex items-center justify-center text-gray-500">
+                                Aucune donnée disponible pour cette période
+                            </div>
+                        )}
+                    </div>
+                </div>
+                
+                {/* Performance par jour */}
+                <div className="bg-white rounded-lg shadow-md p-6 mb-6 hover:shadow-lg transition-shadow">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Performance par jour de la semaine</h3>
+                    {loading ? (
+                        <div className="h-[300px] flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
+                        </div>
+                    ) : weekdayData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={300}>
+                            <BarChart data={weekdayData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                <XAxis dataKey="day" stroke="#6b7280" />
+                                <YAxis yAxisId="left" stroke="#6b7280" />
+                                <YAxis yAxisId="right" orientation="right" stroke="#6b7280" />
+                                <Tooltip content={<CustomTooltip />} />
+                                <Legend />
+                                <Bar yAxisId="left" dataKey="commandes" fill="#3b82f6" name="Commandes" radius={[4, 4, 0, 0]} />
+                                <Bar yAxisId="right" dataKey="ca" fill="#10b981" name="CA (€)" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    ) : (
+                        <div className="h-[300px] flex items-center justify-center text-gray-500">
+                            Aucune donnée disponible pour cette période
+                        </div>
+                    )}
+                </div>
+
+                {/* Top produits/services */}
+                <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Top produits/services</h3>
+                    {loading ? (
+                        <div className="space-y-3">
+                            {[1, 2, 3, 4, 5].map(i => (
+                                <div key={i} className="h-12 bg-gray-200 animate-pulse rounded-md"></div>
+                            ))}
+                        </div>
+                    ) : topProducts.length > 0 ? (
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="border-b-2 border-gray-200">
+                                        <th className="text-left py-3 px-4 text-gray-700 font-semibold">Produit/Service</th>
+                                        <th className="text-right py-3 px-4 text-gray-700 font-semibold">Commandes</th>
+                                        <th className="text-right py-3 px-4 text-gray-700 font-semibold">CA généré</th>
+                                        <th className="text-right py-3 px-4 text-gray-700 font-semibold">CA moyen</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {topProducts.map((product, idx) => (
+                                        <tr key={idx} className="border-b border-gray-100 hover:bg-amber-50 transition-colors">
+                                            <td className="py-3 px-4 text-gray-800 font-medium">{product.name}</td>
+                                            <td className="text-right py-3 px-4 text-gray-600">{product.orders}</td>
+                                            <td className="text-right py-3 px-4 text-gray-800 font-semibold">
+                                                {product.revenue.toFixed(2)}€
+                                            </td>
+                                            <td className="text-right py-3 px-4 text-gray-600">
+                                                {product.avgRevenue.toFixed(2)}€
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                        <div className="py-8 text-center text-gray-500">
+                            Aucune donnée disponible pour cette période
+                        </div>
+                    )}
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 };
 
 export default Statistiques;
