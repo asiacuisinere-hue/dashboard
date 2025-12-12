@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { TrendingUp, TrendingDown, Users, ShoppingCart, DollarSign, Package, Clock, Star, AlertCircle } from 'lucide-react';
+import { TrendingUp, TrendingDown, Users, ShoppingCart, DollarSign, Package, AlertCircle } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
 const StatCard = ({ title, value, change, icon: Icon, color, isLoading }) => (
@@ -54,9 +54,20 @@ const Statistiques = () => {
             setError(null);
             
             try {
+                console.log('[Statistiques] Fetching KPIs for period:', period);
+                
+                // Get the current session
                 const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-                if (sessionError) throw new Error(`Erreur de session: ${sessionError.message}`);
-                if (!session) throw new Error("Utilisateur non authentifié");
+                
+                if (sessionError) {
+                    throw new Error(`Erreur de session: ${sessionError.message}`);
+                }
+                
+                if (!session) {
+                    throw new Error("Utilisateur non authentifié");
+                }
+
+                console.log('[Statistiques] Session found, making request...');
 
                 const response = await fetch(
                     `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/get-kpis?period=${period}`,
@@ -69,20 +80,27 @@ const Statistiques = () => {
                     }
                 );
 
+                console.log('[Statistiques] Response status:', response.status);
+
                 if (!response.ok) {
                     const contentType = response.headers.get('content-type');
                     let errorMessage = `Erreur du serveur (status ${response.status})`;
+                    
                     if (contentType && contentType.includes('application/json')) {
                         const errorData = await response.json();
+                        console.error('[Statistiques] Error data:', errorData);
                         errorMessage = errorData.details || errorData.error || errorMessage;
                     } else {
                         const errorText = await response.text();
+                        console.error('[Statistiques] Error text:', errorText);
                         errorMessage = errorText || errorMessage;
                     }
+                    
                     throw new Error(errorMessage);
                 }
 
                 const data = await response.json();
+                console.log('[Statistiques] KPIs data received:', data);
                 
                 setKpis({
                     revenue: data.revenue || '0.00',
@@ -139,7 +157,7 @@ const Statistiques = () => {
                 setTopProducts(formattedTopProducts);
 
             } catch (err) {
-                console.error('Error fetching KPIs:', err);
+                console.error('[Statistiques] Error:', err);
                 setError(err.message);
                 setKpis({ 
                     revenue: '0.00', 
