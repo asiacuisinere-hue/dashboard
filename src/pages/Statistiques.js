@@ -31,6 +31,7 @@ const Statistiques = () => {
     const [kpis, setKpis] = useState({});
     const [revenueData, setRevenueData] = useState([]);
     const [orderTypeData, setOrderTypeData] = useState([]);
+    const [weekdayData, setWeekdayData] = useState([]);
 
     useEffect(() => {
         const fetchKpis = async () => {
@@ -79,6 +80,13 @@ const Statistiques = () => {
                     color: colorMapping[item.type] || '#6b7280'
                 }));
                 setOrderTypeData(formattedOrderTypeData);
+
+                const formattedWeekdayData = (data.weekdayData || []).map(item => ({
+                    day: item.day_name,
+                    commandes: item.total_orders,
+                    ca: parseFloat(item.total_revenue)
+                }));
+                setWeekdayData(formattedWeekdayData);
 
             } catch (err) {
                 setError(err.message);
@@ -155,6 +163,24 @@ const Statistiques = () => {
                 }
             </ResponsiveContainer>
           </div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Performance par jour de la semaine</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            {loading ? <p>Chargement...</p> :
+                <BarChart data={weekdayData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="day" />
+                  <YAxis yAxisId="left" />
+                  <YAxis yAxisId="right" orientation="right" />
+                  <Tooltip />
+                  <Legend />
+                  <Bar yAxisId="left" dataKey="commandes" fill="#3b82f6" name="Commandes" />
+                  <Bar yAxisId="right" dataKey="ca" fill="#10b981" name="CA (€)" />
+                </BarChart>
+            }
+          </ResponsiveContainer>
         </div>
       </div>
     </div>
