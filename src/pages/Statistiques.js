@@ -44,6 +44,7 @@ const Statistiques = () => {
     });
 
     const [revenueData, setRevenueData] = useState([]);
+    const [orderTypeData, setOrderTypeData] = useState([]);
     const [weekdayData, setWeekdayData] = useState([]);
     const [topProducts, setTopProducts] = useState([]);
 
