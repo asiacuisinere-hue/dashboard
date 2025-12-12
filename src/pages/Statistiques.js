@@ -31,7 +31,9 @@ const Statistiques = () => {
     const [kpis, setKpis] = useState({});
     const [revenueData, setRevenueData] = useState([]);
     const [orderTypeData, setOrderTypeData] = useState([]);
+    const [orderTypeData, setOrderTypeData] = useState([]);
     const [weekdayData, setWeekdayData] = useState([]);
+    const [topProducts, setTopProducts] = useState([]);
 
     useEffect(() => {
         const fetchKpis = async () => {
@@ -87,6 +89,14 @@ const Statistiques = () => {
                     ca: parseFloat(item.total_revenue)
                 }));
                 setWeekdayData(formattedWeekdayData);
+
+                const formattedTopProducts = (data.topProductsData || []).map(item => ({
+                    name: item.item_name,
+                    orders: item.total_orders,
+                    revenue: parseFloat(item.total_revenue),
+                    avgRevenue: parseFloat(item.average_revenue)
+                }));
+                setTopProducts(formattedTopProducts);
 
             } catch (err) {
                 setError(err.message);
@@ -181,6 +191,36 @@ const Statistiques = () => {
                 </BarChart>
             }
           </ResponsiveContainer>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Top produits/services</h3>
+          <div className="overflow-x-auto">
+            {loading ? <p>Chargement...</p> :
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-4 text-gray-700 font-semibold">Produit/Service</th>
+                      <th className="text-right py-3 px-4 text-gray-700 font-semibold">Commandes</th>
+                      <th className="text-right py-3 px-4 text-gray-700 font-semibold">CA généré</th>
+                      <th className="text-right py-3 px-4 text-gray-700 font-semibold">CA moyen</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {topProducts.map((product, idx) => (
+                      <tr key={idx} className="border-b hover:bg-gray-50">
+                        <td className="py-3 px-4 text-gray-800">{product.name}</td>
+                        <td className="text-right py-3 px-4 text-gray-600">{product.orders}</td>
+                        <td className="text-right py-3 px-4 text-gray-800 font-semibold">{product.revenue.toFixed(2)}€</td>
+                        <td className="text-right py-3 px-4 text-gray-600">
+                          {product.avgRevenue.toFixed(2)}€
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+            }
+          </div>
         </div>
       </div>
     </div>
