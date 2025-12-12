@@ -194,15 +194,19 @@ const Statistiques = () => {
         {/* Métriques secondaires (static for now) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Taux de complétion</h3>
-            <Clock className="w-5 h-5 text-blue-600" />
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">Taux de complétion</h3>
+              <Clock className="w-5 h-5 text-blue-600" />
+            </div>
             <div className="text-3xl font-bold text-gray-800">N/A%</div>
             <p className="text-sm text-gray-600 mt-2">Commandes livrées à temps</p>
           </div>
           
           <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Satisfaction client</h3>
-            <Star className="w-5 h-5 text-yellow-500" />
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">Satisfaction client</h3>
+              <Star className="w-5 h-5 text-yellow-500" />
+            </div>
             <div className="text-3xl font-bold text-gray-800">N/A/5</div>
             <p className="text-sm text-gray-600 mt-2">Note moyenne sur les avis</p>
           </div>
