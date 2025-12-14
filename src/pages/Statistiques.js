@@ -61,7 +61,7 @@ const Statistiques = () => {
             try {
                 const { data: { session }, error: sessionError } = await supabase.auth.getSession();
                 if (sessionError) throw new Error(`Erreur de session: ${sessionError.message}`);
-                if (!session) throw new Error("Utilisateur non authentifié");
+                if (!session) throw new Error("Utilisateur non authentifié.");
 
                 const response = await fetch(
                     `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/get-kpis?period=${period}`,
@@ -247,7 +247,7 @@ const Statistiques = () => {
                                     <Line type="monotone" dataKey="ca" stroke="#3b82f6" strokeWidth={2} name="CA (€)" dot={{ fill: '#3b82f6', r: 4 }} activeDot={{ r: 6 }} />
                                 </LineChart>
                             </ResponsiveContainer>
-                        ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnée disponible</div>}
+                        ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnée disponible pour cette période</div>}
                     </div>
 
                     <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
@@ -262,7 +262,7 @@ const Statistiques = () => {
                                     <Legend />
                                 </PieChart>
                             </ResponsiveContainer>
-                        ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnée disponible</div>}
+                        ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnée disponible pour cette période</div>}
                     </div>
                     
                     <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
@@ -277,26 +277,28 @@ const Statistiques = () => {
                                     <Legend />
                                 </PieChart>
                             </ResponsiveContainer>
-                        ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnée de dépense</div>}
+                        ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnée de dépense pour cette période</div>}
                     </div>
                 </div>
                 
-                <div className="bg-white rounded-lg shadow-md p-6 mb-6 hover:shadow-lg transition-shadow">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Performance par jour de la semaine</h3>
-                    {loading ? <div className="h-[300px] flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div></div> : weekdayData.length > 0 ? (
-                        <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={weekdayData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                <XAxis dataKey="day" stroke="#6b7280" />
-                                <YAxis yAxisId="left" stroke="#6b7280" />
-                                <YAxis yAxisId="right" orientation="right" stroke="#6b7280" />
-                                <Tooltip content={<CustomTooltip />} />
-                                <Legend />
-                                <Bar yAxisId="left" dataKey="commandes" fill="#3b82f6" name="Commandes" radius={[4, 4, 0, 0]} />
-                                <Bar yAxisId="right" dataKey="ca" fill="#10b981" name="CA (€)" radius={[4, 4, 0, 0]} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnée disponible</div>}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Performance par jour de la semaine</h3>
+                        {loading ? <div className="h-[300px] flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div></div> : weekdayData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height={300}>
+                                <BarChart data={weekdayData}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                    <XAxis dataKey="day" stroke="#6b7280" />
+                                    <YAxis yAxisId="left" stroke="#6b7280" />
+                                    <YAxis yAxisId="right" orientation="right" stroke="#6b7280" />
+                                    <Tooltip content={<CustomTooltip />} />
+                                    <Legend />
+                                    <Bar yAxisId="left" dataKey="commandes" fill="#3b82f6" name="Commandes" radius={[4, 4, 0, 0]} />
+                                    <Bar yAxisId="right" dataKey="ca" fill="#10b981" name="CA (€)" radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnée disponible pour cette période</div>}
+                    </div>
                 </div>
 
                 <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
@@ -324,7 +326,7 @@ const Statistiques = () => {
                                 </tbody>
                             </table>
                         </div>
-                    ) : <div className="py-8 text-center text-gray-500">Aucune donnée disponible</div>}
+                    ) : <div className="py-8 text-center text-gray-500">Aucune donnée disponible pour cette période</div>}
                 </div>
             </div>
         </div>
