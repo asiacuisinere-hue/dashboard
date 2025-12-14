@@ -17,7 +17,8 @@ import Abonnements from './pages/Abonnements';
 import AdminAccountSettings from './pages/AdminAccountSettings';
 import APreparer from './pages/APreparer';
 import Validation from './pages/Validation';
-import Statistiques from './pages/Statistiques'; // AJOUT DE L'IMPORT
+import Statistiques from './pages/Statistiques';
+import Depenses from './pages/Depenses'; // AJOUT DE L'IMPORT
 
 // --- Composants ---
 
@@ -251,7 +252,8 @@ const DashboardLayout = () => {
                     <Route path="/calendrier" element={<CalendarSettings />} />
                     <Route path="/abonnements" element={<Abonnements />} />
                     <Route path="/admin-account" element={<AdminAccountSettings />} />
-                    <Route path="/statistiques" element={<Statistiques />} /> {/* AJOUT DE LA ROUTE */}
+                    <Route path="/statistiques" element={<Statistiques />} />
+                    <Route path="/depenses" element={<Depenses />} /> {/* AJOUT DE LA ROUTE DÉPENSES */}
                 </Routes>
             </main>
         </div>
