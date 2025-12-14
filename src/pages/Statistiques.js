@@ -222,9 +222,8 @@ const Statistiques = () => {
                                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                                     period === p.value
                                         ? 'bg-amber-500 text-white shadow-md'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            >
+                                        : 'bg-white text-amber-500 border border-amber-500 hover:bg-amber-50'
+                                } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}                            >
                                 {p.label}
                             </button>
                         ))}
