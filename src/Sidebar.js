@@ -168,30 +168,30 @@ const Sidebar = ({ newCount, inProgressCount, pendingQuotesCount, toPrepareCount
     const groups = [
         {
             title: 'PILOTAGE',
-            links: [
-                { to: '/statistiques', label: 'Statistiques' },
-                { 
-                    to: '/abonnements', 
-                    label: 'Abonnements', 
-                    count: activeSubscriptionsCount, 
-                    style: activeSubscriptionsBadgeStyle,
-                    secondCount: subscriptionsNeedAttentionCount,
-                    secondStyle: needsAttentionBadgeStyle
-                },
-            ]
-        },
-        {
-            title: 'GESTION',
-            links: [
-                { to: '/', label: 'Nouvelles Demandes', count: newCount, style: newBadgeStyle },
-                { to: '/demandes-en-cours', label: 'Demandes en Cours', count: inProgressCount, style: inProgressBadgeStyle },
-                { to: '/a-preparer', label: 'À Préparer', count: toPrepareCount, style: toPrepareBadgeStyle },
-                { to: '/devis', label: 'Devis', count: pendingQuotesCount, style: pendingQuotesBadgeStyle },
-                { 
-                    to: '/factures', 
-                    label: 'Factures', 
-                    subLinks: [
-                        { to: '/factures?status=pending', label: 'En attente', count: pendingInvoicesCount, style: pendingInvoiceBadgeStyle },
+                        links: [
+                            { to: '/statistiques', label: 'Statistiques' },
+                            { to: '/depenses', label: 'Dépenses' }, // Moved Expenses link
+                            { 
+                                to: '/abonnements', 
+                                label: 'Abonnements', 
+                                count: activeSubscriptionsCount, 
+                                style: activeSubscriptionsBadgeStyle,
+                                secondCount: subscriptionsNeedAttentionCount,
+                                secondStyle: needsAttentionBadgeStyle
+                            },
+                        ]
+                    },
+                    {
+                        title: 'GESTION',
+                        links: [
+                            { to: '/', label: 'Nouvelles Demandes', count: newCount, style: newBadgeStyle },
+                            { to: '/demandes-en-cours', label: 'Demandes en Cours', count: inProgressCount, style: inProgressBadgeStyle },
+                            { to: '/a-preparer', label: 'À Préparer', count: toPrepareCount, style: toPrepareBadgeStyle },
+                            { to: '/devis', label: 'Devis', count: pendingQuotesCount, style: pendingQuotesBadgeStyle },
+                            { 
+                                to: '/factures', 
+                                label: 'Factures', 
+                                subLinks: [                        { to: '/factures?status=pending', label: 'En attente', count: pendingInvoicesCount, style: pendingInvoiceBadgeStyle },
                         { to: '/factures?status=deposit_paid', label: 'Acompte versé', count: depositPaidInvoicesCount, style: depositPaidInvoiceBadgeStyle },
                         { to: '/factures?status=paid&prep=true', label: 'Payées (Prêtes)', count: waitingForPrepCount, style: waitingForPrepStyle }
                     ]
