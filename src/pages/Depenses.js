@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
-import { PlusCircle, Trash2, Edit, AlertCircle, Loader2 } from 'lucide-react';
+import { PlusCircle, Trash2, AlertCircle, Loader2 } from 'lucide-react';
 
 const Depenses = () => {
     const [expenses, setExpenses] = useState([]);
@@ -24,7 +24,7 @@ const Depenses = () => {
         'Matières Premières', 'Déplacement', 'Fournitures', 'Salaires', 'Marketing', 'Autre', 'Abonnement'
     ];
 
-    const fetchExpenses = async () => {
+    const fetchExpenses = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
@@ -56,11 +56,11 @@ const Depenses = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [filterCategory, filterStartDate, filterEndDate]); // Dependencies for useCallback
 
     useEffect(() => {
         fetchExpenses();
-    }, [filterCategory, filterStartDate, filterEndDate]);
+    }, [fetchExpenses]); // Dependency for useEffect
 
     const handleAddExpense = async (e) => {
         e.preventDefault();
