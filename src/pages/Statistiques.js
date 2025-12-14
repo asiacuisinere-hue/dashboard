@@ -105,6 +105,10 @@ const Statistiques = () => {
                 setKpis({
                     revenue: data.revenue || '0.00',
                     revenueChange: data.revenueChange || 0,
+                    totalExpenses: data.totalExpenses || '0.00',
+                    expensesChange: data.expensesChange || 0,
+                    totalGrossMargin: data.totalGrossMargin || '0.00',
+                    grossMarginChange: data.grossMarginChange || 0,
                     orders: data.totalOrders || 0,
                     ordersChange: data.ordersChange || 0,
                     newClients: data.newClients || 0,
@@ -241,41 +245,23 @@ const Statistiques = () => {
                     </div>
                 )}
 
-                {/* KPIs principaux */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                    <StatCard 
-                        title="Chiffre d'affaires" 
-                        value={`${parseFloat(kpis.revenue).toFixed(2)}€`}
-                        change={kpis.revenueChange} 
-                        icon={DollarSign} 
-                        color="text-green-600" 
-                        isLoading={loading} 
-                    />
-                    <StatCard 
-                        title="Nombre de commandes" 
-                        value={kpis.orders} 
-                        change={kpis.ordersChange} 
-                        icon={ShoppingCart} 
-                        color="text-blue-600" 
-                        isLoading={loading} 
-                    />
-                    <StatCard 
-                        title="Nouveaux clients" 
-                        value={kpis.newClients} 
-                        change={kpis.clientsChange} 
-                        icon={Users} 
-                        color="text-purple-600" 
-                        isLoading={loading} 
-                    />
-                    <StatCard 
-                        title="Panier moyen" 
-                        value={`${parseFloat(kpis.avgOrderValue).toFixed(2)}€`}
-                        change={null} 
-                        icon={Package} 
-                        color="text-orange-600" 
-                        isLoading={loading} 
-                    />
-                </div>
+                        {/* KPIs principaux */}
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+
+                          <StatCard title="Chiffre d'affaires" value={`${parseFloat(kpis.revenue).toFixed(2)}€`} change={kpis.revenueChange} icon={DollarSign} color="text-green-600" isLoading={loading} />
+
+                          <StatCard title="Total Dépenses" value={`${parseFloat(kpis.totalExpenses).toFixed(2)}€`} change={kpis.expensesChange} icon={Package} color="text-red-600" isLoading={loading} />
+
+                          <StatCard title="Marge Brute" value={`${parseFloat(kpis.totalGrossMargin).toFixed(2)}€`} change={kpis.grossMarginChange} icon={DollarSign} color="text-green-600" isLoading={loading} />
+
+                          <StatCard title="Nombre de commandes" value={kpis.orders} change={kpis.ordersChange} icon={ShoppingCart} color="text-blue-600" isLoading={loading} />
+
+                          <StatCard title="Nouveaux clients" value={kpis.newClients} change={kpis.clientsChange} icon={Users} color="text-purple-600" isLoading={loading} />
+
+                          <StatCard title="Panier moyen" value={`${parseFloat(kpis.avgOrderValue).toFixed(2)}€`} change={null} icon={Package} color="text-orange-600" isLoading={loading} />
+
+                        </div>
 
                 {/* Graphiques */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
