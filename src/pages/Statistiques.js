@@ -52,7 +52,7 @@ const Statistiques = () => {
     const [weekdayData, setWeekdayData] = useState([]);
     const [topProducts, setTopProducts] = useState([]);
     const [expenseDistributionData, setExpenseDistributionData] = useState([]);
-    const [monthlyPerformanceData, setMonthlyPerformanceData] = useState([]); // New State for monthly data
+    const [monthlyPerformanceData, setMonthlyPerformanceData] = useState([]);
 
     useEffect(() => {
         const fetchKpis = async () => {
@@ -149,13 +149,14 @@ const Statistiques = () => {
                     value: Number(item.value)
                 }));
                 setExpenseDistributionData(formattedExpenseData);
-                
+
                 const formattedMonthlyPerformanceData = (data.monthlyPerformanceData || []).map(item => ({
                     name: new Date(item.month_start).toLocaleDateString('fr-FR', { year: 'numeric', month: 'short' }),
                     commandes: item.total_orders,
                     ca: parseFloat(item.total_revenue),
                 }));
                 setMonthlyPerformanceData(formattedMonthlyPerformanceData);
+
 
             } catch (err) {
                 console.error('Error fetching KPIs:', err);
@@ -290,52 +291,50 @@ const Statistiques = () => {
                     </div>
                 </div>
                 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                    <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Performance par jour de la semaine</h3>
-                        {loading ? <div className="h-[300px] flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div></div> : weekdayData.length > 0 ? (
-                            <ResponsiveContainer width="100%" height={300}>
-                                <BarChart data={weekdayData}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                    <XAxis dataKey="day" stroke="#6b7280" />
-                                    <YAxis yAxisId="left" stroke="#6b7280" />
-                                    <YAxis yAxisId="right" orientation="right" stroke="#6b7280" />
-                                    <Tooltip content={<CustomTooltip />} />
-                                    <Legend />
-                                    <Bar yAxisId="left" dataKey="commandes" fill="#3b82f6" name="Commandes" radius={[4, 4, 0, 0]} />
-                                    <Bar yAxisId="right" dataKey="ca" fill="#10b981" name="CA (€)" radius={[4, 4, 0, 0]} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnée disponible pour cette période</div>}
-                    </div>
+                <div className="bg-white rounded-lg shadow-md p-6 mb-6 hover:shadow-lg transition-shadow">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Performance par jour de la semaine</h3>
+                    {loading ? <div className="h-[300px] flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div></div> : weekdayData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={300}>
+                            <BarChart data={weekdayData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                <XAxis dataKey="day" stroke="#6b7280" />
+                                <YAxis yAxisId="left" stroke="#6b7280" />
+                                <YAxis yAxisId="right" orientation="right" stroke="#6b7280" />
+                                <Tooltip content={<CustomTooltip />} />
+                                <Legend />
+                                <Bar yAxisId="left" dataKey="commandes" fill="#3b82f6" name="Commandes" radius={[4, 4, 0, 0]} />
+                                <Bar yAxisId="right" dataKey="ca" fill="#10b981" name="CA (€)" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnée disponible pour cette période</div>}
+                </div>
 
-                    <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Top produits/services</h3>
-                        {loading ? <div className="space-y-3">{[1, 2, 3, 4, 5].map(i => <div key={i} className="h-12 bg-gray-200 animate-pulse rounded-md"></div>)}</div> : topProducts.length > 0 ? (
-                            <div className="overflow-x-auto">
-                                <table className="w-full">
-                                    <thead>
-                                        <tr className="border-b-2 border-gray-200">
-                                            <th className="text-left py-3 px-4 text-gray-700 font-semibold">Produit/Service</th>
-                                            <th className="text-right py-3 px-4 text-gray-700 font-semibold">Commandes</th>
-                                            <th className="text-right py-3 px-4 text-gray-700 font-semibold">CA généré</th>
-                                            <th className="text-right py-3 px-4 text-gray-700 font-semibold">CA moyen</th>
+                <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Top produits/services</h3>
+                    {loading ? <div className="space-y-3">{[1, 2, 3, 4, 5].map(i => <div key={i} className="h-12 bg-gray-200 animate-pulse rounded-md"></div>)}</div> : topProducts.length > 0 ? (
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="border-b-2 border-gray-200">
+                                        <th className="text-left py-3 px-4 text-gray-700 font-semibold">Produit/Service</th>
+                                        <th className="text-right py-3 px-4 text-gray-700 font-semibold">Commandes</th>
+                                        <th className="text-right py-3 px-4 text-gray-700 font-semibold">CA généré</th>
+                                        <th className="text-right py-3 px-4 text-gray-700 font-semibold">CA moyen</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {topProducts.map((product, idx) => (
+                                        <tr key={idx} className="border-b border-gray-100 hover:bg-amber-50 transition-colors">
+                                            <td className="py-3 px-4 text-gray-800 font-medium">{product.name}</td>
+                                            <td className="text-right py-3 px-4 text-gray-600">{product.orders}</td>
+                                            <td className="text-right py-3 px-4 text-gray-800 font-semibold">{product.revenue.toFixed(2)}€</td>
+                                            <td className="text-right py-3 px-4 text-gray-600">{product.avgRevenue.toFixed(2)}€</td>
                                         </tr>
-                                    </thead>
-                                    <tbody>
-                                        {topProducts.map((product, idx) => (
-                                            <tr key={idx} className="border-b border-gray-100 hover:bg-amber-50 transition-colors">
-                                                <td className="py-3 px-4 text-gray-800 font-medium">{product.name}</td>
-                                                <td className="text-right py-3 px-4 text-gray-600">{product.orders}</td>
-                                                <td className="text-right py-3 px-4 text-gray-800 font-semibold">{product.revenue.toFixed(2)}€</td>
-                                                <td className="text-right py-3 px-4 text-gray-600">{product.avgRevenue.toFixed(2)}€</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        ) : <div className="py-8 text-center text-gray-500">Aucune donnée disponible pour cette période</div>}
-                    </div>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : <div className="py-8 text-center text-gray-500">Aucune donnée disponible pour cette période</div>}
                 </div>
 
                 <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
@@ -345,12 +344,12 @@ const Statistiques = () => {
                             <LineChart data={monthlyPerformanceData}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                                 <XAxis dataKey="name" stroke="#6b7280" />
-                                <YAxis yAxisId="left" stroke="#6b7280" />
-                                <YAxis yAxisId="right" orientation="right" stroke="#6b7280" />
+                                <YAxis yAxisId="left" stroke="#3b82f6" />
+                                <YAxis yAxisId="right" orientation="right" stroke="#10b981" />
                                 <Tooltip content={<CustomTooltip />} />
                                 <Legend />
                                 <Line yAxisId="left" type="monotone" dataKey="commandes" stroke="#3b82f6" strokeWidth={2} name="Commandes" />
-                                <Line yAxisId="right" type="monotone" dataKey="ca" stroke="#10b981" strokeWidth={2} name="CA (€)" />
+                                <Line yAxisId="right" type="monotone" dataKey="ca" fill="#10b981" strokeWidth={2} name="CA (€)" />
                             </LineChart>
                         </ResponsiveContainer>
                     ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnée mensuelle disponible</div>}
