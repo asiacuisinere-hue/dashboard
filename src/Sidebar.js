@@ -209,6 +209,7 @@ const Sidebar = ({ newCount, inProgressCount, pendingQuotesCount, toPrepareCount
         {
             title: 'CONFIGURATION',
             links: [
+                { to: '/events', label: 'Événements' },
                 { to: '/services', label: 'Services' },
                 { to: '/scanner', label: 'Scanner', mobileOnly: false }, // Hide on mobile list
                 { to: '/parametres', label: 'Paramètres' },
