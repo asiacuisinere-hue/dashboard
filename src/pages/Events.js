@@ -121,7 +121,9 @@ const Events = () => {
     return (
         <div className="p-6 bg-gray-50 min-h-screen">
             <div className="max-w-7xl mx-auto">
-                <h1 className="text-3xl font-bold text-gray-800 mb-4">Journal d\'Événements</h1>
+                <h1 className="text-3xl font-bold text-gray-800 mb-4 flex items-center">
+                    <Calendar className="w-8 h-8 mr-3 text-amber-500" /> Journal d'Événements
+                </h1>
                 <p className="text-gray-600 mb-6">Ajoutez et gérez les événements spéciaux pour les corréler avec vos statistiques.</p>
 
                 {error && (
