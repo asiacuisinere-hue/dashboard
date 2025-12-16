@@ -355,7 +355,7 @@ const Statistiques = () => {
                         <ResponsiveContainer width="100%" height={300}>
                             <LineChart data={monthlyPerformanceData}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                <XAxis dataKey="name" stroke="#6b7280" />
+                                <XAxis dataKey="name" stroke="#6b7280" tickFormatter={formatMonthTick} />
                                 <YAxis yAxisId="left" stroke="#3b82f6" />
                                 <YAxis yAxisId="right" orientation="right" stroke="#10b981" />
                                 <Tooltip content={<CustomTooltip />} />
