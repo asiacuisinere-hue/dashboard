@@ -210,6 +210,11 @@ const Statistiques = () => {
         return date.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
     };
 
+    // --- DÉBUT DU CODE DE DÉBOGAGE ---
+    console.log("DEBUG: Axe X du graphique mensuel (format YYYY-MM):", monthlyPerformanceData.map(d => d.name));
+    console.log("DEBUG: Coordonnées X des événements (format YYYY-MM):", eventsData.map(event => new Date(event.start_date).toISOString().substring(0, 7)));
+    // --- FIN DU CODE DE DÉBOGAGE ---
+
     return (
         <div className="min-h-screen bg-gray-50 p-6">
             <div className="max-w-7xl mx-auto">
