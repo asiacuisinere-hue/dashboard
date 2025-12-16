@@ -153,7 +153,7 @@ const Statistiques = () => {
                 setExpenseDistributionData(formattedExpenseData);
 
                 const formattedMonthlyPerformanceData = (data.monthlyPerformanceData || []).map(item => ({
-                    name: new Date(item.month_start).toLocaleDateString('fr-FR', { year: 'numeric', month: 'short' }),
+                    name: new Date(item.month_start).toISOString().substring(0, 7), // YYYY-MM for matching
                     commandes: item.total_orders,
                     ca: parseFloat(item.total_revenue),
                 }));
@@ -204,6 +204,11 @@ const Statistiques = () => {
     };
     
     const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658'];
+
+    const formatMonthTick = (tickItem) => {
+        const date = new Date(tickItem + '-02'); // Add '-02' to avoid timezone issues with first of month
+        return date.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+    };
 
     return (
         <div className="min-h-screen bg-gray-50 p-6">
@@ -296,22 +301,24 @@ const Statistiques = () => {
                     </div>
                 </div>
                 
-                <div className="bg-white rounded-lg shadow-md p-6 mb-6 hover:shadow-lg transition-shadow">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Performance par jour de la semaine</h3>
-                    {loading ? <div className="h-[300px] flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div></div> : weekdayData.length > 0 ? (
-                        <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={weekdayData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                <XAxis dataKey="day" stroke="#6b7280" />
-                                <YAxis yAxisId="left" stroke="#6b7280" />
-                                <YAxis yAxisId="right" orientation="right" stroke="#6b7280" />
-                                <Tooltip content={<CustomTooltip />} />
-                                <Legend />
-                                <Bar yAxisId="left" dataKey="commandes" fill="#3b82f6" name="Commandes" radius={[4, 4, 0, 0]} />
-                                <Bar yAxisId="right" dataKey="ca" fill="#10b981" name="CA (€)" radius={[4, 4, 0, 0]} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnée disponible pour cette période</div>}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Performance par jour de la semaine</h3>
+                        {loading ? <div className="h-[300px] flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div></div> : weekdayData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height={300}>
+                                <BarChart data={weekdayData}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                    <XAxis dataKey="day" stroke="#6b7280" />
+                                    <YAxis yAxisId="left" stroke="#6b7280" />
+                                    <YAxis yAxisId="right" orientation="right" stroke="#6b7280" />
+                                    <Tooltip content={<CustomTooltip />} />
+                                    <Legend />
+                                    <Bar yAxisId="left" dataKey="commandes" fill="#3b82f6" name="Commandes" radius={[4, 4, 0, 0]} />
+                                    <Bar yAxisId="right" dataKey="ca" fill="#10b981" name="CA (€)" radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnée disponible pour cette période</div>}
+                    </div>
                 </div>
 
                 <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
