@@ -368,7 +368,7 @@ const Statistiques = () => {
                                 <Line yAxisId="left" type="monotone" dataKey="commandes" stroke="#3b82f6" strokeWidth={2} name="Commandes" />
                                 <Line yAxisId="right" type="monotone" dataKey="ca" stroke="#10b981" strokeWidth={2} name="CA (€)" />
                                 {eventsData.map(event => (
-                                    <ReferenceLine key={event.event_name} x={new Date(event.start_date).toLocaleDateString('fr-FR', { year: '2-digit', month: 'short' })} stroke="red" strokeDasharray="3 3" label={{ value: event.event_name, position: 'insideTop' }} />
+                                    <ReferenceLine key={event.event_name} x={new Date(event.start_date).toISOString().substring(0, 7)} stroke="red" strokeDasharray="3 3" label={{ value: event.event_name, position: 'insideTop' }} />
                                 ))}
                             </LineChart>
                         </ResponsiveContainer>
