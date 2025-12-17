@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { TrendingUp, TrendingDown, Users, ShoppingCart, DollarSign, Package, AlertCircle } from 'lucide-react';
+import { TrendingUp, TrendingDown, Users, ShoppingCart, DollarSign, Package, AlertCircle, Download } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
 const StatCard = ({ title, value, change, icon: Icon, color, isLoading }) => (
@@ -54,6 +54,9 @@ const Statistiques = () => {
     const [expenseDistributionData, setExpenseDistributionData] = useState([]);
     const [monthlyPerformanceData, setMonthlyPerformanceData] = useState([]);
     const [eventsData, setEventsData] = useState([]);
+    const [exportStartDate, setExportStartDate] = useState('');
+    const [exportEndDate, setExportEndDate] = useState('');
+    const [isExporting, setIsExporting] = useState(false);
 
 
     useEffect(() => {
@@ -253,6 +256,52 @@ const Statistiques = () => {
         return <circle cx={cx} cy={cy} r={3} fill={stroke} />;
     };
 
+    const handleExport = async () => {
+        if (!exportStartDate || !exportEndDate) {
+            alert("Veuillez sélectionner une date de début et une date de fin.");
+            return;
+        }
+
+        setIsExporting(true);
+        setError(null); // Clear previous errors
+
+        try {
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+            if (sessionError || !session) {
+                throw new Error("Utilisateur non authentifié.");
+            }
+
+            const url = `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/export-data?startDate=${exportStartDate}&endDate=${exportEndDate}`;
+            
+            const response = await fetch(url, {
+                headers: {
+                    'Authorization': `Bearer ${session.access_token}`,
+                }
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Erreur lors de l'export : ${errorText}`);
+            }
+
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = `export_asiacuisine_${exportStartDate}_au_${exportEndDate}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(downloadUrl);
+
+        } catch (err) {
+            console.error('Export error:', err);
+            setError(err.message);
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
     // --- DÉBUT DU CODE DE DÉBOGAGE ---
     console.log("DEBUG: Axe X du graphique mensuel (format YYYY-MM):", monthlyPerformanceData.map(d => d.name));
     console.log("DEBUG: Coordonnées X des événements (format YYYY-MM):", eventsData.map(event => new Date(event.start_date).toISOString().substring(0, 7)));
@@ -287,6 +336,45 @@ const Statistiques = () => {
                                 {p.label}
                             </button>
                         ))}
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Export de Données</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                        <div>
+                            <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-1">Date de début</label>
+                            <input 
+                                type="date" 
+                                id="startDate" 
+                                value={exportStartDate}
+                                onChange={(e) => setExportStartDate(e.target.value)}
+                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm px-3 py-2 border"
+                            />
+                        </div>
+                        <div>
+                            <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-1">Date de fin</label>
+                            <input 
+                                type="date" 
+                                id="endDate" 
+                                value={exportEndDate}
+                                onChange={(e) => setExportEndDate(e.target.value)}
+                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm px-3 py-2 border"
+                            />
+                        </div>
+                        <div>
+                            <button
+                                onClick={handleExport}
+                                disabled={isExporting || !exportStartDate || !exportEndDate}
+                                className="w-full flex items-center justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isExporting ? (
+                                    'Export en cours...'
+                                ) : (
+                                    <><Download className="mr-2 h-4 w-4" /> Exporter les données (CSV)</>
+                                )}
+                            </button>
+                        </div>
                     </div>
                 </div>
 
