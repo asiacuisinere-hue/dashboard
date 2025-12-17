@@ -160,9 +160,9 @@ const Statistiques = () => {
 
                 // Format monthly performance data
                 const formattedMonthlyPerformance = (data.monthlyPerformanceData || []).map(item => ({
-                    name: new Date(item.month).toLocaleString('fr-FR', { month: 'long' }),
-                    ca: parseFloat(item.total_revenue),
-                    commandes: item.total_orders,
+                    name: item.month ? item.month.toLowerCase() : 'inconnu',
+                    ca: parseFloat(item.total_revenue) || 0,
+                    commandes: parseInt(item.total_orders, 10) || 0,
                 }));
                 setMonthlyPerformanceData(formattedMonthlyPerformance);
 
@@ -383,7 +383,7 @@ const Statistiques = () => {
                                 <Bar yAxisId="left" dataKey="ca" fill="#8884d8" name="CA Mensuel" />
                                 <Line yAxisId="right" type="monotone" dataKey="commandes" stroke="#82ca9d" name="Commandes Mensuelles" />
                                 {events.map(event => {
-                                    const eventMonth = new Date(event.start_date).toLocaleString('fr-FR', { month: 'long' });
+                                    const eventMonth = new Date(event.start_date).toLocaleString('fr-FR', { month: 'long' }).toLowerCase();
                                     if (monthlyPerformanceData.some(d => d.name === eventMonth)) {
                                         return (
                                             <ReferenceLine 
