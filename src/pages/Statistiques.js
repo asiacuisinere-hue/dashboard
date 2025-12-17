@@ -20,7 +20,7 @@ const StatCard = ({ title, value, change, icon: Icon, color, isLoading }) => (
         {change !== null && change !== undefined && (
           <div className={`flex items-center text-sm ${parseFloat(change) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
             {parseFloat(change) >= 0 ? <TrendingUp className="w-4 h-4 mr-1" /> : <TrendingDown className="w-4 h-4 mr-1" />}
-            <span>{Math.abs(parseFloat(change)).toFixed(1)}% vs pÃ©riode prÃ©cÃ©dente</span>
+            <span>{Math.abs(parseFloat(change)).toFixed(1)}% vs période précédente</span>
           </div>
         )}
       </>
@@ -64,7 +64,7 @@ const Statistiques = () => {
             try {
                 const { data: { session }, error: sessionError } = await supabase.auth.getSession();
                 if (sessionError) throw new Error(`Erreur de session: ${sessionError.message}`);
-                if (!session) throw new Error("Utilisateur non authentifiÃ©.");
+                if (!session) throw new Error("Utilisateur non authentifié.");
 
                 const response = await fetch(
                     `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/get-kpis?period=${period}`,
@@ -115,7 +115,7 @@ const Statistiques = () => {
                 const typeLabels = {
                     'COMMANDE_MENU': 'Menus',
                     'COMMANDE_SPECIALE': 'Commandes SpÃ©ciales',
-                    'RESERVATION_SERVICE': 'RÃ©servations',
+                    'RESERVATION_SERVICE': 'Réservations',
                     'SOUSCRIPTION_ABONNEMENT': 'Abonnements'
                 };
                 const colorMapping = {
@@ -263,7 +263,7 @@ const Statistiques = () => {
             <div className="max-w-7xl mx-auto">
                 <div className="mb-8">
                     <h1 className="text-3xl font-bold text-gray-800 mb-2">Statistiques</h1>
-                    <p className="text-gray-600">AperÃ§u complet de la performance de votre activitÃ©</p>
+                    <p className="text-gray-600">Aperçu complet de la performance de votre activité</p>
                 </div>
 
                 <div className="bg-white rounded-lg shadow-md p-4 mb-6">
@@ -293,17 +293,17 @@ const Statistiques = () => {
                 {error && <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-lg flex items-start"><AlertCircle className="w-5 h-5 text-red-500 mr-3 mt-0.5 flex-shrink-0" /><div><h3 className="text-red-800 font-semibold">Erreur de chargement</h3><p className="text-red-700 text-sm mt-1">{error}</p></div></div>}
 
                 <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-6 mb-6">
-                    <StatCard title="Chiffre d'affaires" value={`${parseFloat(kpis.revenue).toFixed(2)}â‚¬`} change={kpis.revenueChange} icon={DollarSign} color="text-green-600" isLoading={loading} />
-                    <StatCard title="Total DÃ©penses" value={`${parseFloat(kpis.totalExpenses).toFixed(2)}â‚¬`} change={kpis.expensesChange} icon={Package} color="text-red-600" isLoading={loading} />
-                    <StatCard title="Marge Brute" value={`${parseFloat(kpis.totalGrossMargin).toFixed(2)}â‚¬`} change={kpis.grossMarginChange} icon={DollarSign} color="text-green-600" isLoading={loading} />
+                    <StatCard title="Chiffre d'affaires" value={`${parseFloat(kpis.revenue).toFixed(2)}€`} change={kpis.revenueChange} icon={DollarSign} color="text-green-600" isLoading={loading} />
+                    <StatCard title="Total DÃ©penses" value={`${parseFloat(kpis.totalExpenses).toFixed(2)}€`} change={kpis.expensesChange} icon={Package} color="text-red-600" isLoading={loading} />
+                    <StatCard title="Marge Brute" value={`${parseFloat(kpis.totalGrossMargin).toFixed(2)}€`} change={kpis.grossMarginChange} icon={DollarSign} color="text-green-600" isLoading={loading} />
                     <StatCard title="Nombre de commandes" value={kpis.orders} change={kpis.ordersChange} icon={ShoppingCart} color="text-blue-600" isLoading={loading} />
                     <StatCard title="Nouveaux clients" value={kpis.newClients} change={kpis.clientsChange} icon={Users} color="text-purple-600" isLoading={loading} />
-                    <StatCard title="Panier moyen" value={`${parseFloat(kpis.avgOrderValue).toFixed(2)}â‚¬`} change={null} icon={Package} color="text-orange-600" isLoading={loading} />
+                    <StatCard title="Panier moyen" value={`${parseFloat(kpis.avgOrderValue).toFixed(2)}€`} change={null} icon={Package} color="text-orange-600" isLoading={loading} />
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                     <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Ã‰volution du chiffre d'affaires</h3>
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Évolution du chiffre d'affaires</h3>
                         {loading ? <div className="h-[300px] flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div></div> : revenueData.length > 0 ? (
                             <ResponsiveContainer width="100%" height={300}>
                                 <LineChart data={revenueData}>
@@ -312,14 +312,14 @@ const Statistiques = () => {
                                     <YAxis stroke="#6b7280" />
                                     <Tooltip content={<CustomTooltip />} />
                                     <Legend />
-                                    <Line type="monotone" dataKey="ca" stroke="#3b82f6" strokeWidth={2} name="CA (â‚¬)" dot={{ fill: '#3b82f6', r: 4 }} activeDot={{ r: 6 }} />
+                                    <Line type="monotone" dataKey="ca" stroke="#3b82f6" strokeWidth={2} name="CA (€)" dot={{ fill: '#3b82f6', r: 4 }} activeDot={{ r: 6 }} />
                                 </LineChart>
                             </ResponsiveContainer>
-                        ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnÃ©e disponible pour cette pÃ©riode</div>}
+                        ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnée disponible pour cette période</div>}
                     </div>
 
                     <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4">RÃ©partition par type de demande</h3>
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Répartition par type de demande</h3>
                         {loading ? <div className="h-[300px] flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div></div> : orderTypeData.length > 0 ? (
                             <ResponsiveContainer width="100%" height={300}>
                                 <PieChart>
@@ -330,22 +330,22 @@ const Statistiques = () => {
                                     <Legend />
                                 </PieChart>
                             </ResponsiveContainer>
-                        ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnÃ©e disponible pour cette pÃ©riode</div>}
+                        ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnée disponible pour cette période</div>}
                     </div>
                     
                     <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4">RÃ©partition des DÃ©penses</h3>
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Répartition des Dépenses</h3>
                         {loading ? <div className="h-[300px] flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div></div> : expenseDistributionData.length > 0 ? (
                             <ResponsiveContainer width="100%" height={300}>
                                 <PieChart>
                                     <Pie data={expenseDistributionData} cx="50%" cy="50%" labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} outerRadius={100} fill="#8884d8" dataKey="value">
                                         {expenseDistributionData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                                     </Pie>
-                                    <Tooltip formatter={(value) => `${value.toFixed(2)}â‚¬`} />
+                                    <Tooltip formatter={(value) => `${value.toFixed(2)}€`} />
                                     <Legend />
                                 </PieChart>
                             </ResponsiveContainer>
-                        ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnÃ©e de dÃ©pense pour cette pÃ©riode</div>}
+                        ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnée de dépense pour cette période</div>}
                     </div>
                 </div>
                 
@@ -362,10 +362,10 @@ const Statistiques = () => {
                                     <Tooltip content={<CustomTooltip />} />
                                     <Legend />
                                     <Bar yAxisId="left" dataKey="commandes" fill="#3b82f6" name="Commandes" radius={[4, 4, 0, 0]} />
-                                    <Bar yAxisId="right" dataKey="ca" fill="#10b981" name="CA (â‚¬)" radius={[4, 4, 0, 0]} />
+                                    <Bar yAxisId="right" dataKey="ca" fill="#10b981" name="CA (€)" radius={[4, 4, 0, 0]} />
                                 </BarChart>
                             </ResponsiveContainer>
-                        ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnÃ©e disponible pour cette pÃ©riode</div>}
+                        ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnée disponible pour cette période</div>}
                     </div>
                 </div>
 
@@ -378,7 +378,7 @@ const Statistiques = () => {
                                     <tr className="border-b-2 border-gray-200">
                                         <th className="text-left py-3 px-4 text-gray-700 font-semibold">Produit/Service</th>
                                         <th className="text-right py-3 px-4 text-gray-700 font-semibold">Commandes</th>
-                                        <th className="text-right py-3 px-4 text-gray-700 font-semibold">CA gÃ©nÃ©rÃ©</th>
+                                        <th className="text-right py-3 px-4 text-gray-700 font-semibold">CA généré</th>
                                         <th className="text-right py-3 px-4 text-gray-700 font-semibold">CA moyen</th>
                                     </tr>
                                 </thead>
@@ -387,18 +387,18 @@ const Statistiques = () => {
                                         <tr key={idx} className="border-b border-gray-100 hover:bg-amber-50 transition-colors">
                                             <td className="py-3 px-4 text-gray-800 font-medium">{product.name}</td>
                                             <td className="text-right py-3 px-4 text-gray-600">{product.orders}</td>
-                                            <td className="text-right py-3 px-4 text-gray-800 font-semibold">{product.revenue.toFixed(2)}â‚¬</td>
-                                            <td className="text-right py-3 px-4 text-gray-600">{product.avgRevenue.toFixed(2)}â‚¬</td>
+                                            <td className="text-right py-3 px-4 text-gray-800 font-semibold">{product.revenue.toFixed(2)}€</td>
+                                            <td className="text-right py-3 px-4 text-gray-600">{product.avgRevenue.toFixed(2)}€</td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
                         </div>
-                    ) : <div className="py-8 text-center text-gray-500">Aucune donnÃ©e disponible pour cette pÃ©riode</div>}
+                    ) : <div className="py-8 text-center text-gray-500">Aucune donnée disponible pour cette période</div>}
                 </div>
 
                 <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Ã‰volution Mensuelle (24 derniers mois)</h3>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Évolution Mensuelle (24 derniers mois)</h3>
                     {loading ? <div className="h-[300px] flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div></div> : monthlyPerformanceData.length > 0 ? (
                         <ResponsiveContainer width="100%" height={300}>
                             <LineChart data={monthlyPerformanceData}>
@@ -409,10 +409,10 @@ const Statistiques = () => {
                                 <Tooltip content={<CustomTooltip />} />
                                 <Legend />
                                 <Line yAxisId="left" type="monotone" dataKey="commandes" stroke="#3b82f6" strokeWidth={2} name="Commandes" dot={<CustomDot />} activeDot={{ r: 8, strokeWidth: 2 }} />
-                                <Line yAxisId="right" type="monotone" dataKey="ca" stroke="#10b981" strokeWidth={2} name="CA (â‚¬)" />
+                                <Line yAxisId="right" type="monotone" dataKey="ca" stroke="#10b981" strokeWidth={2} name="CA (€)" />
                             </LineChart>
                         </ResponsiveContainer>
-                    ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnÃ©e mensuelle disponible</div>}
+                    ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnée mensuelle disponible</div>}
                 </div>
             </div>
         </div>
