@@ -114,7 +114,7 @@ const Statistiques = () => {
                 
                 const typeLabels = {
                     'COMMANDE_MENU': 'Menus',
-                    'COMMANDE_SPECIALE': 'Commandes SpÃ©ciales',
+                    'COMMANDE_SPECIALE': 'Commandes Spéciales',
                     'RESERVATION_SERVICE': 'Réservations',
                     'SOUSCRIPTION_ABONNEMENT': 'Abonnements'
                 };
@@ -272,7 +272,7 @@ const Statistiques = () => {
                             { value: 'last7days', label: '7 derniers jours' },
                             { value: 'last30days', label: '30 derniers jours' },
                             { value: 'currentMonth', label: 'Ce mois' },
-                            { value: 'currentYear', label: 'Cette annÃ©e' }
+                            { value: 'currentYear', label: 'Cette année' }
                         ].map((p) => (
                             <button
                                 key={p.value}
