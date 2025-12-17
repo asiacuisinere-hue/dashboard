@@ -294,7 +294,7 @@ const Statistiques = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-6 mb-6">
                     <StatCard title="Chiffre d'affaires" value={`${parseFloat(kpis.revenue).toFixed(2)}€`} change={kpis.revenueChange} icon={DollarSign} color="text-green-600" isLoading={loading} />
-                    <StatCard title="Total DÃ©penses" value={`${parseFloat(kpis.totalExpenses).toFixed(2)}€`} change={kpis.expensesChange} icon={Package} color="text-red-600" isLoading={loading} />
+                    <StatCard title="Total Dépenses" value={`${parseFloat(kpis.totalExpenses).toFixed(2)}€`} change={kpis.expensesChange} icon={Package} color="text-red-600" isLoading={loading} />
                     <StatCard title="Marge Brute" value={`${parseFloat(kpis.totalGrossMargin).toFixed(2)}€`} change={kpis.grossMarginChange} icon={DollarSign} color="text-green-600" isLoading={loading} />
                     <StatCard title="Nombre de commandes" value={kpis.orders} change={kpis.ordersChange} icon={ShoppingCart} color="text-blue-600" isLoading={loading} />
                     <StatCard title="Nouveaux clients" value={kpis.newClients} change={kpis.clientsChange} icon={Users} color="text-purple-600" isLoading={loading} />
@@ -334,6 +334,34 @@ const Statistiques = () => {
                     </div>
                     
                     <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Top produits/services</h3>
+                        {loading ? <div className="space-y-3">{[1, 2, 3, 4, 5].map(i => <div key={i} className="h-12 bg-gray-200 animate-pulse rounded-md"></div>)}</div> : topProducts.length > 0 ? (
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead>
+                                        <tr className="border-b-2 border-gray-200">
+                                            <th className="text-left py-3 px-4 text-gray-700 font-semibold">Produit/Service</th>
+                                            <th className="text-right py-3 px-4 text-gray-700 font-semibold">Commandes</th>
+                                            <th className="text-right py-3 px-4 text-gray-700 font-semibold">CA généré</th>
+                                            <th className="text-right py-3 px-4 text-gray-700 font-semibold">CA moyen</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {topProducts.map((product, idx) => (
+                                            <tr key={idx} className="border-b border-gray-100 hover:bg-amber-50 transition-colors">
+                                                <td className="py-3 px-4 text-gray-800 font-medium">{product.name}</td>
+                                                <td className="text-right py-3 px-4 text-gray-600">{product.orders}</td>
+                                                <td className="text-right py-3 px-4 text-gray-800 font-semibold">{product.revenue.toFixed(2)}€</td>
+                                                <td className="text-right py-3 px-4 text-gray-600">{product.avgRevenue.toFixed(2)}€</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : <div className="py-8 text-center text-gray-500">Aucune donnée disponible pour cette période</div>}
+                    </div>
+                    
+                    <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
                         <h3 className="text-lg font-semibold text-gray-800 mb-4">Répartition des Dépenses</h3>
                         {loading ? <div className="h-[300px] flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div></div> : expenseDistributionData.length > 0 ? (
                             <ResponsiveContainer width="100%" height={300}>
@@ -348,7 +376,7 @@ const Statistiques = () => {
                         ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnée de dépense pour cette période</div>}
                     </div>
                 </div>
-                
+
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                     <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
                         <h3 className="text-lg font-semibold text-gray-800 mb-4">Performance par jour de la semaine</h3>
@@ -367,34 +395,6 @@ const Statistiques = () => {
                             </ResponsiveContainer>
                         ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnée disponible pour cette période</div>}
                     </div>
-                </div>
-
-                <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Top produits/services</h3>
-                    {loading ? <div className="space-y-3">{[1, 2, 3, 4, 5].map(i => <div key={i} className="h-12 bg-gray-200 animate-pulse rounded-md"></div>)}</div> : topProducts.length > 0 ? (
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead>
-                                    <tr className="border-b-2 border-gray-200">
-                                        <th className="text-left py-3 px-4 text-gray-700 font-semibold">Produit/Service</th>
-                                        <th className="text-right py-3 px-4 text-gray-700 font-semibold">Commandes</th>
-                                        <th className="text-right py-3 px-4 text-gray-700 font-semibold">CA généré</th>
-                                        <th className="text-right py-3 px-4 text-gray-700 font-semibold">CA moyen</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {topProducts.map((product, idx) => (
-                                        <tr key={idx} className="border-b border-gray-100 hover:bg-amber-50 transition-colors">
-                                            <td className="py-3 px-4 text-gray-800 font-medium">{product.name}</td>
-                                            <td className="text-right py-3 px-4 text-gray-600">{product.orders}</td>
-                                            <td className="text-right py-3 px-4 text-gray-800 font-semibold">{product.revenue.toFixed(2)}€</td>
-                                            <td className="text-right py-3 px-4 text-gray-600">{product.avgRevenue.toFixed(2)}€</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    ) : <div className="py-8 text-center text-gray-500">Aucune donnée disponible pour cette période</div>}
                 </div>
 
                 <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
