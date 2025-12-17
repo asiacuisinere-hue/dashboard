@@ -111,6 +111,7 @@ const DashboardLayout = () => {
     const [activeSubscriptionsCount, setActiveSubscriptionsCount] = useState(0);
     const [subscriptionsNeedAttentionCount, setSubscriptionsNeedAttentionCount] = useState(0);
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+    const [notifications, setNotifications] = useState([]);
 
     const appStyle = {
         display: 'flex',
@@ -195,13 +196,46 @@ const DashboardLayout = () => {
         const handleDbChanges = (payload) => {
             console.log(`--- [REALTIME] Event '${payload.eventType}' on table '${payload.table}' detected.`);
             
+            let newNotification = null;
+
             if (payload.table === 'demandes' && payload.eventType === 'INSERT') {
+                newNotification = {
+                    id: `demande-${payload.new.id}`,
+                    type: 'info',
+                    message: `Nouvelle demande reçue (${payload.new.type}).`,
+                    timestamp: new Date(),
+                    read: false,
+                    link: '/nouvelles-demandes'
+                };
                 if (Notification.permission === 'granted') {
-                    new Notification('Nouvelle demande reçue !', {
-                        body: 'Une nouvelle demande est en attente de traitement.',
-                        icon: '/logo.svg'
-                    });
+                    new Notification('Nouvelle demande !', { body: newNotification.message, icon: '/logo.svg' });
                 }
+            } else if (payload.table === 'quotes' && payload.eventType === 'UPDATE') {
+                if (payload.new.status === 'accepted' && payload.old.status !== 'accepted') {
+                    newNotification = {
+                        id: `quote-${payload.new.id}`,
+                        type: 'success',
+                        message: `Le devis #${payload.new.id.substring(0, 8)} a été accepté.`,
+                        timestamp: new Date(),
+                        read: false,
+                        link: '/devis'
+                    };
+                }
+            } else if (payload.table === 'invoices' && payload.eventType === 'UPDATE') {
+                 if (payload.new.status === 'paid' && payload.old.status !== 'paid') {
+                    newNotification = {
+                        id: `invoice-${payload.new.id}`,
+                        type: 'success',
+                        message: `La facture #${payload.new.id.substring(0, 8)} a été payée.`,
+                        timestamp: new Date(),
+                        read: false,
+                        link: '/factures'
+                    };
+                }
+            }
+
+            if (newNotification) {
+                setNotifications(prev => [newNotification, ...prev]);
             }
             
             fetchCounts();
@@ -236,6 +270,8 @@ const DashboardLayout = () => {
                 activeSubscriptionsCount={activeSubscriptionsCount}
                 subscriptionsNeedAttentionCount={subscriptionsNeedAttentionCount}
                 isMobile={isMobile}
+                notifications={notifications}
+                setNotifications={setNotifications}
             />
             <main style={mainContentStyle}>
                 <Routes>
