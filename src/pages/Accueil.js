@@ -134,7 +134,7 @@ const Accueil = () => {
                                         </p>
                                     </div>
                                     {renderType(demande.type)}
-                                    <Link to="/" className="text-sm text-amber-600 hover:text-amber-800">Voir</Link>
+                                    <Link to="/nouvelles-demandes" className="text-sm text-amber-600 hover:text-amber-800">Voir</Link>
                                 </li>
                             ))}
                         </ul>

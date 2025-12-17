@@ -3,6 +3,7 @@ import { Route, Routes, Navigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 import Sidebar from './Sidebar';
 import Scanner from './Scanner';
+import Demandes from './Demandes';
 import DemandesEnCours from './DemandesEnCours';
 import Historique from './pages/Historique';
 import Particuliers from './pages/Particuliers';
@@ -239,6 +240,7 @@ const DashboardLayout = () => {
             <main style={mainContentStyle}>
                 <Routes>
                     <Route path="/" element={<Accueil />} />
+                    <Route path="/nouvelles-demandes" element={<Demandes />} />
                     <Route path="/demandes-en-cours" element={<DemandesEnCours />} />
                     <Route path="/a-preparer" element={<APreparer />} />
                     <Route path="/historique" element={<Historique />} />

@@ -184,7 +184,7 @@ const Sidebar = ({ newCount, inProgressCount, pendingQuotesCount, toPrepareCount
                     {
                         title: 'GESTION',
                         links: [
-                            { to: '/', label: 'Nouvelles Demandes', count: newCount, style: newBadgeStyle },
+                            { to: '/nouvelles-demandes', label: 'Nouvelles Demandes', count: newCount, style: newBadgeStyle },
                             { to: '/demandes-en-cours', label: 'Demandes en Cours', count: inProgressCount, style: inProgressBadgeStyle },
                             { to: '/a-preparer', label: 'À Préparer', count: toPrepareCount, style: toPrepareBadgeStyle },
                             { to: '/devis', label: 'Devis', count: pendingQuotesCount, style: pendingQuotesBadgeStyle },
