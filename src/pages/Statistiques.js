@@ -188,15 +188,42 @@ const Statistiques = () => {
 
     const CustomTooltip = ({ active, payload, label }) => {
         if (active && payload && payload.length) {
+            // Find events for the current month (label is 'YYYY-MM')
+            const eventsInMonth = eventsData.filter(event => 
+                new Date(event.start_date).toISOString().substring(0, 7) === label
+            );
+
             return (
                 <div className="bg-white p-3 border border-gray-300 rounded-lg shadow-lg">
-                    <p className="font-semibold text-gray-800">{label}</p>
+                    {/* Display the formatted month and year */}
+                    <p className="font-semibold text-gray-800 mb-2">{formatMonthTick(label)}</p>
+                    
+                    {/* Display the standard payload (CA, Commandes) */}
                     {payload.map((entry, index) => (
-                        <p key={index} style={{ color: entry.color }}>
+                        <p key={`payload-${index}`} style={{ color: entry.color }}>
                             {entry.name}: {typeof entry.value === 'number' ? entry.value.toFixed(2) : entry.value}
-                            {entry.name.includes('CA') && 'â‚¬'}
+                            {entry.name.includes('CA') && '€'}
                         </p>
                     ))}
+                    
+                    {/* Display the events if any */}
+                    {eventsInMonth.length > 0 && (
+                        <div className="mt-2 pt-2 border-t border-gray-200">
+                            <h4 className="font-semibold text-sm text-red-600">Événements ce mois-ci :</h4>
+                            <ul className="list-disc list-inside pl-2">
+                                {eventsInMonth.map(event => (
+                                    <li key={event.id} className="text-sm text-gray-700 mt-1">
+                                        {event.event_name} 
+                                        <span className="text-xs text-gray-500 ml-2">
+                                            ({new Date(event.start_date).toLocaleDateString('fr-FR', {day: 'numeric', month: 'short'})}
+                                            {' - '}
+                                            {new Date(event.end_date).toLocaleDateString('fr-FR', {day: 'numeric', month: 'short'})})
+                                        </span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
                 </div>
             );
         }
