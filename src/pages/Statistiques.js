@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, ReferenceLine, Label } from 'recharts';
 import { TrendingUp, TrendingDown, Users, ShoppingCart, DollarSign, Package, AlertCircle } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
@@ -47,6 +47,8 @@ const Statistiques = () => {
     const [orderTypeData, setOrderTypeData] = useState([]);
     const [weekdayData, setWeekdayData] = useState([]);
     const [topProducts, setTopProducts] = useState([]);
+    const [monthlyPerformanceData, setMonthlyPerformanceData] = useState([]);
+    const [events, setEvents] = useState([]);
 
     useEffect(() => {
         const fetchKpis = async () => {
@@ -156,6 +158,17 @@ const Statistiques = () => {
                 }));
                 setTopProducts(formattedTopProducts);
 
+                // Format monthly performance data
+                const formattedMonthlyPerformance = (data.monthlyPerformanceData || []).map(item => ({
+                    name: new Date(item.month).toLocaleString('fr-FR', { month: 'long' }),
+                    ca: parseFloat(item.total_revenue),
+                    commandes: item.total_orders,
+                }));
+                setMonthlyPerformanceData(formattedMonthlyPerformance);
+
+                // Set events data
+                setEvents(data.eventsData || []);
+
             } catch (err) {
                 console.error('[Statistiques] Error:', err);
                 setError(err.message);
@@ -172,6 +185,8 @@ const Statistiques = () => {
                 setOrderTypeData([]);
                 setWeekdayData([]);
                 setTopProducts([]);
+                setMonthlyPerformanceData([]);
+                setEvents([]);
             } finally {
                 setLoading(false);
             }
@@ -347,6 +362,49 @@ const Statistiques = () => {
                             </div>
                         )}
                     </div>
+                </div>
+
+                {/* Monthly Performance Chart */}
+                <div className="bg-white rounded-lg shadow-md p-6 mb-6 hover:shadow-lg transition-shadow">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Évolution Mensuelle et Événements</h3>
+                    {loading ? (
+                        <div className="h-[300px] flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
+                        </div>
+                    ) : monthlyPerformanceData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={300}>
+                            <ComposedChart data={monthlyPerformanceData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                <XAxis dataKey="name" stroke="#6b7280" />
+                                <YAxis yAxisId="left" stroke="#8884d8" label={{ value: 'CA (€)', angle: -90, position: 'insideLeft' }} />
+                                <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" label={{ value: 'Commandes', angle: -90, position: 'insideRight' }} />
+                                <Tooltip content={<CustomTooltip />} />
+                                <Legend />
+                                <Bar yAxisId="left" dataKey="ca" fill="#8884d8" name="CA Mensuel" />
+                                <Line yAxisId="right" type="monotone" dataKey="commandes" stroke="#82ca9d" name="Commandes Mensuelles" />
+                                {events.map(event => {
+                                    const eventMonth = new Date(event.start_date).toLocaleString('fr-FR', { month: 'long' });
+                                    if (monthlyPerformanceData.some(d => d.name === eventMonth)) {
+                                        return (
+                                            <ReferenceLine 
+                                                key={event.id} 
+                                                x={eventMonth} 
+                                                stroke="red" 
+                                                strokeDasharray="3 3"
+                                            >
+                                                <Label value={event.event_name} angle={-90} position="insideTopLeft" fill="red" fontSize={10} />
+                                            </ReferenceLine>
+                                        );
+                                    }
+                                    return null;
+                                })}
+                            </ComposedChart>
+                        </ResponsiveContainer>
+                    ) : (
+                        <div className="h-[300px] flex items-center justify-center text-gray-500">
+                            Aucune donnée de performance mensuelle disponible.
+                        </div>
+                    )}
                 </div>
                 
                 {/* Performance par jour */}
