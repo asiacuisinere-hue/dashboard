@@ -20,6 +20,7 @@ import Validation from './pages/Validation';
 import Statistiques from './pages/Statistiques';
 import Depenses from './pages/Depenses';
 import Events from './pages/Events'; // AJOUT DE L'IMPORT
+import Accueil from './pages/Accueil'; // Ajout de la nouvelle page d'accueil
 
 // --- Composants ---
 
@@ -238,7 +239,7 @@ const DashboardLayout = () => {
             />
             <main style={mainContentStyle}>
                 <Routes>
-                    <Route path="/" element={<Demandes />} />
+                    <Route path="/" element={<Accueil />} />
                     <Route path="/demandes-en-cours" element={<DemandesEnCours />} />
                     <Route path="/a-preparer" element={<APreparer />} />
                     <Route path="/historique" element={<Historique />} />
