@@ -210,6 +210,22 @@ const Statistiques = () => {
         return date.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
     };
 
+    // Custom dot renderer for the 'commandes' line
+    const CustomDot = ({ cx, cy, stroke, payload }) => {
+        // Check if any event's start date falls in the month of the current data point
+        const hasEvent = eventsData.some(event => 
+            new Date(event.start_date).toISOString().substring(0, 7) === payload.name
+        );
+
+        if (hasEvent) {
+            // If there is an event, return a larger, more prominent dot (a "marker")
+            return <circle cx={cx} cy={cy} r={7} fill="red" stroke="white" strokeWidth={2} />;
+        }
+
+        // For other data points, render the standard dot
+        return <circle cx={cx} cy={cy} r={3} fill={stroke} />;
+    };
+
     // --- DÃ‰BUT DU CODE DE DÃ‰BOGAGE ---
     console.log("DEBUG: Axe X du graphique mensuel (format YYYY-MM):", monthlyPerformanceData.map(d => d.name));
     console.log("DEBUG: CoordonnÃ©es X des Ã©vÃ©nements (format YYYY-MM):", eventsData.map(event => new Date(event.start_date).toISOString().substring(0, 7)));
@@ -365,25 +381,8 @@ const Statistiques = () => {
                                 <YAxis yAxisId="right" orientation="right" stroke="#10b981" />
                                 <Tooltip content={<CustomTooltip />} />
                                 <Legend />
-                                <Line yAxisId="left" type="monotone" dataKey="commandes" stroke="#3b82f6" strokeWidth={2} name="Commandes" />
+                                <Line yAxisId="left" type="monotone" dataKey="commandes" stroke="#3b82f6" strokeWidth={2} name="Commandes" dot={<CustomDot />} activeDot={{ r: 8, strokeWidth: 2 }} />
                                 <Line yAxisId="right" type="monotone" dataKey="ca" stroke="#10b981" strokeWidth={2} name="CA (â‚¬)" />
-                                {eventsData.map(event => {
-                                    const eventMonthX = new Date(event.start_date).toISOString().substring(0, 7);
-                                    // Check if the event's month is actually in our chart data
-                                    if (monthlyPerformanceData.some(d => d.name === eventMonthX)) {
-                                        return (
-                                            <ReferenceLine 
-                                                key={event.id || event.event_name} 
-                                                x={eventMonthX} 
-                                                stroke="red" 
-                                                strokeDasharray="4 4" 
-                                            >
-                                                <Label value={event.event_name} angle={-90} position="insideTopLeft" fill="red" fontSize={10} />
-                                            </ReferenceLine>
-                                        );
-                                    }
-                                    return null;
-                                })}
                             </LineChart>
                         </ResponsiveContainer>
                     ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnÃ©e mensuelle disponible</div>}
