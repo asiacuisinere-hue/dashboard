@@ -253,10 +253,10 @@ const Statistiques = () => {
         return <circle cx={cx} cy={cy} r={3} fill={stroke} />;
     };
 
-    // --- DÃ‰BUT DU CODE DE DÃ‰BOGAGE ---
+    // --- DÉBUT DU CODE DE DÉBOGAGE ---
     console.log("DEBUG: Axe X du graphique mensuel (format YYYY-MM):", monthlyPerformanceData.map(d => d.name));
-    console.log("DEBUG: CoordonnÃ©es X des Ã©vÃ©nements (format YYYY-MM):", eventsData.map(event => new Date(event.start_date).toISOString().substring(0, 7)));
-    // --- FIN DU CODE DE DÃ‰BOGAGE ---
+    console.log("DEBUG: Coordonnées X des événements (format YYYY-MM):", eventsData.map(event => new Date(event.start_date).toISOString().substring(0, 7)));
+    // --- FIN DU CODE DE DÉBOGAGE ---
 
     return (
         <div className="min-h-screen bg-gray-50 p-6">
@@ -318,20 +318,51 @@ const Statistiques = () => {
                         ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnée disponible pour cette période</div>}
                     </div>
 
-                    <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Répartition par type de demande</h3>
-                        {loading ? <div className="h-[300px] flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div></div> : orderTypeData.length > 0 ? (
-                            <ResponsiveContainer width="100%" height={300}>
-                                <PieChart>
-                                    <Pie data={orderTypeData} cx="50%" cy="50%" labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} outerRadius={100} fill="#8884d8" dataKey="value">
-                                        {orderTypeData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
-                                    </Pie>
-                                    <Tooltip />
-                                    <Legend />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnée disponible pour cette période</div>}
-                    </div>
+                                        <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+
+                                            <h3 className="text-lg font-semibold text-gray-800 mb-4">Répartition par type de demande</h3>
+
+                                            {loading ? <div className="h-[300px] flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div></div> : orderTypeData.length > 0 ? (
+
+                                                <ResponsiveContainer width="100%" height={300}>
+
+                                                    <PieChart>
+
+                                                        <Pie 
+
+                                                            data={orderTypeData} 
+
+                                                            cx="50%" 
+
+                                                            cy="50%" 
+
+                                                            labelLine={false} 
+
+                                                            label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+
+                                                            outerRadius={100} 
+
+                                                            fill="#8884d8" 
+
+                                                            dataKey="value"
+
+                                                        >
+
+                                                            {orderTypeData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
+
+                                                        </Pie>
+
+                                                        <Tooltip />
+
+                                                        <Legend />
+
+                                                    </PieChart>
+
+                                                </ResponsiveContainer>
+
+                                            ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnée disponible pour cette période</div>}
+
+                                        </div>
                     
                     <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
                         <h3 className="text-lg font-semibold text-gray-800 mb-4">Top produits/services</h3>
