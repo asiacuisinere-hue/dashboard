@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { Link } from 'react-router-dom';
-import { Users, Clock, Zap, DollarSign, Calendar, Hash, TrendingUp, TrendingDown, ShoppingCart, Package, AlertCircle } from 'lucide-react'; // Ajout des icônes manquantes et suppression des inutilisées
+import { DollarSign, Calendar, Hash, TrendingUp, TrendingDown } from 'lucide-react'; // Ajout des icônes manquantes et suppression des inutilisées
 
 // Définition du composant StatCard (copié depuis Statistiques.js)
 const StatCard = ({ title, value, change, icon: Icon, color, isLoading }) => (
@@ -98,21 +98,22 @@ const Accueil = () => {
 
             {/* KPIs */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                {/* Ces StatCards sont des exemples, il faudra les remplacer par les vrais composants */}
-                <div className="bg-white p-6 rounded-lg shadow-md flex items-center">
-                    <DollarSign className="w-8 h-8 text-green-500 mr-4"/>
-                    <div>
-                        <div className="text-gray-500">CA (Mois en cours)</div>
-                        <div className="text-2xl font-bold">{parseFloat(stats.revenueCurrentMonth).toFixed(2)}€</div>
-                    </div>
-                </div>
-                <div className="bg-white p-6 rounded-lg shadow-md flex items-center">
-                    <Hash className="w-8 h-8 text-blue-500 mr-4"/>
-                    <div>
-                        <div className="text-gray-500">Nouvelles Commandes (Mois)</div>
-                        <div className="text-2xl font-bold">{stats.newOrdersCurrentMonth}</div>
-                    </div>
-                </div>
+                <StatCard 
+                    title="CA (Mois en cours)"
+                    value={`${parseFloat(stats.revenueCurrentMonth).toFixed(2)}€`}
+                    icon={DollarSign}
+                    color="text-green-600"
+                    isLoading={loading}
+                    change={null}
+                />
+                <StatCard 
+                    title="Nouvelles Commandes (Mois)"
+                    value={stats.newOrdersCurrentMonth}
+                    icon={Hash}
+                    color="text-blue-600"
+                    isLoading={loading}
+                    change={null}
+                />
             </div>
 
             {/* Widgets pour les demandes et événements */}
