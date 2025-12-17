@@ -1,8 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { Link } from 'react-router-dom';
-import { StatCard } from './Statistiques'; // Assurez-vous que StatCard est exportable
-import { Users, Clock, Zap, DollarSign, Calendar, Hash } from 'lucide-react';
+import { Users, Clock, Zap, DollarSign, Calendar, Hash, TrendingUp, TrendingDown, ShoppingCart, Package, AlertCircle } from 'lucide-react'; // Ajout des icônes manquantes et suppression des inutilisées
+
+// Définition du composant StatCard (copié depuis Statistiques.js)
+const StatCard = ({ title, value, change, icon: Icon, color, isLoading }) => (
+  <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+    <div className="flex items-center justify-between mb-2">
+      <span className="text-gray-600 text-sm font-medium">{title}</span>
+      <Icon className={`w-5 h-5 ${color}`} />
+    </div>
+    {isLoading ? (
+      <div className="space-y-2">
+        <div className="h-8 w-3/4 bg-gray-200 animate-pulse rounded-md"></div>
+        <div className="h-4 w-1/2 bg-gray-200 animate-pulse rounded-md"></div>
+      </div>
+    ) : (
+      <>
+        <div className="text-3xl font-bold text-gray-800 mb-1">{value}</div>
+        {change !== null && change !== undefined && (
+          <div className={`flex items-center text-sm ${parseFloat(change) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {parseFloat(change) >= 0 ? <TrendingUp className="w-4 h-4 mr-1" /> : <TrendingDown className="w-4 h-4 mr-1" />}
+            <span>{Math.abs(parseFloat(change)).toFixed(1)}% vs période précédente</span>
+          </div>
+        )}
+      </>
+    )}
+  </div>
+);
 
 const Accueil = () => {
     const [stats, setStats] = useState({ revenueCurrentMonth: '0.00', newOrdersCurrentMonth: 0 });

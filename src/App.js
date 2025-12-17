@@ -3,7 +3,6 @@ import { Route, Routes, Navigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 import Sidebar from './Sidebar';
 import Scanner from './Scanner';
-import Demandes from './Demandes';
 import DemandesEnCours from './DemandesEnCours';
 import Historique from './pages/Historique';
 import Particuliers from './pages/Particuliers';
