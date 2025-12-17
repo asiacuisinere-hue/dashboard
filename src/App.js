@@ -246,7 +246,17 @@ const DashboardLayout = () => {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'quotes' }, handleDbChanges)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, handleDbChanges)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'abonnements' }, handleDbChanges)
-            .subscribe();
+            .subscribe((status, err) => {
+                if (status === 'SUBSCRIBED') {
+                    console.log('✅ [REALTIME] Connecté au canal de notifications !');
+                }
+                if (status === 'CHANNEL_ERROR') {
+                    console.error('❌ [REALTIME] Erreur de connexion au canal:', err);
+                }
+                if (status === 'TIMED_OUT') {
+                    console.warn('⌛ [REALTIME] Le temps de connexion au canal a expiré.');
+                }
+            });
 
         const handleResize = () => setIsMobile(window.innerWidth <= 768);
         window.addEventListener('resize', handleResize);
