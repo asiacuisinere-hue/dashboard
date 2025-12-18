@@ -192,7 +192,7 @@ const Devis = () => {
         }
 
         try {
-            setSuccessMessage('Génération du devis en cours...');
+            setSuccessMessage('Création du devis en cours...');
 
             const response = await fetch(
                 `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/generate-quote`,
@@ -206,28 +206,13 @@ const Devis = () => {
                 }
             );
 
+            const result = await response.json();
+
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Erreur lors de la génération du devis');
+                throw new Error(result.error || 'Erreur lors de la génération du devis');
             }
 
-            const blob = await response.blob();
-            const documentNumber = response.headers.get('X-Document-Number') || 'devis-nouveau';
-            
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `devis-${documentNumber}.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-
-            setSuccessMessage(
-                demandeId 
-                    ? 'Devis généré et lié à la demande avec succès !' 
-                    : 'Devis généré avec succès (création directe) !'
-            );
+            setSuccessMessage(result.message || 'Devis créé avec succès !');
             
             // Reset form
             setSelectedCustomer(null);
@@ -462,7 +447,7 @@ const Devis = () => {
                 <div style={subSectionStyle}>
                     <h3>4. Générer le devis</h3>
                     <button onClick={handleGenerateQuote} style={generateQuoteButtonStyle} disabled={isLoading}>
-                        {isLoading ? 'Génération en cours...' : 'Générer et Télécharger le Devis PDF'}
+                        {isLoading ? 'Création en cours...' : 'Créer le brouillon du devis'}
                     </button>
                 </div>
             </div>
@@ -527,11 +512,13 @@ const Devis = () => {
                     quote={selectedQuote}
                     onClose={() => setSelectedQuote(null)}
                     onUpdateStatus={handleUpdateQuoteStatus}
+                    fetchExistingQuotes={fetchExistingQuotes}
                 />
             )}
         </div>
     );
 };
+
 // --- Styles ---
 const containerStyle = {
     padding: '20px',

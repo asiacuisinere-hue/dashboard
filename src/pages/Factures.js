@@ -402,6 +402,14 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
                 </div>
 
                 <div style={modalActionsStyle}>
+                    {invoice.storage_path && (
+                        <button 
+                            onClick={() => window.open(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/view-document?path=${invoice.storage_path}`, '_blank')}
+                            style={{ ...actionButtonStyle, backgroundColor: '#6c757d' }}
+                        >
+                            Voir
+                        </button>
+                    )}
                     <button onClick={handleSendInvoice} disabled={loadingAction} style={{ ...actionButtonStyle, backgroundColor: '#17a2b8', marginRight: 'auto' }}>
                         {loadingAction ? 'Envoi...' : 'Envoyer par mail'}
                     </button>

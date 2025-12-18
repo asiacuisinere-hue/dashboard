@@ -1,111 +1,97 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
 
-const QuoteDetailModal = ({ quote, onClose, onUpdateStatus }) => {
-    const [quoteItems, setQuoteItems] = useState([]);
-    const [loadingItems, setLoadingItems] = useState(true);
+const QuoteDetailModal = ({ quote, onClose, onUpdateStatus, fetchExistingQuotes }) => {
+    const [isSending, setIsSending] = useState(false);
 
-    const fetchQuoteItems = useCallback(async () => {
-        setLoadingItems(true);
-        const { data, error } = await supabase
-            .from('quote_items')
-            .select('*')
-            .eq('quote_id', quote.id);
-
-        if (error) {
-            console.error('Error fetching quote items:', error);
-        } else {
-            setQuoteItems(data);
+    const handleView = () => {
+        if (!quote.storage_path) {
+            alert("Aucun document à afficher.");
+            return;
         }
-        setLoadingItems(false);
-    }, [quote.id]);
-
-    useEffect(() => {
-        fetchQuoteItems();
-    }, [fetchQuoteItems]);
-
-    const renderCustomerInfo = () => {
-        if (quote.clients) {
-            return (
-                <>
-                    <p><strong>Nom:</strong> {quote.clients.last_name} {quote.clients.first_name}</p>
-                    <p><strong>Email:</strong> {quote.clients.email}</p>
-                </>
-            );
-        } else if (quote.entreprises) {
-            return (
-                <>
-                    <p><strong>Nom de l'entreprise:</strong> {quote.entreprises.nom_entreprise}</p>
-                    <p><strong>Contact:</strong> {quote.entreprises.contact_name}</p>
-                    <p><strong>Email du contact:</strong> {quote.entreprises.contact_email}</p>
-                </>
-            );
-        }
-        return <p>Informations client non disponibles.</p>;
+        const url = `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/view-document?path=${quote.storage_path}`;
+        window.open(url, '_blank');
     };
 
+    const handleDownload = async () => {
+        if (!quote.storage_path) {
+            alert("Aucun document à télécharger.");
+            return;
+        }
+        const url = `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/view-document?path=${quote.storage_path}`;
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error("Le fichier n'a pas pu être téléchargé.");
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = quote.storage_path.split('/').pop() || `devis-${quote.document_number}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(downloadUrl);
+        } catch (error) {
+            alert(`Erreur de téléchargement: ${error.message}`);
+        }
+    };
+
+    const handleSend = async () => {
+        if (!window.confirm("Confirmer l'envoi du devis par email au client ?")) return;
+        setIsSending(true);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) throw new Error("Utilisateur non authentifié.");
+            
+            const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/send-quote-by-email`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify({ quoteId: quote.id }),
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error);
+            alert(result.message);
+            fetchExistingQuotes(); // Refresh the list to show the new 'sent' status
+            onClose();
+        } catch (error) {
+            alert(`Erreur: ${error.message}`);
+        } finally {
+            setIsSending(false);
+        }
+    };
+    
     return (
         <div style={modalOverlayStyle}>
-            <div style={modalContentStyle}>
+            <div style={{...modalContentStyle, maxWidth: '600px'}}>
                 <button onClick={onClose} style={closeButtonStyle}>&times;</button>
-                <h2 style={{ borderBottom: '2px solid #eee', paddingBottom: '10px', marginBottom: '20px' }}>Détails du Devis #{quote.document_number || quote.id.substring(0, 8)}</h2>
+                <h2>Détails du Devis #{quote.document_number}</h2>
+                <p><strong>Statut :</strong> <span style={statusBadgeStyle(quote.status)}>{quote.status}</span></p>
+                <p><strong>Date :</strong> {new Date(quote.created_at).toLocaleDateString('fr-FR')}</p>
                 
-                <div style={detailSectionStyle}>
-                    <h3 style={detailTitleStyle}>Client / Entreprise</h3>
-                    {renderCustomerInfo()}
-                </div>
-
-                <div style={detailSectionStyle}>
-                    <h3 style={detailTitleStyle}>Informations du Devis</h3>
-                    <p><strong>Date du devis:</strong> {new Date(quote.created_at).toLocaleDateString('fr-FR')}</p>
-                    <p><strong>Statut:</strong> <span style={statusBadgeStyle(quote.status)}>{quote.status}</span></p>
-                    <p><strong>Total:</strong> {quote.total_amount.toFixed(2)} €</p>
-                    {quote.demande_id && (
-                        <p><strong>Lié à la demande:</strong> {quote.demande_id.substring(0, 8)}...</p>
-                    )}
-                </div>
-
-                <div style={detailSectionStyle}>
-                    <h3 style={detailTitleStyle}>Services inclus</h3>
-                    {loadingItems ? (
-                        <p>Chargement des services...</p>
-                    ) : quoteItems.length === 0 ? (
-                        <p>Aucun service détaillé.</p>
-                    ) : (
-                        <div style={tableContainerStyle}>
-                            <table style={tableStyle}>
-                                <thead>
-                                    <tr>
-                                        <th style={thStyle}>Service</th>
-                                        <th style={thStyle}>Description</th>
-                                        <th style={thStyle}>Qté</th>
-                                        <th style={thStyle}>Prix U. (€)</th>
-                                        <th style={thStyle}>Total (€)</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {quoteItems.map(item => (
-                                        <tr key={item.id}>
-                                            <td style={tdStyle}>{item.name || 'N/A'}</td>
-                                            <td style={tdStyle}>{item.description}</td>
-                                            <td style={tdStyle}>{item.quantity}</td>
-                                            <td style={tdStyle}>{item.unit_price.toFixed(2)}</td>
-                                            <td style={tdStyle}>{(item.quantity * item.unit_price).toFixed(2)}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </div>
-
+                {/* --- Actions --- */}
                 <div style={modalActionsStyle}>
-                    {quote.status === 'sent' && (
+                    {quote.storage_path && (
                         <>
-                            <button onClick={() => onUpdateStatus(quote.id, 'accepted')} style={{ ...actionButtonStyle, backgroundColor: '#28a745' }}>Accepter</button>
-                            <button onClick={() => onUpdateStatus(quote.id, 'rejected')} style={{ ...actionButtonStyle, backgroundColor: '#dc3545' }}>Refuser</button>
+                            <button onClick={handleView} style={{ ...actionButtonStyle, backgroundColor: '#6c757d' }}>Voir</button>
+                            <button onClick={handleDownload} style={{ ...actionButtonStyle, backgroundColor: '#17a2b8' }}>Télécharger</button>
                         </>
                     )}
+                    {quote.status === 'draft' && (
+                        <button onClick={handleSend} disabled={isSending} style={{ ...actionButtonStyle, backgroundColor: '#007bff' }}>
+                            {isSending ? 'Envoi en cours...' : 'Envoyer par Email'}
+                        </button>
+                    )}
+                    {quote.status === 'sent' && (
+                         <button onClick={() => onUpdateStatus(quote.id, 'accepted')} style={{...actionButtonStyle, backgroundColor: '#28a745'}}>
+                            Marquer comme Accepté
+                        </button>
+                    )}
+                     <button onClick={() => onUpdateStatus(quote.id, 'rejected')} style={{...actionButtonStyle, backgroundColor: '#dc3545'}}>
+                        Marquer comme Refusé
+                    </button>
                 </div>
             </div>
         </div>
@@ -113,95 +99,11 @@ const QuoteDetailModal = ({ quote, onClose, onUpdateStatus }) => {
 };
 
 // --- Styles ---
-
-const modalOverlayStyle = {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-};
-
-const modalContentStyle = {
-    background: 'white',
-    padding: '30px',
-    borderRadius: '8px',
-    boxShadow: '0 5px 15px rgba(0,0,0,0.3)',
-    width: '90%',
-    maxWidth: '800px',
-    maxHeight: '90vh',
-    overflowY: 'auto',
-    position: 'relative',
-};
-
-const closeButtonStyle = {
-    position: 'absolute',
-    top: '15px',
-    right: '15px',
-    background: 'none',
-    border: 'none',
-    fontSize: '28px',
-    cursor: 'pointer',
-    color: '#aaa',
-};
-
-const detailSectionStyle = {
-    marginBottom: '25px',
-};
-
-const detailTitleStyle = {
-    borderBottom: '1px solid #eee',
-    paddingBottom: '8px',
-    marginBottom: '15px',
-    color: '#333',
-    fontSize: '18px',
-};
-
-const modalActionsStyle = {
-    marginTop: '30px',
-    textAlign: 'right',
-    borderTop: '1px solid #eee',
-    paddingTop: '20px',
-};
-
-const actionButtonStyle = {
-    padding: '10px 20px',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '16px',
-    fontWeight: 'bold',
-    marginLeft: '10px',
-};
-const tableContainerStyle = {
-    overflowX: 'auto',
-};
-
-const tableStyle = {
-    width: '100%',
-    borderCollapse: 'collapse',
-    marginTop: '20px',
-};
-
-const thStyle = {
-    border: '1px solid #ddd',
-    padding: '10px',
-    textAlign: 'left',
-    backgroundColor: '#f2f2f2',
-    fontWeight: 'bold',
-};
-
-const tdStyle = {
-    border: '1px solid #ddd',
-    padding: '10px',
-    textAlign: 'left',
-};
+const modalOverlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 };
+const modalContentStyle = { background: 'white', padding: '30px', borderRadius: '8px', width: '90%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto', position: 'relative' };
+const closeButtonStyle = { position: 'absolute', top: '15px', right: '15px', background: 'transparent', border: 'none', fontSize: '24px', cursor: 'pointer' };
+const actionButtonStyle = { padding: '10px 15px', border: 'none', borderRadius: '5px', cursor: 'pointer', color: 'white', fontWeight: 'bold' };
+const modalActionsStyle = { marginTop: '30px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #eee', paddingTop: '20px' };
 const statusBadgeStyle = (status) => {
     let backgroundColor;
     switch (status) {
