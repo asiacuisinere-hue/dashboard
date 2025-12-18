@@ -43,7 +43,7 @@ const QuoteDetailModal = ({ quote, onClose, onUpdateStatus, fetchExistingQuotes 
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) throw new Error("Utilisateur non authentifié.");
             
-            const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/send-quote`, {
+            const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/send-quote-test-does-not-exist`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
