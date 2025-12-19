@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 import { useLocation, useNavigate } from 'react-router-dom';
 import QuoteDetailModal from './QuoteDetailModal';
+import ReactPaginate from 'react-paginate';
 
 const Devis = () => {
     const location = useLocation();
@@ -21,6 +22,8 @@ const Devis = () => {
     const [selectedQuote, setSelectedQuote] = useState(null);
     const [quoteSearchTerm, setQuoteSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
+    const [currentPage, setCurrentPage] = useState(0);
+    const itemsPerPage = 10;
 
     // --- General component states ---
     const [isLoading, setIsLoading] = useState(false);
@@ -302,6 +305,15 @@ const Devis = () => {
         return 'N/A';
     };
 
+    // --- PAGINATION LOGIC ---
+    const handlePageClick = (event) => {
+        setCurrentPage(event.selected);
+    };
+    const offset = currentPage * itemsPerPage;
+    const currentQuotes = existingQuotes.slice(offset, offset + itemsPerPage);
+    const pageCount = Math.ceil(existingQuotes.length / itemsPerPage);
+
+
     return (
         <div style={containerStyle}>
             <h1>Gestion des Devis</h1>
@@ -475,34 +487,98 @@ const Devis = () => {
                 {existingQuotes.length === 0 ? (
                     <p>Aucun devis existant.</p>
                 ) : (
-                    <div style={tableContainerStyle}>
-                        <table style={tableStyle}>
-                            <thead>
-                                <tr>
-                                    <th style={thStyle}>ID Devis</th>
-                                    <th style={thStyle}>Client / Entreprise</th>
-                                    <th style={thStyle}>Date</th>
-                                    <th style={thStyle}>Total</th>
-                                    <th style={thStyle}>Statut</th>
-                                    <th style={thStyle}>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {existingQuotes.map(quote => (
-                                    <tr key={quote.id}>
-                                        <td style={tdStyle}>{quote.document_number?.substring(0, 18) || quote.id.substring(0, 8)}</td>
-                                        <td style={tdStyle}>{renderCustomerName(quote)}</td>
-                                        <td style={tdStyle}>{new Date(quote.created_at).toLocaleDateString('fr-FR')}</td>
-                                        <td style={tdStyle}>{quote.total_amount.toFixed(2)} €</td>
-                                        <td style={tdStyle}><span style={statusBadgeStyle(quote.status)}>{quote.status}</span></td>
-                                        <td style={tdStyle}>
-                                            <button onClick={() => setSelectedQuote(quote)} style={detailsButtonStyle}>Voir Détails</button>
-                                        </td>
+                    <>
+                        <div style={tableContainerStyle}>
+                            <table style={tableStyle}>
+                                <thead>
+                                    <tr>
+                                        <th style={thStyle}>ID Devis</th>
+                                        <th style={thStyle}>Client / Entreprise</th>
+                                        <th style={thStyle}>Date</th>
+                                        <th style={thStyle}>Échéance</th>
+                                        <th style={thStyle}>Total</th>
+                                        <th style={thStyle}>Statut</th>
+                                        <th style={thStyle}>Actions</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody>
+                                    {currentQuotes.map(quote => {
+                                        let dueDate = null;
+                                        // Calculate due date only for 'sent' or 'accepted' quotes (30 days validity)
+                                        if (quote.status === 'sent' || quote.status === 'accepted') {
+                                            const createdDate = new Date(quote.created_at);
+                                            createdDate.setDate(createdDate.getDate() + 30);
+                                            dueDate = createdDate.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+                                        }
+
+                                        return (
+                                            <tr key={quote.id}>
+                                                <td style={tdStyle}>{quote.document_number?.substring(0, 18) || quote.id.substring(0, 8)}</td>
+                                                <td style={tdStyle}>{renderCustomerName(quote)}</td>
+                                                <td style={tdStyle}>{new Date(quote.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })}</td>
+                                                <td style={tdStyle}>{dueDate || '—'}</td>
+                                                <td style={tdStyle}>{quote.total_amount.toFixed(2)} €</td>
+                                                <td style={tdStyle}><span style={statusBadgeStyle(quote.status)}>{quote.status}</span></td>
+                                                <td style={tdStyle}>
+                                                    <button onClick={() => setSelectedQuote(quote)} style={detailsButtonStyle}>Voir Détails</button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div style={{ borderTop: '1px solid #eee', marginTop: '2rem', paddingTop: '1rem' }}>
+                            <style>{`
+                                .pagination {
+                                    display: flex;
+                                    justify-content: center;
+                                    align-items: center;
+                                    list-style: none;
+                                    padding: 0;
+                                    font-family: Arial, sans-serif;
+                                }
+                                .pagination li {
+                                    margin: 0 4px;
+                                }
+                                .pagination li a {
+                                    padding: 8px 14px;
+                                    border-radius: 5px;
+                                    cursor: pointer;
+                                    color: #333;
+                                    text-decoration: none;
+                                    transition: background-color 0.2s, color 0.2s;
+                                    border: 1px solid #ddd;
+                                    font-weight: bold;
+                                }
+                                .pagination li.active a {
+                                    background-color: #d4af37;
+                                    color: white;
+                                    border-color: #d4af37;
+                                }
+                                .pagination li.disabled a {
+                                    color: #ccc;
+                                    cursor: not-allowed;
+                                }
+                                .pagination li a:hover:not(.disabled) {
+                                    background-color: #f5f5f5;
+                                }
+                            `}</style>
+                            <ReactPaginate
+                                previousLabel={'<'}
+                                nextLabel={'>'}
+                                breakLabel={'...'}
+                                pageCount={pageCount}
+                                marginPagesDisplayed={1}
+                                pageRangeDisplayed={3}
+                                onPageChange={handlePageClick}
+                                containerClassName={'pagination'}
+                                activeClassName={'active'}
+                                disabledClassName={'disabled'}
+                            />
+                        </div>
+                    </>
                 )}
             </div>
 
