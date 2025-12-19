@@ -3,36 +3,73 @@ import { supabase } from '../supabaseClient';
 
 const QuoteDetailModal = ({ quote, onClose, onUpdateStatus, fetchExistingQuotes }) => {
     const [isSending, setIsSending] = useState(false);
+    const [isLoadingAction, setIsLoadingAction] = useState(false);
 
-    const handleView = () => {
+    const handleView = async () => {
+        setIsLoadingAction(true);
         if (!quote.storage_path) {
             alert("Aucun document à afficher.");
+            setIsLoadingAction(false);
             return;
         }
-        const url = `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/view-document?path=${quote.storage_path}`;
-        window.open(url, '_blank');
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) throw new Error("Utilisateur non authentifié.");
+
+            const url = `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/view-document?path=${quote.storage_path}`;
+            const response = await fetch(url, {
+                headers: {
+                    'Authorization': `Bearer ${session.access_token}`,
+                },
+            });
+
+            if (!response.ok) throw new Error("Le fichier n'a pas pu être chargé.");
+            
+            const blob = await response.blob();
+            const fileURL = URL.createObjectURL(blob);
+            window.open(fileURL, '_blank');
+
+        } catch (error) {
+            alert(`Erreur d'affichage: ${error.message}`);
+        } finally {
+            setIsLoadingAction(false);
+        }
     };
 
     const handleDownload = async () => {
+        setIsLoadingAction(true);
         if (!quote.storage_path) {
             alert("Aucun document à télécharger.");
+            setIsLoadingAction(false);
             return;
         }
-        const url = `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/view-document?path=${quote.storage_path}`;
         try {
-            const response = await fetch(url);
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) throw new Error("Utilisateur non authentifié.");
+            
+            const url = `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/view-document?path=${quote.storage_path}`;
+            const response = await fetch(url, {
+                headers: {
+                    'Authorization': `Bearer ${session.access_token}`,
+                },
+            });
+
             if (!response.ok) throw new Error("Le fichier n'a pas pu être téléchargé.");
+
             const blob = await response.blob();
             const downloadUrl = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = downloadUrl;
-            a.download = quote.storage_path.split('/').pop() || `devis-${quote.document_number}.pdf`;
+            a.download = quote.document_number ? `devis-${quote.document_number}.pdf` : (quote.storage_path.split('/').pop() || 'devis.pdf');
             document.body.appendChild(a);
             a.click();
             a.remove();
             window.URL.revokeObjectURL(downloadUrl);
+
         } catch (error) {
             alert(`Erreur de téléchargement: ${error.message}`);
+        } finally {
+            setIsLoadingAction(false);
         }
     };
 
@@ -53,7 +90,7 @@ const QuoteDetailModal = ({ quote, onClose, onUpdateStatus, fetchExistingQuotes 
             });
             const result = await response.json();
             if (!response.ok) throw new Error(result.error);
-            alert(result.message);
+            alert(result.message || 'Devis envoyé avec succès.');
             fetchExistingQuotes(); // Refresh the list to show the new 'sent' status
             onClose();
         } catch (error) {
@@ -75,8 +112,12 @@ const QuoteDetailModal = ({ quote, onClose, onUpdateStatus, fetchExistingQuotes 
                 <div style={modalActionsStyle}>
                     {quote.storage_path && (
                         <>
-                            <button onClick={handleView} style={{ ...actionButtonStyle, backgroundColor: '#6c757d' }}>Voir</button>
-                            <button onClick={handleDownload} style={{ ...actionButtonStyle, backgroundColor: '#17a2b8' }}>Télécharger</button>
+                            <button onClick={handleView} disabled={isLoadingAction} style={{ ...actionButtonStyle, backgroundColor: '#6c757d' }}>
+                                {isLoadingAction ? 'Chargement...' : 'Voir'}
+                            </button>
+                            <button onClick={handleDownload} disabled={isLoadingAction} style={{ ...actionButtonStyle, backgroundColor: '#17a2b8' }}>
+                                {isLoadingAction ? 'Chargement...' : 'Télécharger'}
+                            </button>
                         </>
                     )}
                     {quote.status === 'draft' && (
