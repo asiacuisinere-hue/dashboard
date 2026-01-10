@@ -190,7 +190,7 @@ const DemandesEnCours = () => {
                             <tr key={demande.id}>
                                 <td style={tdStyle}>{new Date(demande.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })}</td>
                                 <td style={{...tdStyle, textAlign: 'center', fontSize: '18px'}}>
-                                    {demande.type === 'RESERVATION_SERVICE' && <span title="RESERVATION_SERVICE">🍽️</span>}
+                                    {demande.type === 'RESERVATION_SERVICE' && <span title="RESERVATION_SERVICE">🏠</span>}
                                     {demande.type === 'COMMANDE_MENU' && <span title="COMMANDE_MENU">🚚</span>}
                                     {demande.type === 'COMMANDE_SPECIALE' && <span title="COMMANDE_SPECIALE">⭐</span>}
                                     {demande.type === 'SOUSCRIPTION_ABONNEMENT' && <span title="SOUSCRIPTION_ABONNEMENT">🔄</span>}

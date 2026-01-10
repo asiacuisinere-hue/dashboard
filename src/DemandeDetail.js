@@ -164,7 +164,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                     style={inputStyle} 
                     type="number" 
                     name="numberOfGuests" 
-                    value={details.numberOfGuests || ''} 
+                    value={details.numberOfPeople || ''} 
                     onChange={handleDetailChange} 
                 />
             </div>
