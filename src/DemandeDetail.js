@@ -159,6 +159,19 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                 />
             </div>
             <div style={formGroupStyle}>
+                <label style={labelStyle}>Heure de l'événement</label>
+                <select
+                    style={inputStyle}
+                    name="heure"
+                    value={details.heure || ''}
+                    onChange={handleDetailChange}
+                >
+                    <option value="">Non spécifié</option>
+                    <option value="Midi">Midi (déjeuner)</option>
+                    <option value="Soir">Soir (dîner)</option>
+                </select>
+            </div>
+            <div style={formGroupStyle}>
                 <label style={labelStyle}>Nombre d'invités</label>
                 <input 
                     style={inputStyle} 
@@ -180,6 +193,20 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                     {communesReunion.map(commune => (
                         <option key={commune} value={commune}>{commune}</option>
                     ))}
+                </select>
+            </div>
+            <div style={formGroupStyle}>
+                <label style={labelStyle}>Budget par personne</label>
+                <select
+                    style={inputStyle}
+                    name="budget"
+                    value={details.budget || ''}
+                    onChange={handleDetailChange}
+                >
+                    <option value="">Non spécifié</option>
+                    <option value="<50">Moins de 50€</option>
+                    <option value="50-80">50€ - 80€</option>
+                    <option value=">80">Plus de 80€</option>
                 </select>
             </div>
             <div style={formGroupStyle}>
