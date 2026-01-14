@@ -175,8 +175,8 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                 <label style={labelStyle}>Nombre d'invités</label>
                 <input 
                     style={inputStyle} 
-                    type="number" 
-                    name="numberOfGuests" 
+                    type="text" 
+                    name="numberOfPeople" 
                     value={details.numberOfPeople || ''} 
                     onChange={handleDetailChange} 
                 />
