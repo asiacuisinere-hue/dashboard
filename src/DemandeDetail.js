@@ -367,10 +367,14 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                             </button>
                         )}
                         <button 
-                            onClick={() => onUpdateStatus(demande.id, 'cancelled')} 
+                            onClick={() => {
+                                if (window.confirm('Êtes-vous sûr de vouloir annuler cette demande ? Cette action est irréversible.')) {
+                                    onUpdateStatus(demande.id, 'cancelled');
+                                }
+                            }} 
                             style={{ ...actionButtonStyle, backgroundColor: '#dc3545' }}
                         >
-                            Annuler
+                            Annuler la commande
                         </button>
                     </>
                 </div>
