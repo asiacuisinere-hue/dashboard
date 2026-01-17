@@ -16,6 +16,7 @@ const Devis = () => {
     const [services, setServices] = useState([]);
     const [quoteItems, setQuoteItems] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
+    const [menuDetails, setMenuDetails] = useState('');
     
     // --- State for existing quotes list ---
     const [existingQuotes, setExistingQuotes] = useState([]);
@@ -184,6 +185,7 @@ const Devis = () => {
             })),
             total: total,
             type: 'service_reservation',
+            menu_details: menuDetails,
         };
 
         // Ajouter demandeId SEULEMENT s'il existe (workflow avec demande)
@@ -221,6 +223,7 @@ const Devis = () => {
             setSelectedCustomer(null);
             setQuoteItems([]);
             setSearchTerm('');
+            setMenuDetails('');
             fetchExistingQuotes();
 
         } catch (error) {
@@ -382,9 +385,20 @@ const Devis = () => {
                     )}
                 </div>
 
+                {/* Section "Menu convenu" */}
+                <div style={subSectionStyle}>
+                    <h3>2. Détails du Menu Convenu</h3>
+                    <textarea
+                        placeholder="Ex: Entrée: Salade de papaye verte, Plat: Canard laqué, Dessert: Perles de coco"
+                        value={menuDetails}
+                        onChange={(e) => setMenuDetails(e.target.value)}
+                        style={{ ...inputStyle, height: '100px', width: '100%', marginTop: '0' }}
+                    />
+                </div>
+
                 {/* Section d'ajout de services */}
                 <div style={subSectionStyle}>
-                    <h3>2. Ajouter des services au devis</h3>
+                    <h3>3. Ajouter des services au devis</h3>
                     <div style={servicesGridStyle}>
                         {services.map(service => (
                             <div key={service.id} style={serviceCardStyle} onClick={() => handleAddServiceToQuote(service)}>
@@ -399,7 +413,7 @@ const Devis = () => {
 
                 {/* Section des lignes du devis */}
                 <div style={subSectionStyle}>
-                    <h3>3. Lignes du devis</h3>
+                    <h3>4. Lignes du devis</h3>
                     {quoteItems.length === 0 ? (
                         <p>Aucun service ajouté au devis.</p>
                     ) : (
@@ -457,7 +471,7 @@ const Devis = () => {
 
                 {/* Section de génération */}
                 <div style={subSectionStyle}>
-                    <h3>4. Générer le devis</h3>
+                    <h3>5. Générer le devis</h3>
                     <button onClick={handleGenerateQuote} style={generateQuoteButtonStyle} disabled={isLoading}>
                         {isLoading ? 'Création en cours...' : 'Créer le brouillon du devis'}
                     </button>
