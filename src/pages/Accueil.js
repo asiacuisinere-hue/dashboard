@@ -3,7 +3,7 @@ import { supabase } from '../supabaseClient';
 import { Link } from 'react-router-dom';
 import { 
     DollarSign, Calendar, Hash, Bell, Utensils, QrCode, 
-    BarChart3, ChevronRight, Clock, MapPin 
+    BarChart3, ChevronRight, Clock, MapPin, CheckCircle 
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 
