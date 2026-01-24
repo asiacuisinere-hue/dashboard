@@ -253,7 +253,22 @@ const Sidebar = ({
                             onMouseEnter={(e) => e.currentTarget.style.color = '#fff'}
                             onMouseLeave={(e) => e.currentTarget.style.color = '#868e96'}
                         >
-                            <span>{group.title}</span>
+                            <div style={{ display: 'flex', alignItems: 'center' }}>
+                                <span>{group.title}</span>
+                                {!isGroupOpen && (
+                                    <div style={{ display: 'flex', gap: '4px', marginLeft: '10px' }}>
+                                        {group.title === 'GESTION' && newCount > 0 && (
+                                            <span style={{ ...newBadgeStyle, width: '14px', height: '14px', fontSize: '8px', marginLeft: 0 }}>{newCount}</span>
+                                        )}
+                                        {group.title === 'GESTION' && toPrepareCount > 0 && (
+                                            <span style={{ ...toPrepareBadgeStyle, width: '14px', height: '14px', fontSize: '8px', marginLeft: 0 }}>{toPrepareCount}</span>
+                                        )}
+                                        {group.title === 'PILOTAGE' && subscriptionsNeedAttentionCount > 0 && (
+                                            <span style={{ ...needsAttentionBadgeStyle, width: '14px', height: '14px', fontSize: '8px', marginLeft: 0 }}>{subscriptionsNeedAttentionCount}</span>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                             {isGroupOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                         </div>
                     )}
@@ -313,8 +328,32 @@ const Sidebar = ({
             <Link to="/scanner" style={scannerIconStyle}>
                 <QrCode size={24} />
             </Link>
-            <div style={hamburgerStyle} onClick={() => setIsOpen(true)}>
+            <div style={{ ...hamburgerStyle, position: 'relative' }} onClick={() => setIsOpen(true)}>
                 ☰
+                {newCount > 0 && (
+                    <span style={{
+                        position: 'absolute',
+                        top: '-2px',
+                        right: '-2px',
+                        width: '12px',
+                        height: '12px',
+                        backgroundColor: '#28a745', // Vert pour "Nouvelles"
+                        borderRadius: '50%',
+                        border: '2px solid #343a40'
+                    }}></span>
+                )}
+                {toPrepareCount > 0 && (
+                    <span style={{
+                        position: 'absolute',
+                        bottom: '-2px',
+                        right: '-2px',
+                        width: '12px',
+                        height: '12px',
+                        backgroundColor: '#6f42c1', // Violet pour "À Préparer"
+                        borderRadius: '50%',
+                        border: '2px solid #343a40'
+                    }}></span>
+                )}
             </div>
           </div>
         </header>
