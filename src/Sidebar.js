@@ -4,7 +4,8 @@ import { supabase } from './supabaseClient';
 import { 
     QrCode, Bell, X, Info, CheckCircle, ChevronDown, ChevronRight,
     LayoutDashboard, BarChart3, Wallet, FileText, Receipt, 
-    History, Building2, ClipboardList, Calendar, UserCog, Utensils, ScanLine, Settings
+    History, Building2, ClipboardList, Calendar, UserCog, Utensils, ScanLine, Settings,
+    Users, Package
 } from 'lucide-react';
 
 const Sidebar = ({ 
