@@ -2,6 +2,21 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 
+// Styles CSS pour l'effet de survol des cartes
+const CardHoverStyles = () => (
+    <style>{`
+        .setting-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1) !important;
+            border-color: #d4af37 !important;
+            background-color: #fffdf5 !important;
+        }
+        .setting-card:hover h2 {
+            color: #d4af37;
+        }
+    `}</style>
+);
+
 const Parametres = () => {
     // --- États Généraux ---
     const [status, setStatus] = useState({ message: '', type: 'info' });
@@ -283,6 +298,7 @@ const Parametres = () => {
     
     return (
         <div style={containerStyle}>
+            <CardHoverStyles />
             <div className="mb-8">
                 <h1 className="text-3xl font-bold text-gray-800 mb-2">Paramètres</h1>
                 <p className="text-gray-600">Gérez ici les différentes configurations de votre application.</p>
@@ -290,9 +306,9 @@ const Parametres = () => {
             {status.message && <div style={statusStyle(status.type)}>{status.message}</div>}
 
             <div style={gridStyle}>
-                <Link to="/calendrier" style={cardStyle}><h2>Gestion du Calendrier</h2><p>Bloquer des dates et des jours.</p></Link>
-                <Link to="/abonnements" style={cardStyle}><h2>Gestion des Abonnements</h2><p>Gérer les demandes d'abonnements.</p></Link>
-                <Link to="/admin-account" style={cardStyle}><h2>Compte Administrateur</h2><p>Gérer les informations de connexion.</p></Link>
+                <Link to="/calendrier" className="setting-card" style={cardStyle}><h2>Gestion du Calendrier</h2><p>Bloquer des dates et des jours.</p></Link>
+                <Link to="/abonnements" className="setting-card" style={cardStyle}><h2>Gestion des Abonnements</h2><p>Gérer les demandes d'abonnements.</p></Link>
+                <Link to="/admin-account" className="setting-card" style={cardStyle}><h2>Compte Administrateur</h2><p>Gérer les informations de connexion.</p></Link>
             </div>
 
             <div style={sectionStyle}>
