@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
-import { QrCode, Bell, X, Info, CheckCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { 
+    QrCode, Bell, X, Info, CheckCircle, ChevronDown, ChevronRight,
+    LayoutDashboard, BarChart3, Wallet, FileText, Receipt, 
+    History, Building2, ClipboardList, Calendar, UserCog, Utensils, ScanLine, Settings
+} from 'lucide-react';
 
 const Sidebar = ({ 
     newCount, inProgressCount, pendingQuotesCount, toPrepareCount, 
@@ -56,12 +60,18 @@ const Sidebar = ({
 
 
   const badgeStyle = {
-    marginLeft: '10px',
-    padding: '2px 8px',
-    borderRadius: '12px',
-    fontSize: '12px',
+    padding: '2px 6px',
+    borderRadius: '10px',
+    fontSize: '10px',
     fontWeight: 'bold',
     color: 'white',
+    minWidth: '18px',
+    height: '18px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+    marginLeft: '8px'
   };
 
   const newBadgeStyle = { ...badgeStyle, backgroundColor: '#28a745' };
@@ -153,11 +163,13 @@ const Sidebar = ({
         {
             title: 'PILOTAGE',
             links: [
-                { to: '/statistiques', label: 'Statistiques' },
-                { to: '/depenses', label: 'Dépenses' },
+                { to: '/', label: 'Accueil', icon: LayoutDashboard },
+                { to: '/statistiques', label: 'Statistiques', icon: BarChart3 },
+                { to: '/depenses', label: 'Dépenses', icon: Wallet },
                 { 
                     to: '/abonnements', 
                     label: 'Abonnements', 
+                    icon: ClipboardList,
                     count: activeSubscriptionsCount, 
                     style: activeSubscriptionsBadgeStyle,
                     secondCount: subscriptionsNeedAttentionCount,
@@ -168,13 +180,14 @@ const Sidebar = ({
         {
             title: 'GESTION',
             links: [
-                { to: '/nouvelles-demandes', label: 'Nouvelles Demandes', count: newCount, style: newBadgeStyle },
-                { to: '/demandes-en-cours', label: 'Demandes en Cours', count: inProgressCount, style: inProgressBadgeStyle },
-                { to: '/a-preparer', label: 'À Préparer', count: toPrepareCount, style: toPrepareBadgeStyle },
-                { to: '/devis', label: 'Devis', count: pendingQuotesCount, style: pendingQuotesBadgeStyle },
+                { to: '/nouvelles-demandes', label: 'Nouvelles', icon: Bell, count: newCount, style: newBadgeStyle },
+                { to: '/demandes-en-cours', label: 'En cours', icon: History, count: inProgressCount, style: inProgressBadgeStyle },
+                { to: '/a-preparer', label: 'À Préparer', icon: Utensils, count: toPrepareCount, style: toPrepareBadgeStyle },
+                { to: '/devis', label: 'Devis', icon: FileText, count: pendingQuotesCount, style: pendingQuotesBadgeStyle },
                 { 
                     to: '/factures', 
                     label: 'Factures', 
+                    icon: Receipt,
                     subLinks: [
                         { to: '/factures?status=pending', label: 'En attente', count: pendingInvoicesCount, style: pendingInvoiceBadgeStyle },
                         { to: '/factures?status=deposit_paid', label: 'Acompte versé', count: depositPaidInvoicesCount, style: depositPaidInvoiceBadgeStyle },
@@ -186,20 +199,20 @@ const Sidebar = ({
         {
             title: 'DONNÉES',
             links: [
-                { to: '/particuliers', label: 'Particuliers' },
-                { to: '/entreprises', label: 'Entreprises' },
-                { to: '/historique', label: 'Historique' },
+                { to: '/particuliers', label: 'Particuliers', icon: Users },
+                { to: '/entreprises', label: 'Entreprises', icon: Building2 },
+                { to: '/historique', label: 'Historique', icon: Package },
             ]
         },
         {
             title: 'CONFIGURATION',
             links: [
-                { to: '/events', label: 'Événements' },
-                { to: '/services', label: 'Services' },
-                { to: '/plats', label: 'Plats' },
-                { to: '/scanner', label: 'Scanner', mobileOnly: false },
-                { to: '/parametres', label: 'Paramètres' },
-                { to: '/admin-account', label: 'Compte' },
+                { to: '/events', label: 'Événements', icon: Calendar },
+                { to: '/services', label: 'Services', icon: ClipboardList },
+                { to: '/plats', label: 'Plats', icon: Utensils },
+                { to: '/scanner', label: 'Scanner', icon: ScanLine, mobileOnly: false },
+                { to: '/parametres', label: 'Paramètres', icon: Settings },
+                { to: '/admin-account', label: 'Compte', icon: UserCog },
             ]
         }
     ];
@@ -220,8 +233,8 @@ const Sidebar = ({
         borderBottom: '1px solid rgba(255,255,255,0.05)'
     };
 
-    const contentStyle = mobile ? { display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' } : { display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' };
-    const desktopLinkStyle = { display: 'block', padding: '12px 20px', color: '#ccc', textDecoration: 'none', borderLeft: '4px solid transparent', transition: 'all 0.3s ease', borderRadius: '4px', marginBottom: '2px', fontSize: '0.9rem' };
+    const contentStyle = { display: 'flex', alignItems: 'center', width: '100%' };
+    const desktopLinkStyle = { display: 'block', padding: '10px 20px', color: '#ccc', textDecoration: 'none', borderLeft: '4px solid transparent', transition: 'all 0.3s ease', borderRadius: '4px', marginBottom: '2px', fontSize: '0.9rem' };
     const desktopActiveLinkStyle = { ...desktopLinkStyle, backgroundColor: 'rgba(212, 175, 55, 0.15)', borderLeft: '4px solid #d4af37', fontWeight: 'bold', color: 'white' };
     const mobileLinkStyle = { display: 'block', padding: '20px', color: 'white', fontSize: '18px', textAlign: 'center', textDecoration: 'none', width: '100%', borderBottom: '1px solid rgba(255,255,255,0.1)' };
     const mobileActiveLinkStyle = { ...mobileLinkStyle, color: '#d4af37', backgroundColor: 'rgba(212, 175, 55, 0.1)' };
@@ -253,7 +266,8 @@ const Sidebar = ({
                             <React.Fragment key={link.to || link.label}>
                                 <NavLink to={link.to} style={({ isActive }) => mobile ? (isActive ? mobileActiveLinkStyle : mobileLinkStyle) : (isActive ? desktopActiveLinkStyle : desktopLinkStyle)} onClick={handleClick}>
                                     <div style={contentStyle}>
-                                        <span>{link.label}</span>
+                                        {link.icon && <link.icon size={18} style={{ marginRight: '12px', opacity: 0.8 }} />}
+                                        <span style={{ flex: 1 }}>{link.label}</span>
                                         <div style={{ display: 'flex', gap: '5px' }}>
                                             {link.count > 0 && <span style={link.style}>{link.count}</span>}
                                             {link.secondCount > 0 && <span style={link.secondStyle}>⚠️ {link.secondCount}</span>}
@@ -263,7 +277,7 @@ const Sidebar = ({
                                 {!mobile && isGroupOpen && link.subLinks && link.subLinks.map(subLink => (
                                     <NavLink key={subLink.to} to={subLink.to} style={({ isActive }) => ({ ...desktopLinkStyle, paddingLeft: '40px', fontSize: '13px', color: isActive ? '#d4af37' : '#aaa' })} onClick={handleClick}>
                                         <div style={contentStyle}>
-                                            <span>{subLink.label}</span>
+                                            <span style={{ flex: 1 }}>{subLink.label}</span>
                                             {subLink.count > 0 && <span style={subLink.style}>{subLink.count}</span>}
                                         </div>
                                     </NavLink>
