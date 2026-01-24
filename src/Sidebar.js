@@ -186,6 +186,7 @@ const Sidebar = ({
             links: [
                 { to: '/events', label: 'Événements' },
                 { to: '/services', label: 'Services' },
+                { to: '/plats', label: 'Plats' }, // Nouveau lien
                 { to: '/scanner', label: 'Scanner', mobileOnly: false }, // Hide on mobile list
                 { to: '/parametres', label: 'Paramètres' },
                 { to: '/admin-account', label: 'Compte' },

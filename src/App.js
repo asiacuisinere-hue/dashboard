@@ -19,6 +19,7 @@ import APreparer from './pages/APreparer';
 import Validation from './pages/Validation';
 import Statistiques from './pages/Statistiques';
 import Depenses from './pages/Depenses';
+import Plats from './pages/Plats'; // Import de la page Plats
 import Events from './pages/Events'; // AJOUT DE L'IMPORT
 import Accueil from './pages/Accueil'; // Ajout de la nouvelle page d'accueil
 
@@ -301,6 +302,7 @@ const DashboardLayout = () => {
                     <Route path="/calendrier" element={<CalendarSettings />} />
                     <Route path="/abonnements" element={<Abonnements />} />
                     <Route path="/admin-account" element={<AdminAccountSettings />} />
+                    <Route path="/plats" element={<Plats />} />
                     <Route path="/statistiques" element={<Statistiques />} />
                                         <Route path="/depenses" element={<Depenses />} />
                                         <Route path="/events" element={<Events />} />
