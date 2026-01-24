@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
-import { QrCode, Bell, X, Info, CheckCircle } from 'lucide-react';
+import { QrCode, Bell, X, Info, CheckCircle, ChevronDown, ChevronRight } from 'lucide-react';
 
 const Sidebar = ({ 
     newCount, inProgressCount, pendingQuotesCount, toPrepareCount, 
@@ -11,8 +11,17 @@ const Sidebar = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [openGroups, setOpenGroups] = useState(['GESTION']); // GESTION ouvert par défaut
   const notificationsRef = useRef(null);
   const navigate = useNavigate();
+
+  const toggleGroup = (groupTitle) => {
+    setOpenGroups(prev => 
+        prev.includes(groupTitle) 
+            ? prev.filter(t => t !== groupTitle) 
+            : [...prev, groupTitle]
+    );
+  };
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -143,30 +152,31 @@ const Sidebar = ({
     const groups = [
         {
             title: 'PILOTAGE',
-                        links: [
-                            { to: '/statistiques', label: 'Statistiques' },
-                            { to: '/depenses', label: 'Dépenses' }, // Moved Expenses link
-                            { 
-                                to: '/abonnements', 
-                                label: 'Abonnements', 
-                                count: activeSubscriptionsCount, 
-                                style: activeSubscriptionsBadgeStyle,
-                                secondCount: subscriptionsNeedAttentionCount,
-                                secondStyle: needsAttentionBadgeStyle
-                            },
-                        ]
-                    },
-                    {
-                        title: 'GESTION',
-                        links: [
-                            { to: '/nouvelles-demandes', label: 'Nouvelles Demandes', count: newCount, style: newBadgeStyle },
-                            { to: '/demandes-en-cours', label: 'Demandes en Cours', count: inProgressCount, style: inProgressBadgeStyle },
-                            { to: '/a-preparer', label: 'À Préparer', count: toPrepareCount, style: toPrepareBadgeStyle },
-                            { to: '/devis', label: 'Devis', count: pendingQuotesCount, style: pendingQuotesBadgeStyle },
-                            { 
-                                to: '/factures', 
-                                label: 'Factures', 
-                                subLinks: [                        { to: '/factures?status=pending', label: 'En attente', count: pendingInvoicesCount, style: pendingInvoiceBadgeStyle },
+            links: [
+                { to: '/statistiques', label: 'Statistiques' },
+                { to: '/depenses', label: 'Dépenses' },
+                { 
+                    to: '/abonnements', 
+                    label: 'Abonnements', 
+                    count: activeSubscriptionsCount, 
+                    style: activeSubscriptionsBadgeStyle,
+                    secondCount: subscriptionsNeedAttentionCount,
+                    secondStyle: needsAttentionBadgeStyle
+                },
+            ]
+        },
+        {
+            title: 'GESTION',
+            links: [
+                { to: '/nouvelles-demandes', label: 'Nouvelles Demandes', count: newCount, style: newBadgeStyle },
+                { to: '/demandes-en-cours', label: 'Demandes en Cours', count: inProgressCount, style: inProgressBadgeStyle },
+                { to: '/a-preparer', label: 'À Préparer', count: toPrepareCount, style: toPrepareBadgeStyle },
+                { to: '/devis', label: 'Devis', count: pendingQuotesCount, style: pendingQuotesBadgeStyle },
+                { 
+                    to: '/factures', 
+                    label: 'Factures', 
+                    subLinks: [
+                        { to: '/factures?status=pending', label: 'En attente', count: pendingInvoicesCount, style: pendingInvoiceBadgeStyle },
                         { to: '/factures?status=deposit_paid', label: 'Acompte versé', count: depositPaidInvoicesCount, style: depositPaidInvoiceBadgeStyle },
                         { to: '/factures?status=paid&prep=true', label: 'Payées (Prêtes)', count: waitingForPrepCount, style: waitingForPrepStyle }
                     ]
@@ -186,49 +196,84 @@ const Sidebar = ({
             links: [
                 { to: '/events', label: 'Événements' },
                 { to: '/services', label: 'Services' },
-                { to: '/plats', label: 'Plats' }, // Nouveau lien
-                { to: '/scanner', label: 'Scanner', mobileOnly: false }, // Hide on mobile list
+                { to: '/plats', label: 'Plats' },
+                { to: '/scanner', label: 'Scanner', mobileOnly: false },
                 { to: '/parametres', label: 'Paramètres' },
                 { to: '/admin-account', label: 'Compte' },
             ]
         }
     ];
-    // Styles...
-    const groupTitleStyle = { fontSize: '0.75rem', color: '#868e96', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '10px 20px', marginTop: '15px' };
+
+    const groupTitleStyle = { 
+        fontSize: '0.75rem', 
+        color: '#868e96', 
+        textTransform: 'uppercase', 
+        letterSpacing: '0.05em', 
+        padding: '15px 20px', 
+        marginTop: '10px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        cursor: 'pointer',
+        userSelect: 'none',
+        transition: 'color 0.2s',
+        borderBottom: '1px solid rgba(255,255,255,0.05)'
+    };
+
     const contentStyle = mobile ? { display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' } : { display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' };
-    const desktopLinkStyle = { display: 'block', padding: '15px 20px', color: '#ccc', textDecoration: 'none', borderLeft: '4px solid transparent', transition: 'all 0.3s ease', borderRadius: '4px', marginBottom: '5px' };
-    const desktopActiveLinkStyle = { ...desktopLinkStyle, backgroundColor: '#495057', borderLeft: '4px solid #d4af37', fontWeight: 'bold', color: 'white' };
+    const desktopLinkStyle = { display: 'block', padding: '12px 20px', color: '#ccc', textDecoration: 'none', borderLeft: '4px solid transparent', transition: 'all 0.3s ease', borderRadius: '4px', marginBottom: '2px', fontSize: '0.9rem' };
+    const desktopActiveLinkStyle = { ...desktopLinkStyle, backgroundColor: 'rgba(212, 175, 55, 0.15)', borderLeft: '4px solid #d4af37', fontWeight: 'bold', color: 'white' };
     const mobileLinkStyle = { display: 'block', padding: '20px', color: 'white', fontSize: '18px', textAlign: 'center', textDecoration: 'none', width: '100%', borderBottom: '1px solid rgba(255,255,255,0.1)' };
     const mobileActiveLinkStyle = { ...mobileLinkStyle, color: '#d4af37', backgroundColor: 'rgba(212, 175, 55, 0.1)' };
     
     return (
       <nav style={{ width: '100%' }}>
-        {groups.map(group => (
-            <div key={group.title}>
-                {!mobile && <h3 style={groupTitleStyle}>{group.title}</h3>}
-                {group.links.filter(link => mobile ? link.mobileOnly !== false : true).map(link => (
-                    <React.Fragment key={link.to || link.label}>
-                        <NavLink to={link.to} style={({ isActive }) => mobile ? (isActive ? mobileActiveLinkStyle : mobileLinkStyle) : (isActive ? desktopActiveLinkStyle : desktopLinkStyle)} onClick={handleClick}>
-                            <div style={contentStyle}>
-                                <span>{link.label}</span>
-                                <div style={{ display: 'flex', gap: '5px' }}>
-                                    {link.count > 0 && <span style={link.style}>{link.count}</span>}
-                                    {link.secondCount > 0 && <span style={link.secondStyle}>⚠️ {link.secondCount}</span>}
-                                </div>
-                            </div>
-                        </NavLink>
-                        {!mobile && link.subLinks && link.subLinks.map(subLink => (
-                            <NavLink key={subLink.to} to={subLink.to} style={({ isActive }) => ({ ...desktopLinkStyle, paddingLeft: '40px', fontSize: '14px', color: isActive ? '#d4af37' : '#ccc' })} onClick={handleClick}>
-                                <div style={contentStyle}>
-                                    <span>{subLink.label}</span>
-                                    {subLink.count > 0 && <span style={subLink.style}>{subLink.count}</span>}
-                                </div>
-                            </NavLink>
+        {groups.map(group => {
+            const isGroupOpen = openGroups.includes(group.title) || mobile;
+            return (
+                <div key={group.title} style={{ marginBottom: '5px' }}>
+                    {!mobile && (
+                        <div 
+                            style={groupTitleStyle} 
+                            onClick={() => toggleGroup(group.title)}
+                            onMouseEnter={(e) => e.currentTarget.style.color = '#fff'}
+                            onMouseLeave={(e) => e.currentTarget.style.color = '#868e96'}
+                        >
+                            <span>{group.title}</span>
+                            {isGroupOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                        </div>
+                    )}
+                    
+                    <div style={{ 
+                        maxHeight: isGroupOpen ? '1000px' : '0', 
+                        overflow: 'hidden', 
+                        transition: 'maxHeight 0.3s ease-in-out' 
+                    }}>
+                        {group.links.filter(link => mobile ? link.mobileOnly !== false : true).map(link => (
+                            <React.Fragment key={link.to || link.label}>
+                                <NavLink to={link.to} style={({ isActive }) => mobile ? (isActive ? mobileActiveLinkStyle : mobileLinkStyle) : (isActive ? desktopActiveLinkStyle : desktopLinkStyle)} onClick={handleClick}>
+                                    <div style={contentStyle}>
+                                        <span>{link.label}</span>
+                                        <div style={{ display: 'flex', gap: '5px' }}>
+                                            {link.count > 0 && <span style={link.style}>{link.count}</span>}
+                                            {link.secondCount > 0 && <span style={link.secondStyle}>⚠️ {link.secondCount}</span>}
+                                        </div>
+                                    </div>
+                                </NavLink>
+                                {!mobile && isGroupOpen && link.subLinks && link.subLinks.map(subLink => (
+                                    <NavLink key={subLink.to} to={subLink.to} style={({ isActive }) => ({ ...desktopLinkStyle, paddingLeft: '40px', fontSize: '13px', color: isActive ? '#d4af37' : '#aaa' })} onClick={handleClick}>
+                                        <div style={contentStyle}>
+                                            <span>{subLink.label}</span>
+                                            {subLink.count > 0 && <span style={subLink.style}>{subLink.count}</span>}
+                                        </div>
+                                    </NavLink>
+                                ))}
+                            </React.Fragment>
                         ))}
-                    </React.Fragment>
-                ))}
-            </div>
-        ))}
+                    </div>
+                </div>
+            );
+        })}
       </nav>
     );
   };

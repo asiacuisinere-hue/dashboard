@@ -171,6 +171,56 @@ const DemandeModal = ({ demande, onClose, onUpdate }) => {
 };
 
 
+const DemandeCard = ({ demande, onSelect }) => {
+    const typeIcons = {
+        'RESERVATION_SERVICE': '🏠',
+        'COMMANDE_MENU': '🚚',
+        'COMMANDE_SPECIALE': '⭐',
+        'SOUSCRIPTION_ABONNEMENT': '🔄'
+    };
+
+    return (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-4 hover:shadow-md transition-shadow">
+            <div className="flex justify-between items-start mb-4">
+                <div className="flex items-center">
+                    <span className="text-2xl mr-3" title={demande.type}>
+                        {typeIcons[demande.type] || '❓'}
+                    </span>
+                    <div>
+                        <h3 className="font-bold text-gray-800">
+                            {demande.clients?.last_name || demande.entreprises?.nom_entreprise || 'Client Inconnu'}
+                        </h3>
+                        <p className="text-xs text-gray-500">
+                            Reçue le {new Date(demande.created_at).toLocaleDateString('fr-FR')}
+                        </p>
+                    </div>
+                </div>
+                <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded-full uppercase">
+                    {demande.status}
+                </span>
+            </div>
+            
+            <div className="space-y-2 mb-5">
+                <div className="flex items-center text-sm text-gray-600">
+                    <span className="font-medium w-32">Date souhaitée:</span>
+                    <span>{new Date(demande.request_date).toLocaleDateString('fr-FR')}</span>
+                </div>
+                <div className="flex items-center text-sm text-gray-600">
+                    <span className="font-medium w-32">Type:</span>
+                    <span>{demande.type.replace('_', ' ')}</span>
+                </div>
+            </div>
+
+            <button 
+                onClick={() => onSelect(demande)}
+                className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 rounded-lg transition-colors text-sm"
+            >
+                Gérer la demande
+            </button>
+        </div>
+    );
+};
+
 const Demandes = () => {
     const [demandes, setDemandes] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -202,7 +252,7 @@ const Demandes = () => {
     }, [fetchDemandes]);
 
     if (loading) {
-        return <div>Chargement des nouvelles demandes...</div>;
+        return <div className="p-6 text-center text-gray-500">Chargement des nouvelles demandes...</div>;
     }
 
     return (
@@ -212,38 +262,58 @@ const Demandes = () => {
                 <p className="text-gray-600">Voici la liste des nouvelles demandes en attente de traitement.</p>
             </div>
             
-            <div style={tableContainerStyle}>
-                <table style={tableStyle}>
-                    <thead>
-                        <tr>
-                            <th style={thStyle}>Date Demande</th>
-                            <th style={thStyle}>Client / Entreprise</th>
-                            <th style={thStyle}>Type</th>
-                            <th style={thStyle}>Date Souhaitée</th>
-                            <th style={thStyle}>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {demandes.map(demande => (
-                            <tr key={demande.id}>
-                                <td style={tdStyle}>{new Date(demande.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })}</td>
-                                <td style={tdStyle}>{demande.clients?.last_name || demande.entreprises?.nom_entreprise || '—'}</td>
-                                <td style={{...tdStyle, textAlign: 'center', fontSize: '18px'}}>
-                                    {demande.type === 'RESERVATION_SERVICE' && <span title="RESERVATION_SERVICE">🏠</span>}
-                                    {demande.type === 'COMMANDE_MENU' && <span title="COMMANDE_MENU">🚚</span>}
-                                    {demande.type === 'COMMANDE_SPECIALE' && <span title="COMMANDE_SPECIALE">⭐</span>}
-                                    {demande.type === 'SOUSCRIPTION_ABONNEMENT' && <span title="SOUSCRIPTION_ABONNEMENT">🔄</span>}
-                                </td>
-                                <td style={tdStyle}>{new Date(demande.request_date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })}</td>
-                                <td style={tdStyle}>
-                                    <button onClick={() => setSelectedDemande(demande)} style={detailsButtonStyle}>
-                                        Voir Détails
-                                    </button>
-                                </td>
+            {/* Vue Tableau (Desktop) */}
+            <div className="hidden lg:block">
+                <div style={tableContainerStyle}>
+                    <table style={tableStyle}>
+                        <thead>
+                            <tr>
+                                <th style={thStyle}>Date Demande</th>
+                                <th style={thStyle}>Client / Entreprise</th>
+                                <th style={thStyle}>Type</th>
+                                <th style={thStyle}>Date Souhaitée</th>
+                                <th style={thStyle}>Actions</th>
                             </tr>
+                        </thead>
+                        <tbody>
+                            {demandes.map(demande => (
+                                <tr key={demande.id}>
+                                    <td style={tdStyle}>{new Date(demande.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })}</td>
+                                    <td style={tdStyle}>{demande.clients?.last_name || demande.entreprises?.nom_entreprise || '—'}</td>
+                                    <td style={{...tdStyle, textAlign: 'center', fontSize: '18px'}}>
+                                        {demande.type === 'RESERVATION_SERVICE' && <span title="RESERVATION_SERVICE">🏠</span>}
+                                        {demande.type === 'COMMANDE_MENU' && <span title="COMMANDE_MENU">🚚</span>}
+                                        {demande.type === 'COMMANDE_SPECIALE' && <span title="COMMANDE_SPECIALE">⭐</span>}
+                                        {demande.type === 'SOUSCRIPTION_ABONNEMENT' && <span title="SOUSCRIPTION_ABONNEMENT">🔄</span>}
+                                    </td>
+                                    <td style={tdStyle}>{new Date(demande.request_date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })}</td>
+                                    <td style={tdStyle}>
+                                        <button onClick={() => setSelectedDemande(demande)} style={detailsButtonStyle}>
+                                            Voir Détails
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Vue Cartes (Mobile/Tablette) */}
+            <div className="block lg:hidden">
+                {demandes.length === 0 ? (
+                    <p className="text-center text-gray-500 py-10 bg-white rounded-xl">Aucune nouvelle demande.</p>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {demandes.map(demande => (
+                            <DemandeCard 
+                                key={demande.id} 
+                                demande={demande} 
+                                onSelect={setSelectedDemande} 
+                            />
                         ))}
-                    </tbody>
-                </table>
+                    </div>
+                )}
             </div>
 
             {selectedDemande && (
