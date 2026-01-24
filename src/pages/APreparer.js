@@ -3,6 +3,58 @@ import { supabase } from '../supabaseClient';
 import DemandeDetail from '../DemandeDetail'; 
 import ReactPaginate from 'react-paginate';
 
+const APreparerCard = ({ demande, onSelect, statusBadgeStyle }) => {
+    const typeIcons = {
+        'RESERVATION_SERVICE': '🏠',
+        'COMMANDE_MENU': '🚚',
+        'COMMANDE_SPECIALE': '⭐'
+    };
+    const invoiceNumber = demande.invoices?.[0]?.document_number;
+
+    return (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-4 hover:shadow-md transition-shadow">
+            <div className="flex justify-between items-start mb-4">
+                <div className="flex items-center">
+                    <span className="text-2xl mr-3" title={demande.type}>
+                        {typeIcons[demande.type] || '❓'}
+                    </span>
+                    <div>
+                        <h3 className="font-bold text-gray-800">
+                            {demande.clients?.last_name || demande.entreprises?.nom_entreprise || 'Client Inconnu'}
+                        </h3>
+                        <p className="text-xs text-gray-500 font-medium">
+                            {invoiceNumber ? `Facture: ${invoiceNumber}` : 'Pas de facture'}
+                        </p>
+                    </div>
+                </div>
+                <span style={statusBadgeStyle(demande.status)} className="uppercase tracking-wider">
+                    {demande.status}
+                </span>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 mb-5 text-sm">
+                <div>
+                    <p className="text-gray-500 text-xs uppercase font-bold mb-1">Ville</p>
+                    <p className="text-gray-800">{demande.details_json?.deliveryCity || '—'}</p>
+                </div>
+                <div>
+                    <p className="text-gray-500 text-xs uppercase font-bold mb-1">Échéance</p>
+                    <p className="text-red-600 font-bold">
+                        {demande.request_date ? new Date(demande.request_date).toLocaleDateString('fr-FR') : '—'}
+                    </p>
+                </div>
+            </div>
+
+            <button 
+                onClick={() => onSelect(demande)}
+                className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded-lg transition-colors text-sm shadow-sm"
+            >
+                Gérer la préparation
+            </button>
+        </div>
+    );
+};
+
 const APreparer = () => {
     const [demandes, setDemandes] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -53,7 +105,7 @@ const APreparer = () => {
     const currentDemandes = demandes.slice(offset, offset + itemsPerPage);
     const pageCount = Math.ceil(demandes.length / itemsPerPage);
 
-    if (loading) return <div style={containerStyle}><p>Chargement...</p></div>;
+    if (loading) return <div style={containerStyle}><p className="text-center text-gray-500 py-10">Chargement...</p></div>;
 
     return (
         <div style={containerStyle}>
@@ -72,46 +124,67 @@ const APreparer = () => {
                 />
             </div>
 
-            <div style={tableContainerStyle}>
-                <table style={tableStyle}>
-                    <thead>
-                        <tr>
-                            <th style={thStyle}>Date Évén./Liv.</th>
-                            <th style={thStyle}>Client</th>
-                            <th style={thStyle}>Ville</th>
-                            <th style={{...thStyle, textAlign: 'center'}}>Type</th>
-                            <th style={thStyle}>Facture</th>
-                            <th style={thStyle}>Statut</th>
-                            <th style={thStyle}>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {currentDemandes.map(demande => {
-                            const invoiceNumber = demande.invoices?.[0]?.document_number;
-                            return (
-                                <tr key={demande.id}>
-                                    <td style={tdStyle}>{demande.request_date ? new Date(demande.request_date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '—'}</td>
-                                    <td style={tdStyle}>{demande.clients?.last_name || demande.entreprises?.nom_entreprise || '—'}</td>
-                                    <td style={tdStyle}>{demande.details_json?.deliveryCity || '—'}</td>
-                                    <td style={{...tdStyle, textAlign: 'center', fontSize: '18px'}}>
-                                        {demande.type === 'RESERVATION_SERVICE' && <span title="RESERVATION_SERVICE">🏠</span>}
-                                        {demande.type === 'COMMANDE_MENU' && <span title="COMMANDE_MENU">🚚</span>}
-                                        {demande.type === 'COMMANDE_SPECIALE' && <span title="COMMANDE_SPECIALE">⭐</span>}
-                                    </td>
-                                    <td style={{...tdStyle, textAlign: 'center'}}>
-                                        {invoiceNumber ? <span title={invoiceNumber}>🧾</span> : '—'}
-                                    </td>
-                                    <td style={tdStyle}><span style={statusBadgeStyle(demande.status)}>{demande.status}</span></td>
-                                    <td style={tdStyle}>
-                                        <button onClick={() => setSelectedDemande(demande)} style={detailsButtonStyle}>
-                                            Gérer
-                                        </button>
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                </table>
+            {/* Vue Tableau (Desktop) */}
+            <div className="hidden lg:block">
+                <div style={tableContainerStyle}>
+                    <table style={tableStyle}>
+                        <thead>
+                            <tr>
+                                <th style={thStyle}>Date Évén./Liv.</th>
+                                <th style={thStyle}>Client</th>
+                                <th style={thStyle}>Ville</th>
+                                <th style={{...thStyle, textAlign: 'center'}}>Type</th>
+                                <th style={thStyle}>Facture</th>
+                                <th style={thStyle}>Statut</th>
+                                <th style={thStyle}>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {currentDemandes.map(demande => {
+                                const invoiceNumber = demande.invoices?.[0]?.document_number;
+                                return (
+                                    <tr key={demande.id}>
+                                        <td style={tdStyle}>{demande.request_date ? new Date(demande.request_date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '—'}</td>
+                                        <td style={tdStyle}>{demande.clients?.last_name || demande.entreprises?.nom_entreprise || '—'}</td>
+                                        <td style={tdStyle}>{demande.details_json?.deliveryCity || '—'}</td>
+                                        <td style={{...tdStyle, textAlign: 'center', fontSize: '18px'}}>
+                                            {demande.type === 'RESERVATION_SERVICE' && <span title="RESERVATION_SERVICE">🏠</span>}
+                                            {demande.type === 'COMMANDE_MENU' && <span title="COMMANDE_MENU">🚚</span>}
+                                            {demande.type === 'COMMANDE_SPECIALE' && <span title="COMMANDE_SPECIALE">⭐</span>}
+                                        </td>
+                                        <td style={{...tdStyle, textAlign: 'center'}}>
+                                            {invoiceNumber ? <span title={invoiceNumber}>🧾</span> : '—'}
+                                        </td>
+                                        <td style={tdStyle}><span style={statusBadgeStyle(demande.status)}>{demande.status}</span></td>
+                                        <td style={tdStyle}>
+                                            <button onClick={() => setSelectedDemande(demande)} style={detailsButtonStyle}>
+                                                Gérer
+                                            </button>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Vue Cartes (Mobile/Tablette) */}
+            <div className="block lg:hidden">
+                {currentDemandes.length === 0 ? (
+                    <p className="text-center text-gray-500 py-10 bg-white rounded-xl">Aucune commande à préparer.</p>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {currentDemandes.map(demande => (
+                            <APreparerCard 
+                                key={demande.id} 
+                                demande={demande} 
+                                onSelect={setSelectedDemande}
+                                statusBadgeStyle={statusBadgeStyle}
+                            />
+                        ))}
+                    </div>
+                )}
             </div>
 
             <div style={{ borderTop: '1px solid #eee', marginTop: '2rem', paddingTop: '1rem' }}>

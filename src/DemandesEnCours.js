@@ -10,6 +10,58 @@ const communesReunion = [
     "Sainte-Marie", "Sainte-Rose", "Sainte-Suzanne", "Salazie"
 ];
 
+const DemandeEnCoursCard = ({ demande, onSelect, statusBadgeStyle }) => {
+    const typeIcons = {
+        'RESERVATION_SERVICE': '🏠',
+        'COMMANDE_MENU': '🚚',
+        'COMMANDE_SPECIALE': '⭐',
+        'SOUSCRIPTION_ABONNEMENT': '🔄'
+    };
+
+    return (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-4 hover:shadow-md transition-shadow">
+            <div className="flex justify-between items-start mb-4">
+                <div className="flex items-center">
+                    <span className="text-2xl mr-3" title={demande.type}>
+                        {typeIcons[demande.type] || '❓'}
+                    </span>
+                    <div>
+                        <h3 className="font-bold text-gray-800">
+                            {demande.clients?.last_name || demande.entreprises?.nom_entreprise || 'Client Inconnu'}
+                        </h3>
+                        <p className="text-xs text-gray-500">
+                            ID: {demande.id.substring(0, 8)}
+                        </p>
+                    </div>
+                </div>
+                <span style={statusBadgeStyle(demande.status)} className="uppercase tracking-wider">
+                    {demande.status}
+                </span>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 mb-5 text-sm">
+                <div>
+                    <p className="text-gray-500 text-xs uppercase font-bold mb-1">Ville</p>
+                    <p className="text-gray-800">{demande.details_json?.deliveryCity || '—'}</p>
+                </div>
+                <div>
+                    <p className="text-gray-500 text-xs uppercase font-bold mb-1">Date Év./Liv.</p>
+                    <p className="text-gray-800">
+                        {demande.request_date ? new Date(demande.request_date).toLocaleDateString('fr-FR') : '—'}
+                    </p>
+                </div>
+            </div>
+
+            <button 
+                onClick={() => onSelect(demande)}
+                className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded-lg transition-colors text-sm"
+            >
+                Gérer la demande
+            </button>
+        </div>
+    );
+};
+
 const DemandesEnCours = () => {
     const [demandes, setDemandes] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -102,7 +154,7 @@ const DemandesEnCours = () => {
     };
 
     if (loading) {
-        return <div style={containerStyle}>Chargement des demandes en cours...</div>;
+        return <div className="p-6 text-center text-gray-500">Chargement des demandes en cours...</div>;
     }
 
     return (
@@ -173,52 +225,73 @@ const DemandesEnCours = () => {
                 <button onClick={resetFilters} style={detailsButtonStyle}>Réinitialiser</button>
             </div>
 
-            <div style={tableContainerStyle}>
-                <table style={tableStyle}>
-                    <thead>
-                        <tr>
-                            <th style={thStyle}>Date Demande</th>
-                            <th style={thStyle}>Type</th>
-                            <th style={thStyle}>Client</th>
-                            <th style={thStyle}>Ville</th>
-                            <th style={thStyle}>D.Evé</th>
-                            <th style={thStyle}>D.Liv.Re</th>
-                            <th style={thStyle}>Statut</th>
-                            <th style={thStyle}>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {demandes.map(demande => (
-                            <tr key={demande.id}>
-                                <td style={tdStyle}>{new Date(demande.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })}</td>
-                                <td style={{...tdStyle, textAlign: 'center', fontSize: '18px'}}>
-                                    {demande.type === 'RESERVATION_SERVICE' && <span title="RESERVATION_SERVICE">🏠</span>}
-                                    {demande.type === 'COMMANDE_MENU' && <span title="COMMANDE_MENU">🚚</span>}
-                                    {demande.type === 'COMMANDE_SPECIALE' && <span title="COMMANDE_SPECIALE">⭐</span>}
-                                    {demande.type === 'SOUSCRIPTION_ABONNEMENT' && <span title="SOUSCRIPTION_ABONNEMENT">🔄</span>}
-                                </td>
-                                <td style={tdStyle}>{demande.clients?.last_name || demande.entreprises?.nom_entreprise || '—'}</td>
-                                <td style={tdStyle}>{demande.details_json?.deliveryCity || '—'}</td>
-                                <td style={tdStyle}>
-                                    {demande.type === 'RESERVATION_SERVICE' && demande.request_date
-                                        ? new Date(demande.request_date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })
-                                        : '—'}
-                                </td>
-                                <td style={tdStyle}>
-                                    {(demande.type === 'COMMANDE_MENU' || demande.type === 'COMMANDE_SPECIALE') && demande.request_date
-                                        ? new Date(demande.request_date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })
-                                        : '—'}
-                                </td>
-                                <td style={tdStyle}><span style={statusBadgeStyle(demande.status)}>{demande.status}</span></td>
-                                <td style={tdStyle}>
-                                    <button onClick={() => setSelectedDemande(demande)} style={detailsButtonStyle}>
-                                        Gérer
-                                    </button>
-                                </td>
+            {/* Vue Tableau (Desktop) */}
+            <div className="hidden lg:block">
+                <div style={tableContainerStyle}>
+                    <table style={tableStyle}>
+                        <thead>
+                            <tr>
+                                <th style={thStyle}>Date Demande</th>
+                                <th style={thStyle}>Type</th>
+                                <th style={thStyle}>Client</th>
+                                <th style={thStyle}>Ville</th>
+                                <th style={thStyle}>D.Evé</th>
+                                <th style={thStyle}>D.Liv.Re</th>
+                                <th style={thStyle}>Statut</th>
+                                <th style={thStyle}>Actions</th>
                             </tr>
+                        </thead>
+                        <tbody>
+                            {demandes.map(demande => (
+                                <tr key={demande.id}>
+                                    <td style={tdStyle}>{new Date(demande.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })}</td>
+                                    <td style={{...tdStyle, textAlign: 'center', fontSize: '18px'}}>
+                                        {demande.type === 'RESERVATION_SERVICE' && <span title="RESERVATION_SERVICE">🏠</span>}
+                                        {demande.type === 'COMMANDE_MENU' && <span title="COMMANDE_MENU">🚚</span>}
+                                        {demande.type === 'COMMANDE_SPECIALE' && <span title="COMMANDE_SPECIALE">⭐</span>}
+                                        {demande.type === 'SOUSCRIPTION_ABONNEMENT' && <span title="SOUSCRIPTION_ABONNEMENT">🔄</span>}
+                                    </td>
+                                    <td style={tdStyle}>{demande.clients?.last_name || demande.entreprises?.nom_entreprise || '—'}</td>
+                                    <td style={tdStyle}>{demande.details_json?.deliveryCity || '—'}</td>
+                                    <td style={tdStyle}>
+                                        {demande.type === 'RESERVATION_SERVICE' && demande.request_date
+                                            ? new Date(demande.request_date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })
+                                            : '—'}
+                                    </td>
+                                    <td style={tdStyle}>
+                                        {(demande.type === 'COMMANDE_MENU' || demande.type === 'COMMANDE_SPECIALE') && demande.request_date
+                                            ? new Date(demande.request_date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })
+                                            : '—'}
+                                    </td>
+                                    <td style={tdStyle}><span style={statusBadgeStyle(demande.status)}>{demande.status}</span></td>
+                                    <td style={tdStyle}>
+                                        <button onClick={() => setSelectedDemande(demande)} style={detailsButtonStyle}>
+                                            Gérer
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Vue Cartes (Mobile/Tablette) */}
+            <div className="block lg:hidden">
+                {demandes.length === 0 ? (
+                    <p className="text-center text-gray-500 py-10 bg-white rounded-xl">Aucune demande en cours.</p>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {demandes.map(demande => (
+                            <DemandeEnCoursCard 
+                                key={demande.id} 
+                                demande={demande} 
+                                onSelect={setSelectedDemande}
+                                statusBadgeStyle={statusBadgeStyle}
+                            />
                         ))}
-                    </tbody>
-                </table>
+                    </div>
+                )}
             </div>
 
             {selectedDemande && (
