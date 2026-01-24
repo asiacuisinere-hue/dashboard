@@ -4,6 +4,49 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import QuoteDetailModal from './QuoteDetailModal';
 import ReactPaginate from 'react-paginate';
 
+const QuoteCard = ({ quote, onSelect, statusBadgeStyle, renderCustomerName }) => {
+    let dueDate = null;
+    if (quote.status === 'sent' || quote.status === 'accepted') {
+        const createdDate = new Date(quote.created_at);
+        createdDate.setDate(createdDate.getDate() + 30);
+        dueDate = createdDate.toLocaleDateString('fr-FR');
+    }
+
+    return (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-4 hover:shadow-md transition-shadow">
+            <div className="flex justify-between items-start mb-4">
+                <div>
+                    <h3 className="font-bold text-gray-800">{renderCustomerName(quote)}</h3>
+                    <p className="text-xs text-gray-500 font-medium">
+                        {quote.document_number || `ID: ${quote.id.substring(0, 8)}`}
+                    </p>
+                </div>
+                <span style={statusBadgeStyle(quote.status)} className="uppercase tracking-wider">
+                    {quote.status}
+                </span>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 mb-5 text-sm">
+                <div>
+                    <p className="text-gray-500 text-xs uppercase font-bold mb-1">Montant</p>
+                    <p className="text-gray-800 font-bold">{quote.total_amount.toFixed(2)} €</p>
+                </div>
+                <div>
+                    <p className="text-gray-500 text-xs uppercase font-bold mb-1">Échéance</p>
+                    <p className="text-gray-800">{dueDate || '—'}</p>
+                </div>
+            </div>
+
+            <button 
+                onClick={() => onSelect(quote)}
+                className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded-lg transition-colors text-sm shadow-sm"
+            >
+                Voir les détails
+            </button>
+        </div>
+    );
+};
+
 const Devis = () => {
     const location = useLocation();
     const navigate = useNavigate();
@@ -324,9 +367,9 @@ const Devis = () => {
             </div>
 
             {/* Display loading, success, error messages */}
-            {isLoading && <p>Génération du devis en cours...</p>}
-            {successMessage && <p style={{ color: 'green' }}>{successMessage}</p>}
-            {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
+            {isLoading && <p className="text-center text-gray-500 py-4">Opération en cours...</p>}
+            {successMessage && <p style={{ color: 'green', textAlign: 'center', fontWeight: 'bold' }}>{successMessage}</p>}
+            {errorMessage && <p style={{ color: 'red', textAlign: 'center', fontWeight: 'bold' }}>{errorMessage}</p>}
 
             {/* Indicator for workflow type */}
             {demandeId && (
@@ -344,11 +387,11 @@ const Devis = () => {
 
             {/* Section de création de nouveau devis */}
             <div style={sectionStyle}>
-                <h2>Créer un nouveau devis</h2>
+                <h2 className="text-xl font-bold text-gray-800 mb-6">Créer un nouveau devis</h2>
 
                 {/* Section de recherche de client */}
                 <div style={subSectionStyle}>
-                    <h3>1. Sélectionner un client / une entreprise</h3>
+                    <h3 className="text-lg font-semibold text-gray-700 mb-4">1. Sélectionner un client / une entreprise</h3>
                     <div style={searchCustomerContainerStyle}>
                         <input
                             type="text"
@@ -389,7 +432,7 @@ const Devis = () => {
 
                 {/* Section "Menu convenu" */}
                 <div style={subSectionStyle}>
-                    <h3>2. Détails du Menu Convenu</h3>
+                    <h3 className="text-lg font-semibold text-gray-700 mb-4">2. Détails du Menu Convenu</h3>
                     <textarea
                         placeholder="Ex: Entrée: Salade de papaye verte, Plat: Canard laqué, Dessert: Perles de coco"
                         value={menuDetails}
@@ -400,13 +443,13 @@ const Devis = () => {
 
                 {/* Section d'ajout de services */}
                 <div style={subSectionStyle}>
-                    <h3>3. Ajouter des services au devis</h3>
+                    <h3 className="text-lg font-semibold text-gray-700 mb-4">3. Ajouter des services au devis</h3>
                     <div style={servicesGridStyle}>
                         {services.map(service => (
                             <div key={service.id} style={serviceCardStyle} onClick={() => handleAddServiceToQuote(service)}>
-                                <h3>{service.name}</h3>
-                                <p>{service.description}</p>
-                                <p>Prix par défaut: {service.default_price} €</p>
+                                <h3 className="font-bold">{service.name}</h3>
+                                <p className="text-sm text-gray-600 mb-2">{service.description}</p>
+                                <p className="font-bold text-amber-600">Prix: {service.default_price} €</p>
                                 <button style={addServiceButtonStyle}>Ajouter</button>
                             </div>
                         ))}
@@ -415,9 +458,9 @@ const Devis = () => {
 
                 {/* Section des lignes du devis */}
                 <div style={subSectionStyle}>
-                    <h3>4. Lignes du devis</h3>
+                    <h3 className="text-lg font-semibold text-gray-700 mb-4">4. Lignes du devis</h3>
                     {quoteItems.length === 0 ? (
-                        <p>Aucun service ajouté au devis.</p>
+                        <p className="text-gray-500 italic">Aucun service ajouté au devis.</p>
                     ) : (
                         <div style={quoteItemsTableContainerStyle}>
                             <table style={tableStyle}>
@@ -473,7 +516,7 @@ const Devis = () => {
 
                 {/* Section de génération */}
                 <div style={subSectionStyle}>
-                    <h3>5. Générer le devis</h3>
+                    <h3 className="text-lg font-semibold text-gray-700 mb-4">5. Générer le devis</h3>
                     <button onClick={handleGenerateQuote} style={generateQuoteButtonStyle} disabled={isLoading}>
                         {isLoading ? 'Création en cours...' : 'Créer le brouillon du devis'}
                     </button>
@@ -482,7 +525,7 @@ const Devis = () => {
 
             {/* Section des devis existants */}
             <div style={sectionStyle}>
-                <h2>Devis existants</h2>
+                <h2 className="text-xl font-bold text-gray-800 mb-6">Devis existants</h2>
                 <div style={filterContainerStyle}>
                     <input
                         type="text"
@@ -501,48 +544,65 @@ const Devis = () => {
                 </div>
                                 
                 {existingQuotes.length === 0 ? (
-                    <p>Aucun devis existant.</p>
+                    <p className="text-center text-gray-500 py-10 bg-gray-50 rounded-xl">Aucun devis existant.</p>
                 ) : (
                     <>
-                        <div style={tableContainerStyle}>
-                            <table style={tableStyle}>
-                                <thead>
-                                    <tr>
-                                        <th style={thStyle}>ID Devis</th>
-                                        <th style={thStyle}>Client / Entreprise</th>
-                                        <th style={thStyle}>Date</th>
-                                        <th style={thStyle}>Échéance</th>
-                                        <th style={thStyle}>Total</th>
-                                        <th style={thStyle}>Statut</th>
-                                        <th style={thStyle}>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {currentQuotes.map(quote => {
-                                        let dueDate = null;
-                                        // Calculate due date only for 'sent' or 'accepted' quotes (30 days validity)
-                                        if (quote.status === 'sent' || quote.status === 'accepted') {
-                                            const createdDate = new Date(quote.created_at);
-                                            createdDate.setDate(createdDate.getDate() + 30);
-                                            dueDate = createdDate.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' });
-                                        }
+                        {/* Vue Tableau (Desktop) */}
+                        <div className="hidden lg:block">
+                            <div style={tableContainerStyle}>
+                                <table style={tableStyle}>
+                                    <thead>
+                                        <tr>
+                                            <th style={thStyle}>ID Devis</th>
+                                            <th style={thStyle}>Client / Entreprise</th>
+                                            <th style={thStyle}>Date</th>
+                                            <th style={thStyle}>Échéance</th>
+                                            <th style={thStyle}>Total</th>
+                                            <th style={thStyle}>Statut</th>
+                                            <th style={thStyle}>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {currentQuotes.map(quote => {
+                                            let dueDate = null;
+                                            if (quote.status === 'sent' || quote.status === 'accepted') {
+                                                const createdDate = new Date(quote.created_at);
+                                                createdDate.setDate(createdDate.getDate() + 30);
+                                                dueDate = createdDate.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+                                            }
 
-                                        return (
-                                            <tr key={quote.id}>
-                                                <td style={tdStyle}>{quote.document_number?.substring(0, 18) || quote.id.substring(0, 8)}</td>
-                                                <td style={tdStyle}>{renderCustomerName(quote)}</td>
-                                                <td style={tdStyle}>{new Date(quote.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })}</td>
-                                                <td style={tdStyle}>{dueDate || '—'}</td>
-                                                <td style={tdStyle}>{quote.total_amount.toFixed(2)} €</td>
-                                                <td style={tdStyle}><span style={statusBadgeStyle(quote.status)}>{quote.status}</span></td>
-                                                <td style={tdStyle}>
-                                                    <button onClick={() => setSelectedQuote(quote)} style={detailsButtonStyle}>Voir Détails</button>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
+                                            return (
+                                                <tr key={quote.id}>
+                                                    <td style={tdStyle}>{quote.document_number?.substring(0, 18) || quote.id.substring(0, 8)}</td>
+                                                    <td style={tdStyle}>{renderCustomerName(quote)}</td>
+                                                    <td style={tdStyle}>{new Date(quote.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })}</td>
+                                                    <td style={tdStyle}>{dueDate || '—'}</td>
+                                                    <td style={tdStyle}>{quote.total_amount.toFixed(2)} €</td>
+                                                    <td style={tdStyle}><span style={statusBadgeStyle(quote.status)}>{quote.status}</span></td>
+                                                    <td style={tdStyle}>
+                                                        <button onClick={() => setSelectedQuote(quote)} style={detailsButtonStyle}>Voir Détails</button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* Vue Cartes (Mobile/Tablette) */}
+                        <div className="block lg:hidden mt-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {currentQuotes.map(quote => (
+                                    <QuoteCard 
+                                        key={quote.id} 
+                                        quote={quote} 
+                                        onSelect={setSelectedQuote}
+                                        statusBadgeStyle={statusBadgeStyle}
+                                        renderCustomerName={renderCustomerName}
+                                    />
+                                ))}
+                            </div>
                         </div>
                         
                         <div style={{ borderTop: '1px solid #eee', marginTop: '2rem', paddingTop: '1rem' }}>

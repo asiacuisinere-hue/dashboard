@@ -14,6 +14,40 @@ const getFrenchStatus = (status) => {
     }
 };
 
+const InvoiceCard = ({ invoice, onSelect, statusBadgeStyle, renderCustomerName, getFrenchStatus }) => (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-4 hover:shadow-md transition-shadow">
+        <div className="flex justify-between items-start mb-4">
+            <div>
+                <h3 className="font-bold text-gray-800">{renderCustomerName(invoice)}</h3>
+                <p className="text-xs text-gray-500 font-medium">
+                    {invoice.document_number || `ID: ${invoice.id.substring(0, 8)}`}
+                </p>
+            </div>
+            <span style={statusBadgeStyle(invoice.status)} className="uppercase tracking-wider">
+                {getFrenchStatus(invoice.status)}
+            </span>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4 mb-5 text-sm">
+            <div>
+                <p className="text-gray-500 text-xs uppercase font-bold mb-1">Montant</p>
+                <p className="text-gray-800 font-bold">{(invoice.total_amount || 0).toFixed(2)} €</p>
+            </div>
+            <div>
+                <p className="text-gray-500 text-xs uppercase font-bold mb-1">Date</p>
+                <p className="text-gray-800">{new Date(invoice.created_at).toLocaleDateString('fr-FR')}</p>
+            </div>
+        </div>
+
+        <button 
+            onClick={() => onSelect(invoice)}
+            className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded-lg transition-colors text-sm shadow-sm"
+        >
+            Voir les détails
+        </button>
+    </div>
+);
+
 const Factures = () => {
     const location = useLocation();
     const [invoices, setInvoices] = useState([]);
@@ -98,7 +132,7 @@ const Factures = () => {
     const pageCount = Math.ceil(invoices.length / itemsPerPage);
 
 
-    if (loading) return <div style={containerStyle}><p>Chargement des factures...</p></div>;
+    if (loading) return <div className="p-6 text-center text-gray-500">Chargement des factures...</div>;
 
     return (
         <div style={containerStyle}>
@@ -123,33 +157,56 @@ const Factures = () => {
                 </select>
             </div>
 
-            <div style={tableContainerStyle}>
-                <table style={tableStyle}>
-                    <thead>
-                        <tr>
-                            <th style={thStyle}>N° Facture</th>
-                            <th style={thStyle}>Client / Entreprise</th>
-                            <th style={thStyle}>Date</th>
-                            <th style={thStyle}>Montant</th>
-                            <th style={thStyle}>Statut</th>
-                            <th style={thStyle}>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {currentInvoices.map(invoice => (
-                            <tr key={invoice.id}>
-                                <td style={tdStyle}>{invoice.document_number || invoice.id.substring(0, 8)}</td>
-                                <td style={tdStyle}>{renderCustomerName(invoice)}</td>
-                                <td style={tdStyle}>{new Date(invoice.created_at).toLocaleDateString('fr-FR')}</td>
-                                <td style={tdStyle}>{(invoice.total_amount || 0).toFixed(2)} €</td>
-                                <td style={tdStyle}><span style={statusBadgeStyle(invoice.status)}>{getFrenchStatus(invoice.status)}</span></td>
-                                <td style={tdStyle}>
-                                    <button onClick={() => setSelectedInvoice(invoice)} style={detailsButtonStyle}>Voir Détails</button>
-                                </td>
+            {/* Vue Tableau (Desktop) */}
+            <div className="hidden lg:block">
+                <div style={tableContainerStyle}>
+                    <table style={tableStyle}>
+                        <thead>
+                            <tr>
+                                <th style={thStyle}>N° Facture</th>
+                                <th style={thStyle}>Client / Entreprise</th>
+                                <th style={thStyle}>Date</th>
+                                <th style={thStyle}>Montant</th>
+                                <th style={thStyle}>Statut</th>
+                                <th style={thStyle}>Actions</th>
                             </tr>
+                        </thead>
+                        <tbody>
+                            {currentInvoices.map(invoice => (
+                                <tr key={invoice.id}>
+                                    <td style={tdStyle}>{invoice.document_number || invoice.id.substring(0, 8)}</td>
+                                    <td style={tdStyle}>{renderCustomerName(invoice)}</td>
+                                    <td style={tdStyle}>{new Date(invoice.created_at).toLocaleDateString('fr-FR')}</td>
+                                    <td style={tdStyle}>{(invoice.total_amount || 0).toFixed(2)} €</td>
+                                    <td style={tdStyle}><span style={statusBadgeStyle(invoice.status)}>{getFrenchStatus(invoice.status)}</span></td>
+                                    <td style={tdStyle}>
+                                        <button onClick={() => setSelectedInvoice(invoice)} style={detailsButtonStyle}>Voir Détails</button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Vue Cartes (Mobile/Tablette) */}
+            <div className="block lg:hidden mt-4">
+                {currentInvoices.length === 0 ? (
+                    <p className="text-center text-gray-500 py-10 bg-white rounded-xl">Aucune facture trouvée.</p>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {currentInvoices.map(invoice => (
+                            <InvoiceCard 
+                                key={invoice.id} 
+                                invoice={invoice} 
+                                onSelect={setSelectedInvoice}
+                                statusBadgeStyle={statusBadgeStyle}
+                                renderCustomerName={renderCustomerName}
+                                getFrenchStatus={getFrenchStatus}
+                            />
                         ))}
-                    </tbody>
-                </table>
+                    </div>
+                )}
             </div>
 
             <div style={{ borderTop: '1px solid #eee', marginTop: '2rem', paddingTop: '1rem' }}>

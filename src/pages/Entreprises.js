@@ -1,6 +1,50 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 
+const EntrepriseCard = ({ entreprise, onEdit, onDelete }) => (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-4 hover:shadow-md transition-shadow">
+        <div className="flex items-center mb-4">
+            <div className="bg-blue-100 text-blue-700 w-10 h-10 rounded-full flex items-center justify-center font-bold mr-3">
+                🏢
+            </div>
+            <div>
+                <h3 className="font-bold text-gray-800">{entreprise.nom_entreprise}</h3>
+                <p className="text-xs text-gray-500">SIRET: {entreprise.siret || '—'}</p>
+            </div>
+        </div>
+        
+        <div className="space-y-3 mb-5 text-sm">
+            <div className="flex flex-col">
+                <span className="text-gray-500 text-xs uppercase font-bold">Contact</span>
+                <span className="text-gray-800">{entreprise.contact_name || '—'}</span>
+            </div>
+            <div className="flex flex-col">
+                <span className="text-gray-500 text-xs uppercase font-bold">Email</span>
+                <span className="text-gray-800 truncate">{entreprise.contact_email}</span>
+            </div>
+            <div className="flex flex-col">
+                <span className="text-gray-500 text-xs uppercase font-bold">Téléphone</span>
+                <span className="text-gray-800">{entreprise.contact_phone || '—'}</span>
+            </div>
+        </div>
+
+        <div className="flex gap-2">
+            <button 
+                onClick={() => onEdit(entreprise)}
+                className="flex-1 bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold py-2 rounded-lg transition-colors text-sm"
+            >
+                Modifier
+            </button>
+            <button 
+                onClick={() => onDelete(entreprise.id)}
+                className="flex-1 bg-red-50 text-red-600 hover:bg-red-100 font-bold py-2 rounded-lg transition-colors text-sm"
+            >
+                Supprimer
+            </button>
+        </div>
+    </div>
+);
+
 const Entreprises = () => {
     const [entreprises, setEntreprises] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -100,13 +144,14 @@ const Entreprises = () => {
     };
 
     if (loading) {
-        return <div>Chargement des entreprises...</div>;
+        return <div className="p-6 text-center text-gray-500">Chargement des entreprises...</div>;
     }
 
     return (
         <div style={containerStyle}>
             <div className="mb-8">
                 <h1 className="text-3xl font-bold text-gray-800 mb-2">Gestion des Entreprises</h1>
+                <p className="text-gray-600">Gérez votre base de clients professionnels.</p>
             </div>
 
             {/* Section de recherche */}
@@ -122,7 +167,7 @@ const Entreprises = () => {
 
             {/* Formulaire d'ajout/édition d'entreprise */}
             <div style={formContainerStyle}>
-                <h2>{editEntreprise ? "Modifier l'entreprise" : "Ajouter une nouvelle entreprise"}</h2>
+                <h2 className="text-xl font-bold text-gray-800 mb-4">{editEntreprise ? "Modifier l'entreprise" : "Ajouter une nouvelle entreprise"}</h2>
                 <div style={formGridStyle}>
                     <div style={formGroupStyle}>
                         <label style={labelStyle}>Nom de l'entreprise:</label>
@@ -155,36 +200,57 @@ const Entreprises = () => {
                 </div>
             </div>
 
-            {/* Liste des entreprises */}
-            <div style={tableContainerStyle}>
-                <h2>Entreprises existantes</h2>
-                <table style={tableStyle}>
-                    <thead>
-                        <tr>
-                            <th style={thStyle}>Nom Entreprise</th>
-                            <th style={thStyle}>SIRET</th>
-                            <th style={thStyle}>Contact</th>
-                            <th style={thStyle}>Email Contact</th>
-                            <th style={thStyle}>Téléphone Contact</th>
-                            <th style={thStyle}>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {entreprises.map(entreprise => (
-                            <tr key={entreprise.id}>
-                                <td style={tdStyle}>{entreprise.nom_entreprise}</td>
-                                <td style={tdStyle}>{entreprise.siret}</td>
-                                <td style={tdStyle}>{entreprise.contact_name}</td>
-                                <td style={tdStyle}>{entreprise.contact_email}</td>
-                                <td style={tdStyle}>{entreprise.contact_phone}</td>
-                                <td style={tdStyle}>
-                                    <button onClick={() => setEditEntreprise(entreprise)} style={editButtonStyle}>Modifier</button>
-                                    <button onClick={() => handleDeleteEntreprise(entreprise.id)} style={deleteButtonStyle}>Supprimer</button>
-                                </td>
+            {/* Vue Tableau (Desktop) */}
+            <div className="hidden lg:block">
+                <div style={tableContainerStyle}>
+                    <h2 className="text-xl font-bold text-gray-800 p-4 border-b">Entreprises existantes</h2>
+                    <table style={tableStyle}>
+                        <thead>
+                            <tr>
+                                <th style={thStyle}>Nom Entreprise</th>
+                                <th style={thStyle}>SIRET</th>
+                                <th style={thStyle}>Contact</th>
+                                <th style={thStyle}>Email Contact</th>
+                                <th style={thStyle}>Téléphone Contact</th>
+                                <th style={thStyle}>Actions</th>
                             </tr>
+                        </thead>
+                        <tbody>
+                            {entreprises.map(entreprise => (
+                                <tr key={entreprise.id}>
+                                    <td style={tdStyle}>{entreprise.nom_entreprise}</td>
+                                    <td style={tdStyle}>{entreprise.siret}</td>
+                                    <td style={tdStyle}>{entreprise.contact_name}</td>
+                                    <td style={tdStyle}>{entreprise.contact_email}</td>
+                                    <td style={tdStyle}>{entreprise.contact_phone}</td>
+                                    <td style={tdStyle}>
+                                        <button onClick={() => setEditEntreprise(entreprise)} style={editButtonStyle}>Modifier</button>
+                                        <button onClick={() => handleDeleteEntreprise(entreprise.id)} style={deleteButtonStyle}>Supprimer</button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Vue Cartes (Mobile/Tablette) */}
+            <div className="block lg:hidden mt-8">
+                <h2 className="text-xl font-bold text-gray-800 mb-4">Entreprises existantes</h2>
+                {entreprises.length === 0 ? (
+                    <p className="text-center text-gray-500 py-10 bg-white rounded-xl">Aucune entreprise trouvée.</p>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {entreprises.map(entreprise => (
+                            <EntrepriseCard 
+                                key={entreprise.id} 
+                                entreprise={entreprise} 
+                                onEdit={setEditEntreprise}
+                                onDelete={handleDeleteEntreprise}
+                            />
                         ))}
-                    </tbody>
-                </table>
+                    </div>
+                )}
             </div>
         </div>
     );

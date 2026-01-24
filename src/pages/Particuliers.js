@@ -1,6 +1,46 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 
+const ClientCard = ({ client, onEdit, onDelete }) => (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-4 hover:shadow-md transition-shadow">
+        <div className="flex items-center mb-4">
+            <div className="bg-amber-100 text-amber-700 w-10 h-10 rounded-full flex items-center justify-center font-bold mr-3">
+                {client.last_name.charAt(0).toUpperCase()}
+            </div>
+            <div>
+                <h3 className="font-bold text-gray-800">{client.last_name} {client.first_name}</h3>
+                <p className="text-xs text-gray-500">ID: {client.client_id || '—'}</p>
+            </div>
+        </div>
+        
+        <div className="space-y-2 mb-5 text-sm">
+            <div className="flex items-center text-gray-600">
+                <span className="font-medium w-20">Email:</span>
+                <span className="truncate">{client.email}</span>
+            </div>
+            <div className="flex items-center text-gray-600">
+                <span className="font-medium w-20">Tél:</span>
+                <span>{client.phone || '—'}</span>
+            </div>
+        </div>
+
+        <div className="flex gap-2">
+            <button 
+                onClick={() => onEdit(client)}
+                className="flex-1 bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold py-2 rounded-lg transition-colors text-sm"
+            >
+                Modifier
+            </button>
+            <button 
+                onClick={() => onDelete(client.id)}
+                className="flex-1 bg-red-50 text-red-600 hover:bg-red-100 font-bold py-2 rounded-lg transition-colors text-sm"
+            >
+                Supprimer
+            </button>
+        </div>
+    </div>
+);
+
 const Particuliers = () => {
     const [clients, setClients] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -101,7 +141,7 @@ const Particuliers = () => {
     };
 
     if (loading) {
-        return <div>Chargement des particuliers...</div>;
+        return <div className="p-6 text-center text-gray-500">Chargement des particuliers...</div>;
     }
 
     return (
@@ -124,7 +164,7 @@ const Particuliers = () => {
 
             {/* Formulaire d'ajout/édition de client */}
             <div style={formContainerStyle}>
-                <h2>{editClient ? 'Modifier le client' : 'Ajouter un nouveau client'}</h2>
+                <h2 className="text-xl font-bold text-gray-800 mb-4">{editClient ? 'Modifier le client' : 'Ajouter un nouveau client'}</h2>
                 <div style={formGridStyle}>
                     <div style={formGroupStyle}>
                         <label style={labelStyle}>Nom:</label>
@@ -161,34 +201,55 @@ const Particuliers = () => {
                 </div>
             </div>
 
-            {/* Liste des clients */}
-            <div style={tableContainerStyle}>
-                <h2>Clients existants</h2>
-                <table style={tableStyle}>
-                    <thead>
-                        <tr>
-                            <th style={thStyle}>Nom</th>
-                            <th style={thStyle}>Prénom</th>
-                            <th style={thStyle}>Email</th>
-                            <th style={thStyle}>Téléphone</th>
-                            <th style={thStyle}>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {clients.map(client => (
-                            <tr key={client.id}>
-                                <td style={tdStyle}>{client.last_name}</td>
-                                <td style={tdStyle}>{client.first_name}</td>
-                                <td style={tdStyle}>{client.email}</td>
-                                <td style={tdStyle}>{client.phone}</td>
-                                <td style={tdStyle}>
-                                    <button onClick={() => setEditClient(client)} style={editButtonStyle}>Modifier</button>
-                                    <button onClick={() => handleDeleteClient(client.id)} style={deleteButtonStyle}>Supprimer</button>
-                                </td>
+            {/* Vue Tableau (Desktop) */}
+            <div className="hidden lg:block">
+                <div style={tableContainerStyle}>
+                    <h2 className="text-xl font-bold text-gray-800 p-4 border-b">Clients existants</h2>
+                    <table style={tableStyle}>
+                        <thead>
+                            <tr>
+                                <th style={thStyle}>Nom</th>
+                                <th style={thStyle}>Prénom</th>
+                                <th style={thStyle}>Email</th>
+                                <th style={thStyle}>Téléphone</th>
+                                <th style={thStyle}>Actions</th>
                             </tr>
+                        </thead>
+                        <tbody>
+                            {clients.map(client => (
+                                <tr key={client.id}>
+                                    <td style={tdStyle}>{client.last_name}</td>
+                                    <td style={tdStyle}>{client.first_name}</td>
+                                    <td style={tdStyle}>{client.email}</td>
+                                    <td style={tdStyle}>{client.phone}</td>
+                                    <td style={tdStyle}>
+                                        <button onClick={() => setEditClient(client)} style={editButtonStyle}>Modifier</button>
+                                        <button onClick={() => handleDeleteClient(client.id)} style={deleteButtonStyle}>Supprimer</button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Vue Cartes (Mobile/Tablette) */}
+            <div className="block lg:hidden mt-8">
+                <h2 className="text-xl font-bold text-gray-800 mb-4">Clients existants</h2>
+                {clients.length === 0 ? (
+                    <p className="text-center text-gray-500 py-10 bg-white rounded-xl">Aucun client trouvé.</p>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {clients.map(client => (
+                            <ClientCard 
+                                key={client.id} 
+                                client={client} 
+                                onEdit={setEditClient}
+                                onDelete={handleDeleteClient}
+                            />
                         ))}
-                    </tbody>
-                </table>
+                    </div>
+                )}
             </div>
         </div>
     );
