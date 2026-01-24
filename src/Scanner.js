@@ -7,9 +7,16 @@ const qrcodeRegionId = 'html5qrcode-scanner-view';
 const Scanner = () => {
     const [scanError, setScanError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
+    const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
     const scannerRef = useRef(null);
     const lastScannedCode = useRef(null);
     const timeoutRef = useRef(null);
+
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth <= 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     const clearMessages = () => {
         setScanError('');
@@ -105,7 +112,11 @@ const Scanner = () => {
         if (!scannerRef.current) {
             const scanner = new Html5QrcodeScanner(
                 qrcodeRegionId, 
-                { fps: 5, qrbox: { width: 250, height: 250 }, supportedScanTypes: [] }, 
+                { 
+                    fps: 10, 
+                    qrbox: isMobile ? { width: 300, height: 300 } : { width: 250, height: 250 }, 
+                    supportedScanTypes: [] 
+                }, 
                 false
             );
             scanner.render(onScanSuccess, onScanFailure);
@@ -121,15 +132,19 @@ const Scanner = () => {
             }
             if(timeoutRef.current) clearTimeout(timeoutRef.current);
         };
-    }, [onScanSuccess, onScanFailure]);
+    }, [onScanSuccess, onScanFailure, isMobile]);
 
     return (
-        <div style={containerStyle}>
-            <h1>Validation des Commandes</h1>
-            <p>Scannez le QR code pour valider la livraison ou le retrait d'une commande.</p>
+        <div style={isMobile ? mobileContainerStyle : containerStyle}>
+            {!isMobile && (
+                <>
+                    <h1>Validation des Commandes</h1>
+                    <p>Scannez le QR code pour valider la livraison ou le retrait d'une commande.</p>
+                </>
+            )}
 
-            <div style={scannerSectionStyle}>
-                <div id={qrcodeRegionId} style={scannerAreaStyle} />
+            <div style={isMobile ? mobileScannerSectionStyle : scannerSectionStyle}>
+                <div id={qrcodeRegionId} style={isMobile ? mobileScannerAreaStyle : scannerAreaStyle} />
                 
                 {successMessage && <p style={successMessageStyle}>{successMessage}</p>}
                 {scanError && <p style={errorMessageStyle}>{scanError}</p>}
@@ -139,6 +154,21 @@ const Scanner = () => {
         </div>
     );
 };
+
+// --- Styles ---
+const containerStyle = { padding: '20px', maxWidth: '900px', margin: '0 auto' };
+const mobileContainerStyle = { padding: '0', maxWidth: '100%', height: '100vh', display: 'flex', flexDirection: 'column' };
+
+const scannerSectionStyle = { background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 4px 8px rgba(0,0,0,0.1)', textAlign: 'center' };
+const mobileScannerSectionStyle = { background: '#000', padding: '0', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' };
+
+const scannerAreaStyle = { width: '100%', maxWidth: '400px', margin: '0 auto', marginBottom: '20px' };
+const mobileScannerAreaStyle = { width: '100%', height: '100%', margin: '0' };
+
+const messageStyle = { marginTop: '20px', fontWeight: 'bold', fontSize: '1.1em', padding: '10px', borderRadius: '5px' };
+const errorMessageStyle = { ...messageStyle, color: '#721c24', backgroundColor: '#f8d7da', border: '1px solid #f5c6cb', margin: '10px' };
+const successMessageStyle = { ...messageStyle, color: '#155724', backgroundColor: '#d4edda', border: '1px solid #c3e6cb', margin: '10px' };
+const infoMessageStyle = { ...messageStyle, color: '#fff', backgroundColor: 'transparent', border: 'none', margin: '10px' };
 
 // --- Styles ---
 const containerStyle = { padding: '20px', maxWidth: '900px', margin: '0 auto' };
