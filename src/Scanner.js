@@ -170,13 +170,4 @@ const errorMessageStyle = { ...messageStyle, color: '#721c24', backgroundColor: 
 const successMessageStyle = { ...messageStyle, color: '#155724', backgroundColor: '#d4edda', border: '1px solid #c3e6cb', margin: '10px' };
 const infoMessageStyle = { ...messageStyle, color: '#fff', backgroundColor: 'transparent', border: 'none', margin: '10px' };
 
-// --- Styles ---
-const containerStyle = { padding: '20px', maxWidth: '900px', margin: '0 auto' };
-const scannerSectionStyle = { background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 4px 8px rgba(0,0,0,0.1)', textAlign: 'center' };
-const scannerAreaStyle = { width: '100%', maxWidth: '400px', margin: '0 auto', marginBottom: '20px' };
-const messageStyle = { marginTop: '20px', fontWeight: 'bold', fontSize: '1.1em', padding: '10px', borderRadius: '5px' };
-const errorMessageStyle = { ...messageStyle, color: '#721c24', backgroundColor: '#f8d7da', border: '1px solid #f5c6cb' };
-const successMessageStyle = { ...messageStyle, color: '#155724', backgroundColor: '#d4edda', border: '1px solid #c3e6cb' };
-const infoMessageStyle = { ...messageStyle, color: '#0c5460', backgroundColor: '#d1ecf1', border: '1px solid #bee5eb' };
-
 export default Scanner;
