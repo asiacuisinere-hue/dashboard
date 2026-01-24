@@ -106,7 +106,10 @@ const Particuliers = () => {
 
     return (
         <div style={containerStyle}>
-            <h1>Gestion des Particuliers</h1>
+            <div className="mb-8">
+                <h1 className="text-3xl font-bold text-gray-800 mb-2">Gestion des Particuliers</h1>
+                <p className="text-gray-600">Gérez votre base de clients particuliers.</p>
+            </div>
 
             {/* Section de recherche */}
             <div style={filterContainerStyle}>

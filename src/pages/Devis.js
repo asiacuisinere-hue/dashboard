@@ -319,7 +319,9 @@ const Devis = () => {
 
     return (
         <div style={containerStyle}>
-            <h1>Gestion des Devis</h1>
+            <div className="mb-8">
+                <h1 className="text-3xl font-bold text-gray-800 mb-2">Gestion des Devis</h1>
+            </div>
 
             {/* Display loading, success, error messages */}
             {isLoading && <p>Génération du devis en cours...</p>}

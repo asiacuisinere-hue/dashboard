@@ -136,8 +136,10 @@ const Depenses = () => {
     return (
         <div className="p-6 bg-gray-50 min-h-screen">
             <div className="max-w-7xl mx-auto">
-                <h1 className="text-3xl font-bold text-gray-800 mb-4">Gestion des Dépenses</h1>
-                <p className="text-gray-600 mb-6">Ajoutez, visualisez et gérez vos dépenses.</p>
+                <div className="mb-8">
+                    <h1 className="text-3xl font-bold text-gray-800 mb-2">Gestion des Dépenses</h1>
+                    <p className="text-gray-600">Ajoutez, visualisez et gérez vos dépenses.</p>
+                </div>
 
                 {error && (
                     <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-lg flex items-start">

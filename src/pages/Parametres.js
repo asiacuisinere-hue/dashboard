@@ -283,8 +283,10 @@ const Parametres = () => {
     
     return (
         <div style={containerStyle}>
-            <h1>Paramètres</h1>
-            <p>Gérez ici les différentes configurations de votre application.</p>
+            <div className="mb-8">
+                <h1 className="text-3xl font-bold text-gray-800 mb-2">Paramètres</h1>
+                <p className="text-gray-600">Gérez ici les différentes configurations de votre application.</p>
+            </div>
             {status.message && <div style={statusStyle(status.type)}>{status.message}</div>}
 
             <div style={gridStyle}>

@@ -132,8 +132,10 @@ const Abonnements = () => {
 
     return (
         <div style={containerStyle}>
-            <h1>Gestion des Abonnements</h1>
-            <p>Liste et gestion des abonnements actifs, en pause ou terminés.</p>
+            <div className="mb-8">
+                <h1 className="text-3xl font-bold text-gray-800 mb-2">Gestion des Abonnements</h1>
+                <p className="text-gray-600">Liste et gestion des abonnements actifs, en pause ou terminés.</p>
+            </div>
 
             <div style={filterContainerStyle}>
                 <select

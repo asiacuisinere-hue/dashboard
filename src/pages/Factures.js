@@ -102,7 +102,9 @@ const Factures = () => {
 
     return (
         <div style={containerStyle}>
-            <h1>Gestion des Factures</h1>
+            <div className="mb-8">
+                <h1 className="text-3xl font-bold text-gray-800 mb-2">Gestion des Factures</h1>
+            </div>
 
             <div style={filterContainerStyle}>
                 <input

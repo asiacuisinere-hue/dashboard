@@ -207,8 +207,10 @@ const Demandes = () => {
 
     return (
         <div style={containerStyle}>
-            <h1>Nouvelles Demandes</h1>
-            <p>Voici la liste des nouvelles demandes en attente de traitement.</p>
+            <div className="mb-8">
+                <h1 className="text-3xl font-bold text-gray-800 mb-2">Nouvelles Demandes</h1>
+                <p className="text-gray-600">Voici la liste des nouvelles demandes en attente de traitement.</p>
+            </div>
             
             <div style={tableContainerStyle}>
                 <table style={tableStyle}>

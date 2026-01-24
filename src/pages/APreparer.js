@@ -57,8 +57,10 @@ const APreparer = () => {
 
     return (
         <div style={containerStyle}>
-            <h1>Commandes à Préparer</h1>
-            <p>Liste des commandes à préparer ou en cours de préparation.</p>
+            <div className="mb-8">
+                <h1 className="text-3xl font-bold text-gray-800 mb-2">Commandes à Préparer</h1>
+                <p className="text-gray-600">Liste des commandes à préparer ou en cours de préparation.</p>
+            </div>
 
             <div style={filterContainerStyle}>
                 <input 

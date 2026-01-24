@@ -107,8 +107,10 @@ const DemandesEnCours = () => {
 
     return (
         <div style={containerStyle}>
-            <h1>Demandes en cours</h1>
-            <p>Suivi de toutes les demandes actives.</p>
+            <div className="mb-8">
+                <h1 className="text-3xl font-bold text-gray-800 mb-2">Demandes en cours</h1>
+                <p className="text-gray-600">Suivi de toutes les demandes actives.</p>
+            </div>
 
             <div style={filterContainerStyle}>
                 {/* Type Filter Icons */}

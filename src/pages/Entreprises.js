@@ -105,7 +105,9 @@ const Entreprises = () => {
 
     return (
         <div style={containerStyle}>
-            <h1>Gestion des Entreprises</h1>
+            <div className="mb-8">
+                <h1 className="text-3xl font-bold text-gray-800 mb-2">Gestion des Entreprises</h1>
+            </div>
 
             {/* Section de recherche */}
             <div style={filterContainerStyle}>

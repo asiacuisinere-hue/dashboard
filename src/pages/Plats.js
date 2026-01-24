@@ -113,7 +113,10 @@ const Plats = () => {
 
     return (
         <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-            <h1>Gestion de la Galerie des Plats</h1>
+            <div className="mb-8">
+                <h1 className="text-3xl font-bold text-gray-800 mb-2">Gestion de la Galerie des Plats</h1>
+                <p className="text-gray-600">Gérez les plats qui apparaissent dans la "Galerie des Possibles" pour vos clients.</p>
+            </div>
             
             <div style={formContainerStyle}>
                 <h2>{editingDish ? 'Modifier le plat' : 'Ajouter un nouveau plat'}</h2>

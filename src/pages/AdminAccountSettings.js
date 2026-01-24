@@ -60,7 +60,10 @@ const AdminAccountSettings = () => {
 
     return (
         <div style={containerStyle}>
-            <h1>Gestion du Compte Administrateur</h1>
+            <div className="mb-8">
+                <h1 className="text-3xl font-bold text-gray-800 mb-2">Gestion du Compte Administrateur</h1>
+                <p className="text-gray-600">Gérez vos identifiants de connexion et vos paramètres de sécurité.</p>
+            </div>
 
             {/* Section de changement de mot de passe */}
             <div style={sectionStyle}>

@@ -93,7 +93,10 @@ const Services = () => {
 
     return (
         <div style={containerStyle}>
-            <h1>Gestion des Services</h1>
+            <div className="mb-8">
+                <h1 className="text-3xl font-bold text-gray-800 mb-2">Gestion des Services</h1>
+                <p className="text-gray-600">Définissez et gérez les services que vous proposez dans vos devis.</p>
+            </div>
 
             {/* Formulaire d'ajout de service */}
             <div style={formContainerStyle}>
