@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { Link } from 'react-router-dom';
 import { 
-    DollarSign, Calendar, Hash, Bell, Utensils, QrCode, 
+    Bell, Utensils, QrCode, 
     BarChart3, ChevronRight, Clock, MapPin, CheckCircle 
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
+import { BarChart, Bar, XAxis, ResponsiveContainer, Tooltip } from 'recharts';
 
 const ActionTile = ({ title, count, icon: Icon, to, colorClass, bgColorClass }) => (
     <Link to={to} className={`flex flex-col justify-between p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200 ${bgColorClass}`}>
