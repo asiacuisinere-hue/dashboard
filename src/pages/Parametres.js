@@ -259,7 +259,13 @@ const Parametres = () => {
     const addDish = () => {
         setSpecialOffer(prev => ({
             ...prev,
-            dishes: [...(prev.dishes || []), { name: '', price500: '', price1000: '' }]
+            dishes: [...(prev.dishes || []), { 
+                name: '', 
+                label1: '500g', 
+                price1: '', 
+                label2: '1000g', 
+                price2: '' 
+            }]
         }));
     };
 
@@ -383,10 +389,12 @@ const Parametres = () => {
                                     {(specialOffer.dishes || []).map((dish, index) => (
                                         <div key={index} style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '15px', marginTop: '15px', position: 'relative' }}>
                                             <button onClick={() => removeDish(index)} style={removeButtonStyle}>&times;</button>
-                                            <div style={formGridStyle}>
-                                                <InputField label={`Nom du plat #${index + 1}`} name="name" value={dish.name} onChange={(e) => handleDishChange(index, e)} />
-                                                <InputField label="Prix 500g (€)" name="price500" type="number" value={dish.price500} onChange={(e) => handleDishChange(index, e)} />
-                                                <InputField label="Prix 1000g (€)" name="price1000" type="number" value={dish.price1000} onChange={(e) => handleDishChange(index, e)} />
+                                            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '15px' }}>
+                                                <InputField label={`Plat #${index + 1}`} name="name" value={dish.name} onChange={(e) => handleDishChange(index, e)} />
+                                                <InputField label="Libellé 1" name="label1" value={dish.label1} onChange={(e) => handleDishChange(index, e)} />
+                                                <InputField label="Prix 1 (€)" name="price1" type="number" value={dish.price1} onChange={(e) => handleDishChange(index, e)} />
+                                                <InputField label="Libellé 2" name="label2" value={dish.label2} onChange={(e) => handleDishChange(index, e)} />
+                                                <InputField label="Prix 2 (€)" name="price2" type="number" value={dish.price2} onChange={(e) => handleDishChange(index, e)} />
                                             </div>
                                         </div>
                                     ))}
