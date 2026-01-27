@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
-import { PlusCircle, Trash2, AlertCircle, Loader2, Utensils, Globe } from 'lucide-react';
+import { PlusCircle, Trash2, AlertCircle, Loader2 } from 'lucide-react';
 import { useBusinessUnit } from '../BusinessUnitContext';
 
 const Depenses = () => {
