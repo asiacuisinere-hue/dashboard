@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
+import { useBusinessUnit } from './BusinessUnitContext';
 import { 
     QrCode, Bell, X, Info, CheckCircle, ChevronDown, ChevronRight,
     LayoutDashboard, BarChart3, Wallet, FileText, Receipt, 
     History, Building2, ClipboardList, Calendar, UserCog, Utensils, ScanLine, Settings,
-    Users, Package
+    Users, Package, Globe
 } from 'lucide-react';
 
 const Sidebar = ({ 
@@ -14,6 +15,7 @@ const Sidebar = ({
     activeSubscriptionsCount, subscriptionsNeedAttentionCount, 
     isMobile, notifications, setNotifications 
 }) => {
+  const { businessUnit, updateBusinessUnit } = useBusinessUnit();
   const [isOpen, setIsOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [openGroups, setOpenGroups] = useState(['GESTION']); // GESTION ouvert par défaut
@@ -33,6 +35,61 @@ const Sidebar = ({
   const handleLogout = async () => {
     await supabase.auth.signOut();
   };
+
+  // --- Composant Sélecteur d'Unité ---
+  const BusinessUnitSelector = () => (
+    <div style={{
+        display: 'flex',
+        background: '#2c3136',
+        borderRadius: '12px',
+        padding: '4px',
+        marginBottom: '25px',
+        border: '1px solid rgba(255,255,255,0.1)'
+    }}>
+        <button 
+            onClick={() => updateBusinessUnit('cuisine')}
+            style={{
+                flex: 1,
+                padding: '8px',
+                borderRadius: '8px',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                transition: 'all 0.2s',
+                backgroundColor: businessUnit === 'cuisine' ? '#d4af37' : 'transparent',
+                color: businessUnit === 'cuisine' ? '#1a1a1a' : '#868e96'
+            }}
+        >
+            <Utensils size={14} /> Cuisine
+        </button>
+        <button 
+            onClick={() => updateBusinessUnit('courtage')}
+            style={{
+                flex: 1,
+                padding: '8px',
+                borderRadius: '8px',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                transition: 'all 0.2s',
+                backgroundColor: businessUnit === 'courtage' ? '#3b82f6' : 'transparent',
+                color: businessUnit === 'courtage' ? 'white' : '#868e96'
+            }}
+        >
+            <Globe size={14} /> Courtage
+        </button>
+    </div>
+  );
 
   const handleNotificationClick = (notification) => {
     markAsRead(notification.id);
@@ -236,9 +293,9 @@ const Sidebar = ({
 
     const contentStyle = { display: 'flex', alignItems: 'center', width: '100%' };
     const desktopLinkStyle = { display: 'block', padding: '10px 20px', color: '#ccc', textDecoration: 'none', borderLeft: '4px solid transparent', transition: 'all 0.3s ease', borderRadius: '4px', marginBottom: '2px', fontSize: '0.9rem' };
-    const desktopActiveLinkStyle = { ...desktopLinkStyle, backgroundColor: 'rgba(212, 175, 55, 0.15)', borderLeft: '4px solid #d4af37', fontWeight: 'bold', color: 'white' };
+    const desktopActiveLinkStyle = { ...desktopLinkStyle, backgroundColor: businessUnit === 'cuisine' ? 'rgba(212, 175, 55, 0.15)' : 'rgba(59, 130, 246, 0.15)', borderLeft: `4px solid ${businessUnit === 'cuisine' ? '#d4af37' : '#3b82f6'}`, fontWeight: 'bold', color: 'white' };
     const mobileLinkStyle = { display: 'block', padding: '20px', color: 'white', fontSize: '18px', textAlign: 'center', textDecoration: 'none', width: '100%', borderBottom: '1px solid rgba(255,255,255,0.1)' };
-    const mobileActiveLinkStyle = { ...mobileLinkStyle, color: '#d4af37', backgroundColor: 'rgba(212, 175, 55, 0.1)' };
+    const mobileActiveLinkStyle = { ...mobileLinkStyle, color: businessUnit === 'cuisine' ? '#d4af37' : '#3b82f6', backgroundColor: businessUnit === 'cuisine' ? 'rgba(212, 175, 55, 0.1)' : 'rgba(59, 130, 246, 0.1)' };
     
     return (
       <nav style={{ width: '100%' }}>
@@ -363,6 +420,7 @@ const Sidebar = ({
             <div style={closeButtonStyle} onClick={() => setIsOpen(false)}><X /></div>
             <div style={mobileMenuCardStyle}>
               <h2 style={titleStyle}>Menu</h2>
+              <div style={{ padding: '0 20px' }}><BusinessUnitSelector /></div>
               <div style={{ overflowY: 'auto', flex: 1 }}><NavLinks mobile /></div>
               <div style={{ padding: '20px', width: '100%', textAlign: 'center' }}>
                   <button onClick={handleLogout} style={mobileLogoutButtonStyle}><span>👋</span> Déconnexion</button>
@@ -377,6 +435,7 @@ const Sidebar = ({
   return (
     <aside style={{ width: '250px', minWidth: '250px', backgroundColor: '#343a40', padding: '20px', color: 'white', display: 'flex', flexDirection: 'column', height: '100vh', overflowY: 'auto', flexShrink: 0 }}>
         <div style={{ flex: 1, overflowY: 'auto' }}>
+            <BusinessUnitSelector />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
                 <h2 style={{ textAlign: 'center', margin: 0 }}>Asiacuisine.re</h2>
                 <div style={notificationIconStyle} onClick={() => setIsNotificationsOpen(o => !o)}>

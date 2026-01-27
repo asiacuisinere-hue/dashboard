@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { TrendingUp, TrendingDown, Users, ShoppingCart, DollarSign, Package, AlertCircle, Download } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import { useBusinessUnit } from '../BusinessUnitContext';
 
 const StatCard = ({ title, value, change, icon: Icon, color, isLoading }) => (
   <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
@@ -29,6 +30,7 @@ const StatCard = ({ title, value, change, icon: Icon, color, isLoading }) => (
 );
 
 const Statistiques = () => {
+    const { businessUnit } = useBusinessUnit();
     const [period, setPeriod] = useState('last30days');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -70,7 +72,7 @@ const Statistiques = () => {
                 if (!session) throw new Error("Utilisateur non authentifié.");
 
                 const response = await fetch(
-                    `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/get-kpis?period=${period}`,
+                    `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/get-kpis?period=${period}&businessUnit=${businessUnit}`,
                     {
                         method: 'GET',
                         headers: {
@@ -187,7 +189,7 @@ const Statistiques = () => {
         };
 
         fetchKpis();
-    }, [period]);
+    }, [period, businessUnit]);
 
     const CustomTooltip = ({ active, payload, label }) => {
         if (active && payload && payload.length) {
