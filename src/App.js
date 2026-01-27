@@ -22,6 +22,7 @@ import Depenses from './pages/Depenses';
 import Plats from './pages/Plats'; // Import de la page Plats
 import Events from './pages/Events'; // AJOUT DE L'IMPORT
 import Accueil from './pages/Accueil'; // Ajout de la nouvelle page d'accueil
+import { useBusinessUnit } from './BusinessUnitContext';
 
 // --- Composants ---
 
@@ -102,6 +103,7 @@ const mainContentStyle = {
 };
 
 const DashboardLayout = () => {
+    const { businessUnit } = useBusinessUnit();
     const [newCount, setNewCount] = useState(0);
     const [inProgressCount, setInProgressCount] = useState(0);
     const [pendingQuotesCount, setPendingQuotesCount] = useState(0);
@@ -122,71 +124,80 @@ const DashboardLayout = () => {
     };
 
     const fetchCounts = useCallback(async () => {
-        console.log("--- [DEBUG] Fetching all counts ---");
+        console.log(`--- [DEBUG] Fetching all counts for ${businessUnit} ---`);
         
-        const { count: newDemandsCount, error: newError } = await supabase.from('demandes').select('*', { count: 'exact', head: true }).eq('status', 'Nouvelle');
+        const { count: newDemandsCount, error: newError } = await supabase.from('demandes')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'Nouvelle')
+            .eq('business_unit', businessUnit);
         if(newError) console.error("Error fetching new demands:", newError);
-        console.log("DEBUG: New Demands Count:", newDemandsCount);
-        setNewCount(newDemandsCount);
+        setNewCount(newDemandsCount || 0);
 
         const { count: inProgressDemandsCount } = await supabase
             .from('demandes')
             .select('*', { count: 'exact', head: true })
+            .eq('business_unit', businessUnit)
             .or(`and(type.in.("COMMANDE_MENU","COMMANDE_SPECIALE"),status.not.in.("completed","cancelled","paid","Nouvelle","En attente de préparation","Préparation en cours")),and(type.eq.RESERVATION_SERVICE,status.in.("En attente de traitement",confirmed))`);
-        setInProgressCount(inProgressDemandsCount);
+        setInProgressCount(inProgressDemandsCount || 0);
         
-        const { count: sentQuotesCount, error: quotesError } = await supabase.from('quotes').select('*', { count: 'exact', head: true }).eq('status', 'sent');
+        const { count: sentQuotesCount, error: quotesError } = await supabase.from('quotes')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'sent')
+            .eq('business_unit', businessUnit);
         if(quotesError) console.error("Error fetching quotes:", quotesError);
-        console.log("DEBUG: Sent Quotes Count:", sentQuotesCount);
-        setPendingQuotesCount(sentQuotesCount);
+        setPendingQuotesCount(sentQuotesCount || 0);
 
-        const { count: toPrepareDemandsCount, error: toPrepareError } = await supabase.from('demandes').select('*', { count: 'exact', head: true }).in('status', ['En attente de préparation', 'Préparation en cours']);
+        const { count: toPrepareDemandsCount, error: toPrepareError } = await supabase.from('demandes')
+            .select('*', { count: 'exact', head: true })
+            .in('status', ['En attente de préparation', 'Préparation en cours'])
+            .eq('business_unit', businessUnit);
         if(toPrepareError) console.error("Error fetching to-prepare demands:", toPrepareError);
-        console.log("DEBUG: To Prepare Demands Count:", toPrepareDemandsCount);
-        setToPrepareCount(toPrepareDemandsCount);
+        setToPrepareCount(toPrepareDemandsCount || 0);
 
         const { count: pendingInvoices, error: pendingInvError } = await supabase.from('invoices')
             .select('*', { count: 'exact', head: true })
             .eq('status', 'pending')
-            .not('quote_id', 'is', null);
+            .not('quote_id', 'is', null)
+            .eq('business_unit', businessUnit);
         if(pendingInvError) console.error("Error fetching pending invoices:", pendingInvError);
-        console.log("DEBUG: Pending Invoices Count:", pendingInvoices);
-        setPendingInvoicesCount(pendingInvoices);
+        setPendingInvoicesCount(pendingInvoices || 0);
 
         const { count: depositPaidInvoices, error: depositInvError } = await supabase.from('invoices')
             .select('*', { count: 'exact', head: true })
             .eq('status', 'deposit_paid')
-            .not('quote_id', 'is', null);
+            .not('quote_id', 'is', null)
+            .eq('business_unit', businessUnit);
         if(depositInvError) console.error("Error fetching deposit paid invoices:", depositInvError);
-        console.log("DEBUG: Deposit Paid Invoices Count:", depositPaidInvoices);
-        setDepositPaidInvoicesCount(depositPaidInvoices);
+        setDepositPaidInvoicesCount(depositPaidInvoices || 0);
 
         const { count: waitingForPrep, error: waitingError } = await supabase
             .from('invoices')
             .select('*, demandes!inner(status)', { count: 'exact', head: true })
             .eq('status', 'paid')
             .not('quote_id', 'is', null)
-            .not('demandes.status', 'in', '("En attente de préparation","Préparation en cours","completed")');
+            .not('demandes.status', 'in', '("En attente de préparation","Préparation en cours","completed")')
+            .eq('business_unit', businessUnit);
         if(waitingError) console.error("Error fetching waiting for prep invoices:", waitingError);
-        console.log("DEBUG: Waiting for Prep Invoices Count:", waitingForPrep);
-        setWaitingForPrepCount(waitingForPrep);
+        setWaitingForPrepCount(waitingForPrep || 0);
 
         const { count: activeSubsCount, error: subsError } = await supabase
             .from('abonnements')
             .select('*', { count: 'exact', head: true })
-            .eq('status', 'actif');
+            .eq('status', 'actif')
+            .eq('business_unit', businessUnit);
         if(subsError) console.error("Error fetching active subscriptions:", subsError);
         setActiveSubscriptionsCount(activeSubsCount || 0);
 
         const { data: needsAttentionSubs, error: attentionError } = await supabase
             .from('abonnements')
             .select('id, monthly_price')
-            .eq('status', 'actif');
+            .eq('status', 'actif')
+            .eq('business_unit', businessUnit);
         if(attentionError) console.error("Error fetching attention subscriptions:", attentionError);
         const needsAttentionCount = needsAttentionSubs?.filter(sub => !sub.monthly_price || sub.monthly_price <= 0).length || 0;
         setSubscriptionsNeedAttentionCount(needsAttentionCount);
 
-    }, []);
+    }, [businessUnit]);
 
     useEffect(() => {
         fetchCounts();
@@ -197,6 +208,12 @@ const DashboardLayout = () => {
         const handleDbChanges = (payload) => {
             console.log(`--- [REALTIME] Event '${payload.eventType}' on table '${payload.table}' detected.`);
             
+            // On ne traite la notification que si elle concerne l'unité active
+            if (payload.new && payload.new.business_unit !== businessUnit) {
+                console.log(`Ignoring realtime event from other unit (${payload.new.business_unit})`);
+                return;
+            }
+
             let newNotification = null;
 
             if (payload.table === 'demandes' && payload.eventType === 'INSERT') {
@@ -266,7 +283,7 @@ const DashboardLayout = () => {
             supabase.removeChannel(allUpdatesChannel);
             window.removeEventListener('resize', handleResize);
         };
-    }, [fetchCounts]);
+    }, [fetchCounts, businessUnit]);
 
     return (
         <div style={appStyle}>

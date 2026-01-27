@@ -4,8 +4,8 @@ import { TrendingUp, TrendingDown, Users, ShoppingCart, DollarSign, Package, Ale
 import { supabase } from '../supabaseClient';
 import { useBusinessUnit } from '../BusinessUnitContext';
 
-const StatCard = ({ title, value, change, icon: Icon, color, isLoading }) => (
-  <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+const StatCard = ({ title, value, change, icon: Icon, color, isLoading, themeColor }) => (
+  <div className={`bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow border-t-4 ${themeColor === 'courtage' ? 'border-blue-500' : 'border-amber-500'}`}>
     <div className="flex items-center justify-between mb-2">
       <span className="text-gray-600 text-sm font-medium">{title}</span>
       <Icon className={`w-5 h-5 ${color}`} />
@@ -32,6 +32,11 @@ const StatCard = ({ title, value, change, icon: Icon, color, isLoading }) => (
 const Statistiques = () => {
     const { businessUnit } = useBusinessUnit();
     const [period, setPeriod] = useState('last30days');
+    
+    // Theme Colors based on Unit
+    const themeColor = businessUnit === 'courtage' ? 'blue' : 'amber';
+    const mainHexColor = businessUnit === 'courtage' ? '#3b82f6' : '#d4af37';
+
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     
@@ -66,6 +71,20 @@ const Statistiques = () => {
             setLoading(true);
             setError(null);
             
+            // Reset KPIs to zero before fetching to avoid showing data from previous unit
+            setKpis({
+                revenue: '0.00', revenueChange: 0, totalExpenses: '0.00', expensesChange: 0,
+                totalGrossMargin: '0.00', grossMarginChange: 0, orders: 0, ordersChange: 0, 
+                newClients: 0, clientsChange: 0, avgOrderValue: '0.00' 
+            });
+            setRevenueData([]);
+            setOrderTypeData([]);
+            setWeekdayData([]);
+            setTopProducts([]);
+            setExpenseDistributionData([]);
+            setMonthlyPerformanceData([]);
+            setEventsData([]);
+
             try {
                 const { data: { session }, error: sessionError } = await supabase.auth.getSession();
                 if (sessionError) throw new Error(`Erreur de session: ${sessionError.message}`);
@@ -331,8 +350,8 @@ const Statistiques = () => {
                                 disabled={loading}
                                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                                     period === p.value
-                                        ? 'bg-amber-500 text-white shadow-md'
-                                        : 'bg-white text-amber-500 border border-amber-500 hover:bg-amber-50'
+                                        ? `bg-${themeColor}-500 text-white shadow-md`
+                                        : `bg-white text-${themeColor}-500 border border-${themeColor}-500 hover:bg-${themeColor}-50`
                                 } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                                 {p.label}
@@ -351,7 +370,7 @@ const Statistiques = () => {
                                 id="startDate" 
                                 value={exportStartDate}
                                 onChange={(e) => setExportStartDate(e.target.value)}
-                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm px-3 py-2 border"
+                                className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-${themeColor}-500 focus:ring-${themeColor}-500 sm:text-sm px-3 py-2 border`}
                             />
                         </div>
                         <div>
@@ -361,7 +380,7 @@ const Statistiques = () => {
                                 id="endDate" 
                                 value={exportEndDate}
                                 onChange={(e) => setExportEndDate(e.target.value)}
-                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm px-3 py-2 border"
+                                className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-${themeColor}-500 focus:ring-${themeColor}-500 sm:text-sm px-3 py-2 border`}
                             />
                         </div>
                         <div>
@@ -383,18 +402,18 @@ const Statistiques = () => {
                 {error && <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-lg flex items-start"><AlertCircle className="w-5 h-5 text-red-500 mr-3 mt-0.5 flex-shrink-0" /><div><h3 className="text-red-800 font-semibold">Erreur de chargement</h3><p className="text-red-700 text-sm mt-1">{error}</p></div></div>}
 
                 <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-6 mb-6">
-                    <StatCard title="Chiffre d'affaires" value={`${parseFloat(kpis.revenue).toFixed(2)}€`} change={kpis.revenueChange} icon={DollarSign} color="text-green-600" isLoading={loading} />
-                    <StatCard title="Total Dépenses" value={`${parseFloat(kpis.totalExpenses).toFixed(2)}€`} change={kpis.expensesChange} icon={Package} color="text-red-600" isLoading={loading} />
-                    <StatCard title="Marge Brute" value={`${parseFloat(kpis.totalGrossMargin).toFixed(2)}€`} change={kpis.grossMarginChange} icon={DollarSign} color="text-green-600" isLoading={loading} />
-                    <StatCard title="Nombre de commandes" value={kpis.orders} change={kpis.ordersChange} icon={ShoppingCart} color="text-blue-600" isLoading={loading} />
-                    <StatCard title="Nouveaux clients" value={kpis.newClients} change={kpis.clientsChange} icon={Users} color="text-purple-600" isLoading={loading} />
-                    <StatCard title="Panier moyen" value={`${parseFloat(kpis.avgOrderValue).toFixed(2)}€`} change={null} icon={Package} color="text-orange-600" isLoading={loading} />
+                    <StatCard title="Chiffre d'affaires" value={`${parseFloat(kpis.revenue).toFixed(2)}€`} change={kpis.revenueChange} icon={DollarSign} color={`text-${themeColor}-600`} isLoading={loading} themeColor={businessUnit} />
+                    <StatCard title="Total Dépenses" value={`${parseFloat(kpis.totalExpenses).toFixed(2)}€`} change={kpis.expensesChange} icon={Package} color="text-red-600" isLoading={loading} themeColor={businessUnit} />
+                    <StatCard title="Marge Brute" value={`${parseFloat(kpis.totalGrossMargin).toFixed(2)}€`} change={kpis.grossMarginChange} icon={DollarSign} color="text-green-600" isLoading={loading} themeColor={businessUnit} />
+                    <StatCard title="Nombre de commandes" value={kpis.orders} change={kpis.ordersChange} icon={ShoppingCart} color="text-blue-600" isLoading={loading} themeColor={businessUnit} />
+                    <StatCard title="Nouveaux clients" value={kpis.newClients} change={kpis.clientsChange} icon={Users} color="text-purple-600" isLoading={loading} themeColor={businessUnit} />
+                    <StatCard title="Panier moyen" value={`${parseFloat(kpis.avgOrderValue).toFixed(2)}€`} change={null} icon={Package} color="text-orange-600" isLoading={loading} themeColor={businessUnit} />
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                     <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
                         <h3 className="text-lg font-semibold text-gray-800 mb-4">Évolution du chiffre d'affaires</h3>
-                        {loading ? <div className="h-[300px] flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div></div> : revenueData.length > 0 ? (
+                        {loading ? <div className="h-[300px] flex items-center justify-center"><div className={`animate-spin rounded-full h-12 w-12 border-b-2 border-${themeColor}-500`}></div></div> : revenueData.length > 0 ? (
                             <ResponsiveContainer width="100%" height={300}>
                                 <LineChart data={revenueData}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -402,7 +421,7 @@ const Statistiques = () => {
                                     <YAxis stroke="#6b7280" />
                                     <Tooltip content={<CustomTooltip />} />
                                     <Legend />
-                                    <Line type="monotone" dataKey="ca" stroke="#3b82f6" strokeWidth={2} name="CA (€)" dot={{ fill: '#3b82f6', r: 4 }} activeDot={{ r: 6 }} />
+                                    <Line type="monotone" dataKey="ca" stroke={mainHexColor} strokeWidth={2} name="CA (€)" dot={{ fill: mainHexColor, r: 4 }} activeDot={{ r: 6 }} />
                                 </LineChart>
                             </ResponsiveContainer>
                         ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnée disponible pour cette période</div>}
@@ -520,17 +539,17 @@ const Statistiques = () => {
 
                 <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
                     <h3 className="text-lg font-semibold text-gray-800 mb-4">Évolution Mensuelle (24 derniers mois)</h3>
-                    {loading ? <div className="h-[300px] flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div></div> : monthlyPerformanceData.length > 0 ? (
+                    {loading ? <div className="h-[300px] flex items-center justify-center"><div className={`animate-spin rounded-full h-12 w-12 border-b-2 border-${themeColor}-500`}></div></div> : monthlyPerformanceData.length > 0 ? (
                         <ResponsiveContainer width="100%" height={300}>
                             <LineChart data={monthlyPerformanceData}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                                 <XAxis dataKey="name" stroke="#6b7280" tickFormatter={formatMonthTick} />
                                 <YAxis yAxisId="left" stroke="#3b82f6" />
-                                <YAxis yAxisId="right" orientation="right" stroke="#10b981" />
+                                <YAxis yAxisId="right" orientation="right" stroke={mainHexColor} />
                                 <Tooltip content={<CustomTooltip />} />
                                 <Legend />
                                 <Line yAxisId="left" type="monotone" dataKey="commandes" stroke="#3b82f6" strokeWidth={2} name="Commandes" dot={<CustomDot />} activeDot={{ r: 8, strokeWidth: 2 }} />
-                                <Line yAxisId="right" type="monotone" dataKey="ca" stroke="#10b981" strokeWidth={2} name="CA (€)" />
+                                <Line yAxisId="right" type="monotone" dataKey="ca" stroke={mainHexColor} strokeWidth={2} name="CA (€)" />
                             </LineChart>
                         </ResponsiveContainer>
                     ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnée mensuelle disponible</div>}
