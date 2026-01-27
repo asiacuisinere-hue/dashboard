@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
-import { PlusCircle, Trash2, AlertCircle, Loader2 } from 'lucide-react';
+import { PlusCircle, Trash2, AlertCircle, Loader2, Utensils, Globe } from 'lucide-react';
+import { useBusinessUnit } from '../BusinessUnitContext';
 
 const Depenses = () => {
+    const { businessUnit } = useBusinessUnit();
     const [expenses, setExpenses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -14,6 +16,7 @@ const Depenses = () => {
     const [newExpenseAmount, setNewExpenseAmount] = useState('');
     const [newExpenseCategory, setNewExpenseCategory] = useState('');
     const [newExpenseDemandId, setNewExpenseDemandId] = useState('');
+    const [newExpenseUnit, setNewExpenseUnit] = useState(businessUnit);
 
     // Filter state
     const [filterCategory, setFilterCategory] = useState('');
@@ -33,6 +36,7 @@ const Depenses = () => {
 
             let url = `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/get-expenses`;
             const params = new URLSearchParams();
+            params.append('business_unit', businessUnit); // Ajout du filtre business_unit
             if (filterCategory) params.append('category', filterCategory);
             if (filterStartDate) params.append('start_date', filterStartDate);
             if (filterEndDate) params.append('end_date', filterEndDate);
@@ -56,11 +60,12 @@ const Depenses = () => {
         } finally {
             setLoading(false);
         }
-    }, [filterCategory, filterStartDate, filterEndDate]); // Dependencies for useCallback
+    }, [businessUnit, filterCategory, filterStartDate, filterEndDate]); // Added businessUnit to dependencies
 
     useEffect(() => {
         fetchExpenses();
-    }, [fetchExpenses]); // Dependency for useEffect
+        setNewExpenseUnit(businessUnit); // Sync form unit with global unit on change
+    }, [fetchExpenses, businessUnit]); 
 
     const handleAddExpense = async (e) => {
         e.preventDefault();
@@ -76,6 +81,7 @@ const Depenses = () => {
                 amount: parseFloat(newExpenseAmount),
                 category: newExpenseCategory,
                 demand_id: newExpenseDemandId || null,
+                business_unit: newExpenseUnit, // Ajout de l'unité choisie
             };
 
             const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/create-expense`, {
@@ -204,6 +210,19 @@ const Depenses = () => {
                                 {expenseCategories.map(cat => (
                                     <option key={cat} value={cat}>{cat}</option>
                                 ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label htmlFor="expenseUnit" className="block text-sm font-medium text-gray-700">Unité Commerciale</label>
+                            <select
+                                id="expenseUnit"
+                                value={newExpenseUnit}
+                                onChange={(e) => setNewExpenseUnit(e.target.value)}
+                                required
+                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm"
+                            >
+                                <option value="cuisine">Cuisine</option>
+                                <option value="courtage">Courtage</option>
                             </select>
                         </div>
                         <div>
