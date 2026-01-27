@@ -411,63 +411,67 @@ const Statistiques = () => {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                    <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+                    <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow" style={{ minHeight: '400px' }}>
                         <h3 className="text-lg font-semibold text-gray-800 mb-4">Évolution du chiffre d'affaires</h3>
                         {loading ? <div className="h-[300px] flex items-center justify-center"><div className={`animate-spin rounded-full h-12 w-12 border-b-2 border-${themeColor}-500`}></div></div> : revenueData.length > 0 ? (
-                            <ResponsiveContainer width="100%" height={300}>
-                                <LineChart data={revenueData}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                    <XAxis dataKey="name" stroke="#6b7280" />
-                                    <YAxis stroke="#6b7280" />
-                                    <Tooltip content={<CustomTooltip />} />
-                                    <Legend />
-                                    <Line type="monotone" dataKey="ca" stroke={mainHexColor} strokeWidth={2} name="CA (€)" dot={{ fill: mainHexColor, r: 4 }} activeDot={{ r: 6 }} />
-                                </LineChart>
-                            </ResponsiveContainer>
+                            <div style={{ width: '100%', height: '300px' }}>
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={revenueData}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                        <XAxis dataKey="name" stroke="#6b7280" />
+                                        <YAxis stroke="#6b7280" />
+                                        <Tooltip content={<CustomTooltip />} />
+                                        <Legend />
+                                        <Line type="monotone" dataKey="ca" stroke={mainHexColor} strokeWidth={2} name="CA (€)" dot={{ fill: mainHexColor, r: 4 }} activeDot={{ r: 6 }} />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
                         ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnée disponible pour cette période</div>}
                     </div>
 
-                                        <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+                                        <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow" style={{ minHeight: '400px' }}>
 
                                             <h3 className="text-lg font-semibold text-gray-800 mb-4">Répartition par type de demande</h3>
 
-                                            {loading ? <div className="h-[300px] flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div></div> : orderTypeData.length > 0 ? (
+                                            {loading ? <div className="h-[300px] flex items-center justify-center"><div className={`animate-spin rounded-full h-12 w-12 border-b-2 border-${themeColor}-500`}></div></div> : orderTypeData.length > 0 ? (
 
-                                                <ResponsiveContainer width="100%" height={300}>
+                                                <div style={{ width: '100%', height: '300px' }}>
+                                                    <ResponsiveContainer width="100%" height="100%">
 
-                                                    <PieChart>
+                                                        <PieChart>
 
-                                                        <Pie 
+                                                            <Pie 
 
-                                                            data={orderTypeData} 
+                                                                data={orderTypeData} 
 
-                                                            cx="50%" 
+                                                                cx="50%" 
 
-                                                            cy="50%" 
+                                                                cy="50%" 
 
-                                                            labelLine={false} 
+                                                                labelLine={false} 
 
-                                                            label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                                                                label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
 
-                                                            outerRadius={100} 
+                                                                outerRadius={100} 
 
-                                                            fill="#8884d8" 
+                                                                fill="#8884d8" 
 
-                                                            dataKey="value"
+                                                                dataKey="value"
 
-                                                        >
+                                                            >
 
-                                                            {orderTypeData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
+                                                                {orderTypeData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
 
-                                                        </Pie>
+                                                            </Pie>
 
-                                                        <Tooltip />
+                                                            <Tooltip />
 
-                                                        <Legend />
+                                                            <Legend />
 
-                                                    </PieChart>
+                                                        </PieChart>
 
-                                                </ResponsiveContainer>
+                                                    </ResponsiveContainer>
+                                                </div>
 
                                             ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnée disponible pour cette période</div>}
 
@@ -518,40 +522,44 @@ const Statistiques = () => {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                    <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+                    <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow" style={{ minHeight: '400px' }}>
                         <h3 className="text-lg font-semibold text-gray-800 mb-4">Performance par jour de la semaine</h3>
-                        {loading ? <div className="h-[300px] flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div></div> : weekdayData.length > 0 ? (
-                            <ResponsiveContainer width="100%" height={300}>
-                                <BarChart data={weekdayData}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                    <XAxis dataKey="day" stroke="#6b7280" />
-                                    <YAxis yAxisId="left" stroke="#6b7280" />
-                                    <YAxis yAxisId="right" orientation="right" stroke="#6b7280" />
-                                    <Tooltip content={<CustomTooltip />} />
-                                    <Legend />
-                                    <Bar yAxisId="left" dataKey="commandes" fill="#3b82f6" name="Commandes" radius={[4, 4, 0, 0]} />
-                                    <Bar yAxisId="right" dataKey="ca" fill="#10b981" name="CA (€)" radius={[4, 4, 0, 0]} />
-                                </BarChart>
-                            </ResponsiveContainer>
+                        {loading ? <div className="h-[300px] flex items-center justify-center"><div className={`animate-spin rounded-full h-12 w-12 border-b-2 border-${themeColor}-500`}></div></div> : weekdayData.length > 0 ? (
+                            <div style={{ width: '100%', height: '300px' }}>
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={weekdayData}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                        <XAxis dataKey="day" stroke="#6b7280" />
+                                        <YAxis yAxisId="left" stroke="#6b7280" />
+                                        <YAxis yAxisId="right" orientation="right" stroke="#6b7280" />
+                                        <Tooltip content={<CustomTooltip />} />
+                                        <Legend />
+                                        <Bar yAxisId="left" dataKey="commandes" fill="#3b82f6" name="Commandes" radius={[4, 4, 0, 0]} />
+                                        <Bar yAxisId="right" dataKey="ca" fill={mainHexColor} name="CA (€)" radius={[4, 4, 0, 0]} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
                         ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnée disponible pour cette période</div>}
                     </div>
                 </div>
 
-                <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+                <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow" style={{ minHeight: '400px' }}>
                     <h3 className="text-lg font-semibold text-gray-800 mb-4">Évolution Mensuelle (24 derniers mois)</h3>
                     {loading ? <div className="h-[300px] flex items-center justify-center"><div className={`animate-spin rounded-full h-12 w-12 border-b-2 border-${themeColor}-500`}></div></div> : monthlyPerformanceData.length > 0 ? (
-                        <ResponsiveContainer width="100%" height={300}>
-                            <LineChart data={monthlyPerformanceData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                <XAxis dataKey="name" stroke="#6b7280" tickFormatter={formatMonthTick} />
-                                <YAxis yAxisId="left" stroke="#3b82f6" />
-                                <YAxis yAxisId="right" orientation="right" stroke={mainHexColor} />
-                                <Tooltip content={<CustomTooltip />} />
-                                <Legend />
-                                <Line yAxisId="left" type="monotone" dataKey="commandes" stroke="#3b82f6" strokeWidth={2} name="Commandes" dot={<CustomDot />} activeDot={{ r: 8, strokeWidth: 2 }} />
-                                <Line yAxisId="right" type="monotone" dataKey="ca" stroke={mainHexColor} strokeWidth={2} name="CA (€)" />
-                            </LineChart>
-                        </ResponsiveContainer>
+                        <div style={{ width: '100%', height: '300px' }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={monthlyPerformanceData}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                    <XAxis dataKey="name" stroke="#6b7280" tickFormatter={formatMonthTick} />
+                                    <YAxis yAxisId="left" stroke="#3b82f6" />
+                                    <YAxis yAxisId="right" orientation="right" stroke={mainHexColor} />
+                                    <Tooltip content={<CustomTooltip />} />
+                                    <Legend />
+                                    <Line yAxisId="left" type="monotone" dataKey="commandes" stroke="#3b82f6" strokeWidth={2} name="Commandes" dot={<CustomDot />} activeDot={{ r: 8, strokeWidth: 2 }} />
+                                    <Line yAxisId="right" type="monotone" dataKey="ca" stroke={mainHexColor} strokeWidth={2} name="CA (€)" />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </div>
                     ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnée mensuelle disponible</div>}
                 </div>
             </div>
