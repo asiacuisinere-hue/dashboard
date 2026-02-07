@@ -15,6 +15,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
 
     const [details, setDetails] = useState(demande.details_json || {});
     const [requestDate, setRequestDate] = useState('');
+    const [totalAmount, setTotalAmount] = useState(demande.total_amount || '');
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSendingQrCode, setIsSendingQrCode] = useState(false);
     const [isGeneratingStripeLink, setIsGeneratingStripeLink] = useState(false);
@@ -23,7 +24,8 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
     useEffect(() => {
         setDetails(demande.details_json || {});
         setRequestDate(demande.request_date ? new Date(demande.request_date).toISOString().split('T')[0] : '');
-        setPaymentLink(''); // Reset when demande changes
+        setTotalAmount(demande.total_amount || '');
+        setPaymentLink('');
     }, [demande]);
 
     if (!demande) return null;
@@ -64,13 +66,17 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
     const handleUpdateDetails = async () => {
         const { error } = await supabase
             .from('demandes')
-            .update({ details_json: details, request_date: requestDate })
+            .update({ 
+                details_json: details, 
+                request_date: requestDate,
+                total_amount: totalAmount === '' ? null : parseFloat(totalAmount)
+            })
             .eq('id', demande.id);
 
         if (error) {
             alert(`Erreur: ${error.message}`);
         } else {
-            alert('Détails sauvegardés !');
+            alert('Détails et montant sauvegardés !');
             onRefresh && onRefresh();
             onClose();
         }
@@ -140,7 +146,6 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
         if (!window.confirm("Confirmer la réception du paiement et envoyer le QR Code ?")) return;       
         setIsSendingQrCode(true);
         try {
-            // Fetch company settings from the client-side
             const { data: companySettings, error: settingsError } = await supabase
                 .from('company_settings')
                 .select('*')
@@ -155,8 +160,6 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                 demandeId: demande.id,
                 companySettings: companySettings
             };
-
-            console.log('--- [DemandeDetail] Sending payload to send-qrcode:', payload); // Debugging line
 
             const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/send-qrcode`, {
                 method: 'POST',
@@ -337,7 +340,22 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                 </div>
 
                 <div style={detailSectionStyle}>
-                    <h3 style={detailTitleStyle}>Détails</h3>
+                    <h3 style={detailTitleStyle}>Détails & Montant</h3>
+                    <div style={{...formGroupStyle, backgroundColor: '#fff9e6', padding: '15px', borderRadius: '8px', border: '1px solid #ffeeba', marginBottom: '20px'}}>
+                        <label style={{...labelStyle, color: '#856404'}}>MONTANT TOTAL DE LA PRESTATION (€)</label>
+                        <input
+                            style={{...inputStyle, fontSize: '1.2rem', fontWeight: 'bold', borderColor: '#ffeeba'}}
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={totalAmount}
+                            onChange={(e) => setTotalAmount(e.target.value)}
+                        />
+                        <p style={{fontSize: '11px', color: '#856404', marginTop: '5px', marginBottom: 0}}>
+                            * Saisissez le montant final négocié pour pouvoir générer le lien Stripe.
+                        </p>
+                    </div>
+                    
                     <p>
                         <strong>Statut:</strong>
                         <span style={statusBadgeStyle(demande.status)}>{demande.status}</span>
@@ -376,14 +394,13 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
 
                 <div style={modalActionsStyle}>
                     <>
-                        {demande.type === 'RESERVATION_SERVICE' && (
-                            <button
-                                onClick={handleUpdateDetails}
-                                style={{ ...actionButtonStyle, backgroundColor: '#5a6268', marginRight: 'auto' }}
-                            >
-                                Sauvegarder
-                            </button>
-                        )}
+                        <button
+                            onClick={handleUpdateDetails}
+                            style={{ ...actionButtonStyle, backgroundColor: '#5a6268', marginRight: 'auto' }}
+                        >
+                            Sauvegarder
+                        </button>
+                        
                         {demande.status === 'En attente de traitement' && (
                             <button
                                 onClick={() => onUpdateStatus(demande.id, 'confirmed')}
@@ -525,7 +542,8 @@ const statusBadgeStyle = (status) => {
         'cancelled': '#dc3545',
         'En attente de paiement': '#fd7e14',
         'En attente de préparation': '#6f42c1',
-        'Préparation en cours': '#17a2b8'
+        'Préparation en cours': '#17a2b8',
+        'Payée': '#6f42c1'
     };
     return {
         padding: '4px 8px',
