@@ -277,7 +277,7 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
                 )}
 
                 <div className="flex flex-wrap gap-3 justify-end border-t pt-6">
-                    <button onClick={handleSendInvoice} disabled={loading} className="bg-cyan-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-cyan-700 transition-colors mr-auto font-bold">
+                    <button onClick={handleSendInvoice} disabled={loading || !stripeLink} className="bg-cyan-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-cyan-700 transition-colors mr-auto font-bold">
                         <Send size={18} /> {loading ? '...' : 'Envoyer par mail'}
                     </button>
                     {invoice.status === 'pending' && (
