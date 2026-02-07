@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 
@@ -12,6 +12,7 @@ const communesReunion = [
 
 const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
     const navigate = useNavigate();
+    const initializedRef = useRef(null);
 
     const [details, setDetails] = useState(demande.details_json || {});
     const [requestDate, setRequestDate] = useState('');
@@ -22,8 +23,11 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
     const [paymentLink, setPaymentLink] = useState('');
 
     useEffect(() => {
+        // On ne lance l'initialisation que si l'ID de la demande a changé
+        if (initializedRef.current === demande.id) return;
+        initializedRef.current = demande.id;
+
         const initializeModal = async () => {
-            console.log("--- [DEBUG] Initializing Modal for Demande:", demande.id);
             setDetails(demande.details_json || {});
             setRequestDate(demande.request_date ? new Date(demande.request_date).toISOString().split('T')[0] : '');
             setPaymentLink('');
@@ -33,44 +37,39 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
             // --- AUTO PRE-FILL & SAVE LOGIC FOR MENUS ---
             if ((!initialAmount || initialAmount <= 0) && demande.type === 'COMMANDE_MENU') {
                 try {
-                    console.log("DEBUG: Fetching all price settings...");
-                    const { data: settingsList, error: settingsError } = await supabase
+                    const { data: settingsList } = await supabase
                         .from('settings')
                         .select('key, value')
                         .in('key', ['menu_decouverte_price', 'menu_standard_price', 'menu_duo_price', 'menu_confort_price']);
                     
-                    if (settingsError) throw settingsError;
-
-                    // Transformer la liste [ {key: '...', value: '...'} ] en objet { key: value }
-                    const prices = {};
-                    settingsList.forEach(s => {
-                        prices[s.key] = parseFloat(s.value);
-                    });
-                    
-                    console.log("DEBUG: Price Map built:", prices);
-                    
-                    const formula = demande.details_json?.formulaName || "";
-                    console.log("DEBUG: Formula to match:", formula);
-
-                    if (formula.includes('Découverte')) initialAmount = prices['menu_decouverte_price'];
-                    else if (formula.includes('Standard')) initialAmount = prices['menu_standard_price'];
-                    else if (formula.includes('Confort')) initialAmount = prices['menu_confort_price'];
-                    else if (formula.includes('Duo')) initialAmount = prices['menu_duo_price'];
-                    
-                    console.log("DEBUG: Final initialAmount selected:", initialAmount);
-
-                    if (initialAmount > 0) {
-                        console.log(`[Dashboard] Auto-saving price: ${initialAmount}€`);
-                        const { error: updateError } = await supabase
-                            .from('demandes')
-                            .update({ total_amount: initialAmount })
-                            .eq('id', demande.id);
+                    if (settingsList) {
+                        const prices = {};
+                        settingsList.forEach(s => { prices[s.key] = parseFloat(s.value); });
                         
-                        if (updateError) console.error("DEBUG: Update error:", updateError);
-                        else if (onRefresh) onRefresh();
+                        const formula = demande.details_json?.formulaName || "";
+                        let calculated = 0;
+
+                        if (formula.includes('Découverte')) calculated = prices['menu_decouverte_price'];
+                        else if (formula.includes('Standard')) calculated = prices['menu_standard_price'];
+                        else if (formula.includes('Confort')) calculated = prices['menu_confort_price'];
+                        else if (formula.includes('Duo')) calculated = prices['menu_duo_price'];
+                        
+                        if (calculated > 0) {
+                            initialAmount = calculated;
+                            // Mise à jour immédiate de l'UI
+                            setTotalAmount(calculated);
+                            
+                            // Sauvegarde silencieuse en base de données
+                            await supabase
+                                .from('demandes')
+                                .update({ total_amount: calculated })
+                                .eq('id', demande.id);
+                            
+                            // Note: On ne branche pas onRefresh() ici pour éviter le clignotement du parent
+                        }
                     }
                 } catch (err) {
-                    console.error("DEBUG: Pre-fill error:", err);
+                    console.error("Error in auto-fill:", err);
                 }
             }
             
@@ -78,7 +77,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
         };
 
         initializeModal();
-    }, [demande, onRefresh]);
+    }, [demande.id]); // Dépend uniquement de l'ID
 
     if (!demande) return null;
 
