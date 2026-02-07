@@ -48,7 +48,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                                 .eq('id', demande.id);
                             
                             // On rafraîchit la liste en arrière-plan pour que le montant apparaisse aussi dans le tableau
-                            onRefresh && onRefresh();
+                            if (onRefresh) onRefresh();
                         }
                     }
                 } catch (err) {
@@ -60,7 +60,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
         };
 
         initializeModal();
-    }, [demande]);
+    }, [demande, onRefresh]); // Added onRefresh to dependencies
 
     if (!demande) return null;
 
@@ -111,7 +111,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
             alert(`Erreur: ${error.message}`);
         } else {
             alert('Détails et montant sauvegardés !');
-            onRefresh && onRefresh();
+            if (onRefresh) onRefresh();
             onClose();
         }
     };
@@ -157,7 +157,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                 a.click();
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
-                onRefresh && onRefresh();
+                if (onRefresh) onRefresh();
                 onClose();
 
             } catch (error) {
@@ -206,7 +206,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
             const result = await response.json();
             if (!response.ok) throw new Error(result.error || 'Erreur lors de l\'envoi du QR Code.');     
             alert('Paiement confirmé et QR Code envoyé !');
-            onRefresh && onRefresh();
+            if (onRefresh) onRefresh();
             onClose();
         } catch (error) {
             alert(`Erreur: ${error.message}`);
