@@ -3,7 +3,7 @@ import { supabase } from '../supabaseClient';
 import ReactPaginate from 'react-paginate';
 import { useLocation } from 'react-router-dom';
 import { useBusinessUnit } from '../BusinessUnitContext';
-import { CreditCard, CheckCircle } from 'lucide-react'; 
+import { CreditCard, CheckCircle, Send } from 'lucide-react'; 
 
 const getFrenchStatus = (status) => {
     switch (status) {
@@ -230,6 +230,25 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
         onClose();
     };
 
+    const handleSendInvoice = async () => {
+        if (!window.confirm('Confirmer l\'envoi de la facture par email ?')) return;
+        setLoading(true);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/send-invoice-by-email`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+                body: JSON.stringify({ 
+                    invoiceId: invoice.id,
+                    stripeUrl: stripeLink // Transmission du lien Stripe pour l'email
+                }),
+            });
+            if (!response.ok) throw new Error('Erreur lors de l\'envoi.');
+            alert('Facture envoyée avec succès !');
+        } catch (error) { alert(`Erreur: ${error.message}`); }
+        finally { setLoading(false); }
+    };
+
     return (
         <div className="fixed inset-0 bg-black/70 z-[1000] flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto relative p-8 shadow-2xl">
@@ -258,14 +277,17 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
                 )}
 
                 <div className="flex flex-wrap gap-3 justify-end border-t pt-6">
+                    <button onClick={handleSendInvoice} disabled={loading} className="bg-cyan-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-cyan-700 transition-colors mr-auto font-bold">
+                        <Send size={18} /> {loading ? '...' : 'Envoyer par mail'}
+                    </button>
                     {invoice.status === 'pending' && (
                         <button onClick={() => handleGenerateStripe('deposit')} disabled={loading} className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700 transition-colors">
-                            <CreditCard size={18} /> {loading ? '...' : 'Générer Lien Acompte (30%)'}
+                            <CreditCard size={18} /> {loading ? '...' : 'Lien Acompte (30%)'}
                         </button>
                     )}
                     {invoice.status === 'deposit_paid' && (
                         <button onClick={() => handleGenerateStripe('total')} disabled={loading} className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700 transition-colors">
-                            <CreditCard size={18} /> {loading ? '...' : 'Générer Lien Solde'}
+                            <CreditCard size={18} /> {loading ? '...' : 'Lien Solde'}
                         </button>
                     )}
                     <button onClick={() => handleUpdateStatus('paid')} className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition-colors">
