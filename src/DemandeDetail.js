@@ -29,7 +29,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
 
             let initialAmount = demande.total_amount;
 
-            // --- AUTO PRE-FILL LOGIC FOR MENUS ---
+            // --- AUTO PRE-FILL & SAVE LOGIC FOR MENUS ---
             if ((!initialAmount || initialAmount <= 0) && demande.type === 'COMMANDE_MENU') {
                 try {
                     const { data: settings } = await supabase.from('settings').select('*').single();
@@ -39,10 +39,20 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                         else if (formula.includes('Standard')) initialAmount = settings.menu_standard_price;
                         else if (formula.includes('Duo')) initialAmount = settings.menu_duo_price;
                         
-                        console.log(`[Dashboard] Auto-detected price for ${formula}: ${initialAmount}€`);
+                        if (initialAmount > 0) {
+                            console.log(`[Dashboard] Auto-saving price for ${formula}: ${initialAmount}€`);
+                            // Auto-save to DB to enable Stripe link immediately
+                            await supabase
+                                .from('demandes')
+                                .update({ total_amount: initialAmount })
+                                .eq('id', demande.id);
+                            
+                            // On rafraîchit la liste en arrière-plan pour que le montant apparaisse aussi dans le tableau
+                            onRefresh && onRefresh();
+                        }
                     }
                 } catch (err) {
-                    console.error("Error fetching settings for pre-fill:", err);
+                    console.error("Error in auto-fill/save:", err);
                 }
             }
             
@@ -64,7 +74,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${session?.access_token}`
                 },
-                body: JSON.stringify({
+                body: JSON.stringify({ 
                     demand_id: demande.id,
                     amount_type: amountType
                 })
