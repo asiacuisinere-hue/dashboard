@@ -22,10 +22,34 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
     const [paymentLink, setPaymentLink] = useState('');
 
     useEffect(() => {
-        setDetails(demande.details_json || {});
-        setRequestDate(demande.request_date ? new Date(demande.request_date).toISOString().split('T')[0] : '');
-        setTotalAmount(demande.total_amount || '');
-        setPaymentLink('');
+        const initializeModal = async () => {
+            setDetails(demande.details_json || {});
+            setRequestDate(demande.request_date ? new Date(demande.request_date).toISOString().split('T')[0] : '');
+            setPaymentLink('');
+
+            let initialAmount = demande.total_amount;
+
+            // --- AUTO PRE-FILL LOGIC FOR MENUS ---
+            if ((!initialAmount || initialAmount <= 0) && demande.type === 'COMMANDE_MENU') {
+                try {
+                    const { data: settings } = await supabase.from('settings').select('*').single();
+                    if (settings) {
+                        const formula = demande.details_json?.formulaName || "";
+                        if (formula.includes('Découverte')) initialAmount = settings.menu_decouverte_price;
+                        else if (formula.includes('Standard')) initialAmount = settings.menu_standard_price;
+                        else if (formula.includes('Duo')) initialAmount = settings.menu_duo_price;
+                        
+                        console.log(`[Dashboard] Auto-detected price for ${formula}: ${initialAmount}€`);
+                    }
+                } catch (err) {
+                    console.error("Error fetching settings for pre-fill:", err);
+                }
+            }
+            
+            setTotalAmount(initialAmount || '');
+        };
+
+        initializeModal();
     }, [demande]);
 
     if (!demande) return null;
