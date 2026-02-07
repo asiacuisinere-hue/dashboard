@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 
 const communesReunion = [
-    "Bras-Panon", "Cilaos", "Entre-Deux", "L'Ã‰tang-SalÃ©", "La Plaine-des-Palmistes",
+    "Bras-Panon", "Cilaos", "Entre-Deux", "L'Étange-Salé", "La Plaine-des-Palmistes",
     "La Possession", "Le Port", "Le Tampon", "Les Avirons", "Les Trois-Bassins",
-    "Petite-ÃŽle", "Saint-AndrÃ©", "Saint-BenoÃ®t", "Saint-Denis", "Saint-Joseph",
+    "Petite-Île", "Saint-André", "Saint-Benoît", "Saint-Denis", "Saint-Joseph",
     "Saint-Leu", "Saint-Louis", "Saint-Paul", "Saint-Philippe", "Saint-Pierre",
     "Sainte-Marie", "Sainte-Rose", "Sainte-Suzanne", "Salazie"
 ];
@@ -45,10 +45,10 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
             });
 
             const result = await response.json();
-            if (!response.ok) throw new Error(result.error || 'Erreur lors de la gÃ©nÃ©ration du lien.'); 
+            if (!response.ok) throw new Error(result.error || 'Erreur lors de la génération du lien.'); 
 
             setPaymentLink(result.url);
-            alert('Lien de paiement Stripe gÃ©nÃ©rÃ© avec succÃ¨s !');
+            alert('Lien de paiement Stripe généré avec succès !');
         } catch (error) {
             alert(`Erreur Stripe: ${error.message}`);
         } finally {
@@ -70,7 +70,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
         if (error) {
             alert(`Erreur: ${error.message}`);
         } else {
-            alert('DÃ©tails sauvegardÃ©s !');
+            alert('Détails sauvegardés !');
             onRefresh && onRefresh();
             onClose();
         }
@@ -84,7 +84,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
         } : null;
 
         if ((demande.type === 'COMMANDE_MENU' || demande.type === 'COMMANDE_SPECIALE') && (demande.status === 'confirmed' || demande.status === 'En attente de traitement')) {
-            if (!window.confirm("Cette action va gÃ©nÃ©rer la facture, l'envoyer au client, et la tÃ©lÃ©charger. Continuer ?")) return;
+            if (!window.confirm("Cette action va générer la facture, l'envoyer au client, et la télécharger. Continuer ?")) return;
 
             setIsGenerating(true);
             try {
@@ -137,7 +137,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
     };
 
     const handleSendQrCodeAndPay = async () => {
-        if (!window.confirm("Confirmer la rÃ©ception du paiement et envoyer le QR Code ?")) return;       
+        if (!window.confirm("Confirmer la réception du paiement et envoyer le QR Code ?")) return;       
         setIsSendingQrCode(true);
         try {
             // Fetch company settings from the client-side
@@ -148,7 +148,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                 .single();
 
             if (settingsError || !companySettings) {
-                throw new Error(settingsError?.message || 'Impossible de rÃ©cupÃ©rer les paramÃ¨tres de l\'entreprise.');
+                throw new Error(settingsError?.message || 'Impossible de récupérer les paramètres de l\'entreprise.');
             }
 
             const payload = {
@@ -168,7 +168,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
             });
             const result = await response.json();
             if (!response.ok) throw new Error(result.error || 'Erreur lors de l\'envoi du QR Code.');     
-            alert('Paiement confirmÃ© et QR Code envoyÃ© !');
+            alert('Paiement confirmé et QR Code envoyé !');
             onRefresh && onRefresh();
             onClose();
         } catch (error) {
@@ -181,7 +181,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
     const renderReservationServiceForm = () => (
         <>
             <div style={formGroupStyle}>
-                <label style={labelStyle}>Date de l'Ã©vÃ©nement</label>
+                <label style={labelStyle}>Date de l'événement</label>
                 <input
                     style={inputStyle}
                     type="date"
@@ -190,20 +190,20 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                 />
             </div>
             <div style={formGroupStyle}>
-                <label style={labelStyle}>Heure de l'Ã©vÃ©nement</label>
+                <label style={labelStyle}>Heure de l'événement</label>
                 <select
                     style={inputStyle}
                     name="heure"
                     value={details.heure || ''}
                     onChange={handleDetailChange}
                 >
-                    <option value="">Non spÃ©cifiÃ©</option>
-                    <option value="Midi">Midi (dÃ©jeuner)</option>
-                    <option value="Soir">Soir (dÃ®ner)</option>
+                    <option value="">Non spécifié</option>
+                    <option value="Midi">Midi (déjeuner)</option>
+                    <option value="Soir">Soir (dîner)</option>
                 </select>
             </div>
             <div style={formGroupStyle}>
-                <label style={labelStyle}>Nombre d'invitÃ©s</label>
+                <label style={labelStyle}>Nombre d'invités</label>
                 <input
                     style={inputStyle}
                     type="text"
@@ -220,7 +220,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                     value={details.ville || ''}
                     onChange={handleDetailChange}
                 >
-                    <option value="">-- SÃ©lectionnez une ville --</option>
+                    <option value="">-- Sélectionnez une ville --</option>
                     {communesReunion.map(commune => (
                         <option key={commune} value={commune}>{commune}</option>
                     ))}
@@ -234,14 +234,14 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                     value={details.budget || ''}
                     onChange={handleDetailChange}
                 >
-                    <option value="">Non spÃ©cifiÃ©</option>
-                    <option value="<50">Moins de 50â‚¬</option>
-                    <option value="50-80">50â‚¬ - 80â‚¬</option>
-                    <option value=">80">Plus de 80â‚¬</option>
+                    <option value="">Non spécifié</option>
+                    <option value="<50">Moins de 50€</option>
+                    <option value="50-80">50€ - 80€</option>
+                    <option value=">80">Plus de 80€</option>
                 </select>
             </div>
             <div style={formGroupStyle}>
-                <label style={labelStyle}>Formules (sÃ©parÃ©es par ',')</label>
+                <label style={labelStyle}>Formules (séparées par ',')</label>
                 <input
                     style={inputStyle}
                     type="text"
@@ -274,7 +274,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
             );
         }
                 if (demande.type === 'COMMANDE_SPECIALE') {
-                    if (!d.items || !Array.isArray(d.items)) return <p>DÃ©tails de la commande non disponibles.</p>;
+                    if (!d.items || !Array.isArray(d.items)) return <p>Détails de la commande non disponibles.</p>;
 
                     const total = d.total || d.items.reduce((acc, item) => acc + (item.quantity * item.price), 0);
 
@@ -284,13 +284,13 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                                 {d.items.map((item, index) => (
                                     <li key={index} style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
                                         <span>{item.quantity} x {item.name} ({item.portion})</span>
-                                        <span>{(item.quantity * item.price).toFixed(2)} â‚¬</span>        
+                                        <span>{(item.quantity * item.price).toFixed(2)} €</span>        
                                     </li>
                                 ))}
                             </ul>
                             <hr style={{ margin: '10px 0' }} />
                             <p style={{ textAlign: 'right', fontWeight: 'bold', fontSize: '1.1rem' }}>    
-                                <strong>Total:</strong> {parseFloat(total).toFixed(2)} â‚¬
+                                <strong>Total:</strong> {parseFloat(total).toFixed(2)} €
                             </p>
                             {d.deliveryCity && <p style={{marginTop: '10px'}}><strong>Ville de livraison:</strong> {d.deliveryCity}</p>}
                         </div>
@@ -323,7 +323,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
             <div style={modalContentStyle}>
                 <button onClick={onClose} style={closeButtonStyle}>&times;</button>
                 <h2>
-                    DÃ©tails demande #{demande.id.substring(0, 8)}
+                    Détails demande #{demande.id.substring(0, 8)}
                     {demande.invoices?.[0]?.document_number && (
                         <span style={{ fontSize: '14px', color: '#6c757d', marginLeft: '10px' }}>
                             (Facture: {demande.invoices[0].document_number})
@@ -337,7 +337,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                 </div>
 
                 <div style={detailSectionStyle}>
-                    <h3 style={detailTitleStyle}>DÃ©tails</h3>
+                    <h3 style={detailTitleStyle}>Détails</h3>
                     <p>
                         <strong>Statut:</strong>
                         <span style={statusBadgeStyle(demande.status)}>{demande.status}</span>
@@ -353,7 +353,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                         padding: '15px',
                         marginBottom: '20px'
                     }}>
-                        <p style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: 'bold', color: '#635bff' }}>Lien de paiement gÃ©nÃ©rÃ© :</p>
+                        <p style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: 'bold', color: '#635bff' }}>Lien de paiement généré :</p>
                         <div style={{ display: 'flex', gap: '10px' }}>
                             <input 
                                 readOnly 
@@ -364,7 +364,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                             <button 
                                 onClick={() => {
                                     navigator.clipboard.writeText(paymentLink);
-                                    alert('Lien copiÃ© !');
+                                    alert('Lien copié !');
                                 }}
                                 style={{ ...actionButtonStyle, backgroundColor: '#635bff' }}
                             >
@@ -398,7 +398,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                                 disabled={isGeneratingStripeLink}
                                 style={{ ...actionButtonStyle, backgroundColor: '#635bff' }}
                             >
-                                {isGeneratingStripeLink ? 'GÃ©nÃ©ration...' : 'Lien Stripe (Total)'}
+                                {isGeneratingStripeLink ? 'Génération...' : 'Lien Stripe (Total)'}
                             </button>
                         )}
                         {demande.status === 'En attente de paiement' && (
@@ -407,15 +407,15 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                                 disabled={isSendingQrCode}
                                 style={{ ...actionButtonStyle, backgroundColor: '#28a745' }}
                             >
-                                {isSendingQrCode ? 'Envoi...' : 'Paiement ReÃ§u & Envoyer QR'}
+                                {isSendingQrCode ? 'Envoi...' : 'Paiement Reçu & Envoyer QR'}
                             </button>
                         )}
-                        {demande.status === 'En attente de prÃ©paration' && (
+                        {demande.status === 'En attente de préparation' && (
                             <button
-                                onClick={() => onUpdateStatus(demande.id, 'PrÃ©paration en cours')}       
+                                onClick={() => onUpdateStatus(demande.id, 'Préparation en cours')}       
                                 style={{ ...actionButtonStyle, backgroundColor: '#17a2b8' }}
                             >
-                                Mettre en prÃ©paration
+                                Mettre en préparation
                             </button>
                         )}
                         {(demande.status === 'confirmed' && (demande.type === 'RESERVATION_SERVICE' || demande.type === 'SOUSCRIPTION_ABONNEMENT')) && (
@@ -423,7 +423,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                                 onClick={handleAction}
                                 style={{ ...actionButtonStyle, backgroundColor: '#007bff' }}
                             >
-                                CrÃ©er Devis
+                                Créer Devis
                             </button>
                         )}
                         {(demande.type === 'COMMANDE_MENU' || demande.type === 'COMMANDE_SPECIALE') && (demande.status === 'confirmed' || demande.status === 'En attente de traitement') && (
@@ -432,12 +432,12 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                                 disabled={isGenerating}
                                 style={{ ...actionButtonStyle, backgroundColor: '#007bff' }}
                             >
-                                {isGenerating ? 'Envoi...' : 'GÃ©nÃ©rer & Envoyer Facture'}
+                                {isGenerating ? 'Envoi...' : 'Générer & Envoyer Facture'}
                             </button>
                         )}
                         <button
                             onClick={() => {
-                                if (window.confirm('ÃŠtes-vous sÃ»r de vouloir annuler cette demande ? Cette action est irrÃ©versible.')) {
+                                if (window.confirm('Êtes-vous sûr de vouloir annuler cette demande ? Cette action est irréversible.')) {
                                     onUpdateStatus(demande.id, 'cancelled');
                                 }
                             }}
@@ -524,8 +524,8 @@ const statusBadgeStyle = (status) => {
         'completed': '#28a745',
         'cancelled': '#dc3545',
         'En attente de paiement': '#fd7e14',
-        'En attente de prÃ©paration': '#6f42c1',
-        'PrÃ©paration en cours': '#17a2b8'
+        'En attente de préparation': '#6f42c1',
+        'Préparation en cours': '#17a2b8'
     };
     return {
         padding: '4px 8px',

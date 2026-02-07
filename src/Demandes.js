@@ -28,7 +28,7 @@ const DetailsRenderer = ({ details }) => {
             </div>
         );
     }
-    
+
     // Handle SOUSCRIPTION_ABONNEMENT
     if (details.formula) {
          const keyMap = {
@@ -44,7 +44,7 @@ const DetailsRenderer = ({ details }) => {
                     return (
                         <li key={key} style={{ marginBottom: '8px' }}>
                             <strong style={{ color: '#333' }}>{label}:</strong>
-                            <span style={{ marginLeft: '8px', color: '#555' }}>{String(value)}</span>
+                            <span style={{ marginLeft: '8px', color: '#555' }}>{String(value)}</span>     
                         </li>
                     );
                 })}
@@ -86,13 +86,13 @@ const DemandeModal = ({ demande, onClose, onUpdate }) => {
             .from('demandes')
             .update({ status: newStatus })
             .eq('id', demande.id);
-        
+
         if (error) {
             alert(`Erreur lors de la mise à jour : ${error.message}`);
             return false;
         }
         alert(`La demande a été marquée comme "${newStatus}".`);
-        onUpdate(); 
+        onUpdate();
         onClose();
         return true;
     };
@@ -118,7 +118,7 @@ const DemandeModal = ({ demande, onClose, onUpdate }) => {
         if (demande.clients) { // C'est un particulier
             return (
                 <>
-                    <p><strong>Nom:</strong> {demande.clients.last_name} {demande.clients.first_name}</p>
+                    <p><strong>Nom:</strong> {demande.clients.last_name} {demande.clients.first_name}</p> 
                     <p><strong>Email:</strong> {demande.clients.email}</p>
                     <p><strong>Téléphone:</strong> {demande.clients.phone}</p>
                     <p><strong>ID Client:</strong> {demande.clients.client_id}</p>
@@ -127,7 +127,7 @@ const DemandeModal = ({ demande, onClose, onUpdate }) => {
         } else if (demande.entreprises) { // C'est une entreprise
             return (
                 <>
-                    <p><strong>Nom de l\'entreprise:</strong> {demande.entreprises.nom_entreprise}</p>
+                    <p><strong>Nom de l'entreprise:</strong> {demande.entreprises.nom_entreprise}</p>    
                     <p><strong>SIRET:</strong> {demande.entreprises.siret}</p>
                     <p><strong>Nom du contact:</strong> {demande.entreprises.contact_name}</p>
                     <p><strong>Email du contact:</strong> {demande.entreprises.contact_email}</p>
@@ -143,7 +143,7 @@ const DemandeModal = ({ demande, onClose, onUpdate }) => {
             <div style={modalContentStyle}>
                 <button onClick={onClose} style={closeButtonStyle}>&times;</button>
                 <h2 style={{ borderBottom: '2px solid #eee', paddingBottom: '10px', marginBottom: '20px' }}>Détails de la nouvelle demande</h2>
-                
+
                 <div style={detailSectionStyle}>
                     <h3 style={detailTitleStyle}>Client / Entreprise</h3>
                     {renderCustomerDetails()}
@@ -184,7 +184,7 @@ const DemandeCard = ({ demande, onSelect }) => {
             <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center">
                     <span className="text-2xl mr-3" title={demande.type}>
-                        {typeIcons[demande.type] || '❓'}
+                        {typeIcons[demande.type] || '📩'}
                     </span>
                     <div>
                         <h3 className="font-bold text-gray-800">
@@ -199,7 +199,7 @@ const DemandeCard = ({ demande, onSelect }) => {
                     {demande.status}
                 </span>
             </div>
-            
+
             <div className="space-y-2 mb-5">
                 <div className="flex items-center text-sm text-gray-600">
                     <span className="font-medium w-32">Date souhaitée:</span>
@@ -211,7 +211,7 @@ const DemandeCard = ({ demande, onSelect }) => {
                 </div>
             </div>
 
-            <button 
+            <button
                 onClick={() => onSelect(demande)}
                 className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 rounded-lg transition-colors text-sm"
             >
@@ -252,7 +252,7 @@ const Demandes = () => {
     }, [fetchDemandes]);
 
     if (loading) {
-        return <div className="p-6 text-center text-gray-500">Chargement des nouvelles demandes...</div>;
+        return <div className="p-6 text-center text-gray-500">Chargement des nouvelles demandes...</div>; 
     }
 
     return (
@@ -261,7 +261,7 @@ const Demandes = () => {
                 <h1 className="text-3xl font-bold text-gray-800 mb-2">Nouvelles Demandes</h1>
                 <p className="text-gray-600">Voici la liste des nouvelles demandes en attente de traitement.</p>
             </div>
-            
+
             {/* Vue Tableau (Desktop) */}
             <div className="hidden lg:block">
                 <div style={tableContainerStyle}>
@@ -280,7 +280,7 @@ const Demandes = () => {
                                 <tr key={demande.id}>
                                     <td style={tdStyle}>{new Date(demande.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })}</td>
                                     <td style={tdStyle}>{demande.clients?.last_name || demande.entreprises?.nom_entreprise || '—'}</td>
-                                    <td style={{...tdStyle, textAlign: 'center', fontSize: '18px'}}>
+                                    <td style={{...tdStyle, textAlign: 'center', fontSize: '18px'}}>      
                                         {demande.type === 'RESERVATION_SERVICE' && <span title="RESERVATION_SERVICE">🏠</span>}
                                         {demande.type === 'COMMANDE_MENU' && <span title="COMMANDE_MENU">🚚</span>}
                                         {demande.type === 'COMMANDE_SPECIALE' && <span title="COMMANDE_SPECIALE">⭐</span>}
@@ -306,10 +306,10 @@ const Demandes = () => {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {demandes.map(demande => (
-                            <DemandeCard 
-                                key={demande.id} 
-                                demande={demande} 
-                                onSelect={setSelectedDemande} 
+                            <DemandeCard
+                                key={demande.id}
+                                demande={demande}
+                                onSelect={setSelectedDemande}
                             />
                         ))}
                     </div>
@@ -317,10 +317,10 @@ const Demandes = () => {
             </div>
 
             {selectedDemande && (
-                <DemandeModal 
-                    demande={selectedDemande} 
+                <DemandeModal
+                    demande={selectedDemande}
                     onClose={() => setSelectedDemande(null)}
-                    onUpdate={fetchDemandes} 
+                    onUpdate={fetchDemandes}
                 />
             )}
         </div>

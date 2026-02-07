@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from './supabaseClient';
-import DemandeDetail from './DemandeDetail'; 
+import DemandeDetail from './DemandeDetail';
 
 const communesReunion = [
-    "Bras-Panon", "Cilaos", "Entre-Deux", "L'Étang-Salé", "La Plaine-des-Palmistes", 
-    "La Possession", "Le Port", "Le Tampon", "Les Avirons", "Les Trois-Bassins", 
-    "Petite-Île", "Saint-André", "Saint-Benoît", "Saint-Denis", "Saint-Joseph", 
-    "Saint-Leu", "Saint-Louis", "Saint-Paul", "Saint-Philippe", "Saint-Pierre", 
+    "Bras-Panon", "Cilaos", "Entre-Deux", "L'Étang-Salé", "La Plaine-des-Palmistes",
+    "La Possession", "Le Port", "Le Tampon", "Les Avirons", "Les Trois-Bassins",
+    "Petite-Île", "Saint-André", "Saint-Benoît", "Saint-Denis", "Saint-Joseph",
+    "Saint-Leu", "Saint-Louis", "Saint-Paul", "Saint-Philippe", "Saint-Pierre",
     "Sainte-Marie", "Sainte-Rose", "Sainte-Suzanne", "Salazie"
 ];
 
@@ -23,7 +23,7 @@ const DemandeEnCoursCard = ({ demande, onSelect, statusBadgeStyle }) => {
             <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center">
                     <span className="text-2xl mr-3" title={demande.type}>
-                        {typeIcons[demande.type] || '❓'}
+                        {typeIcons[demande.type] || '📩'}
                     </span>
                     <div>
                         <h3 className="font-bold text-gray-800">
@@ -34,25 +34,25 @@ const DemandeEnCoursCard = ({ demande, onSelect, statusBadgeStyle }) => {
                         </p>
                     </div>
                 </div>
-                <span style={statusBadgeStyle(demande.status)} className="uppercase tracking-wider">
+                <span style={statusBadgeStyle(demande.status)} className="uppercase tracking-wider">      
                     {demande.status}
                 </span>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4 mb-5 text-sm">
                 <div>
                     <p className="text-gray-500 text-xs uppercase font-bold mb-1">Ville</p>
-                    <p className="text-gray-800">{demande.details_json?.deliveryCity || '—'}</p>
+                    <p className="text-gray-800">{demande.details_json?.deliveryCity || '—'}</p>        
                 </div>
                 <div>
-                    <p className="text-gray-500 text-xs uppercase font-bold mb-1">Date Év./Liv.</p>
+                    <p className="text-gray-500 text-xs uppercase font-bold mb-1">Date Év./Liv.</p>      
                     <p className="text-gray-800">
                         {demande.request_date ? new Date(demande.request_date).toLocaleDateString('fr-FR') : '—'}
                     </p>
                 </div>
             </div>
 
-            <button 
+            <button
                 onClick={() => onSelect(demande)}
                 className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded-lg transition-colors text-sm"
             >
@@ -70,7 +70,7 @@ const DemandesEnCours = () => {
 
     const fetchDemandes = useCallback(async () => {
         setLoading(true);
-        let query = supabase.from('demandes').select(`*, clients (*), entreprises (*), details_json`);
+        let query = supabase.from('demandes').select(`*, clients (*), entreprises (*), details_json`);    
 
         // --- Type and Status Filtering ---
         if (filter.type === 'COMMANDE_MENU') {
@@ -91,10 +91,10 @@ const DemandesEnCours = () => {
                 .in('status', ['En attente de traitement', 'confirmed']);
         } else {
             // Default view: show all in-progress demands
-                            const commandeMenuFilter = `and(type.in.("COMMANDE_MENU","COMMANDE_SPECIALE"),status.not.in.(completed,cancelled,paid,Nouvelle,"En attente de préparation","Préparation en cours"))`;
+                            const commandeMenuFilter = `and(type.in.("COMMANDE_MENU","COMMANDE_SPECIALE"),status.not.in.(completed,cancelled,paid,Nouvelle,"En attente de préparation","Préparation en cours"))`; 
                             const reservationServiceFilter = `and(type.in.("RESERVATION_SERVICE","SOUSCRIPTION_ABONNEMENT"),status.in.("En attente de traitement",confirmed))`;            query = query.or(`${commandeMenuFilter},${reservationServiceFilter}`);
         }
-        
+
         // --- Additional Filters ---
         if (filter.date) {
             query = query.eq('request_date', filter.date);
@@ -139,7 +139,7 @@ const DemandesEnCours = () => {
                  .from('demandes')
                  .update({ status: newStatus })
                  .eq('id', demandeId);
-    
+
              if (error) {
                  alert(`Erreur lors de la mise à jour du statut : ${error.message}`);
              } else {
@@ -148,13 +148,13 @@ const DemandesEnCours = () => {
                 setSelectedDemande(null);
             }
         };
-    
+
     const resetFilters = () => {
         setFilter({ date: '', status: '', city: '', type: '' });
     };
 
     if (loading) {
-        return <div className="p-6 text-center text-gray-500">Chargement des demandes en cours...</div>;
+        return <div className="p-6 text-center text-gray-500">Chargement des demandes en cours...</div>;  
     }
 
     return (
@@ -166,9 +166,9 @@ const DemandesEnCours = () => {
 
             <div style={filterContainerStyle}>
                 {/* Type Filter Icons */}
-                <button 
-                    onClick={() => handleTypeFilter('RESERVATION_SERVICE')} 
-                    style={filter.type === 'RESERVATION_SERVICE' ? activeIconButtonStyle : iconButtonStyle} 
+                <button
+                    onClick={() => handleTypeFilter('RESERVATION_SERVICE')}
+                    style={filter.type === 'RESERVATION_SERVICE' ? activeIconButtonStyle : iconButtonStyle}
                     title="Filtrer par Réservation Service">
                     🏠
                 </button>
@@ -189,17 +189,17 @@ const DemandesEnCours = () => {
                                     style={filter.type === 'SOUSCRIPTION_ABONNEMENT' ? activeIconButtonStyle : iconButtonStyle}
                                     title="Filtrer par Abonnement">
                                     🔄
-                                </button>                
-                <input 
-                    type="date" 
-                    name="date" 
-                    value={filter.date} 
+                                </button>
+                <input
+                    type="date"
+                    name="date"
+                    value={filter.date}
                     onChange={handleFilterChange}
                     style={filterInputStyle}
                 />
-                <select 
-                    name="status" 
-                    value={filter.status} 
+                <select
+                    name="status"
+                    value={filter.status}
                     onChange={handleFilterChange}
                     style={filterInputStyle}
                 >
@@ -208,7 +208,7 @@ const DemandesEnCours = () => {
                     <option value="En attente de validation de devis">En attente de validation de devis</option>
                     <option value="En attente de paiement">En attente de paiement</option>
                     <option value="Payée">Payée</option>
-                    <option value="En attente de préparation">En attente de préparation</option>
+                    <option value="En attente de préparation">En attente de préparation</option>        
                     <option value="Préparation en cours">Préparation en cours</option>
                 </select>
                 <select
@@ -245,7 +245,7 @@ const DemandesEnCours = () => {
                             {demandes.map(demande => (
                                 <tr key={demande.id}>
                                     <td style={tdStyle}>{new Date(demande.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })}</td>
-                                    <td style={{...tdStyle, textAlign: 'center', fontSize: '18px'}}>
+                                    <td style={{...tdStyle, textAlign: 'center', fontSize: '18px'}}>      
                                         {demande.type === 'RESERVATION_SERVICE' && <span title="RESERVATION_SERVICE">🏠</span>}
                                         {demande.type === 'COMMANDE_MENU' && <span title="COMMANDE_MENU">🚚</span>}
                                         {demande.type === 'COMMANDE_SPECIALE' && <span title="COMMANDE_SPECIALE">⭐</span>}
@@ -254,7 +254,7 @@ const DemandesEnCours = () => {
                                     <td style={tdStyle}>{demande.clients?.last_name || demande.entreprises?.nom_entreprise || '—'}</td>
                                     <td style={tdStyle}>{demande.details_json?.deliveryCity || '—'}</td>
                                     <td style={tdStyle}>
-                                        {demande.type === 'RESERVATION_SERVICE' && demande.request_date
+                                        {demande.type === 'RESERVATION_SERVICE' && demande.request_date   
                                             ? new Date(demande.request_date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })
                                             : '—'}
                                     </td>
@@ -283,9 +283,9 @@ const DemandesEnCours = () => {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {demandes.map(demande => (
-                            <DemandeEnCoursCard 
-                                key={demande.id} 
-                                demande={demande} 
+                            <DemandeEnCoursCard
+                                key={demande.id}
+                                demande={demande}
                                 onSelect={setSelectedDemande}
                                 statusBadgeStyle={statusBadgeStyle}
                             />
@@ -295,11 +295,11 @@ const DemandesEnCours = () => {
             </div>
 
             {selectedDemande && (
-                <DemandeDetail 
-                    demande={selectedDemande} 
+                <DemandeDetail
+                    demande={selectedDemande}
                     onClose={() => setSelectedDemande(null)}
                     onUpdateStatus={handleUpdateStatus}
-                    onRefresh={fetchDemandes} 
+                    onRefresh={fetchDemandes}
                 />
             )}
         </div>
@@ -408,4 +408,3 @@ const statusBadgeStyle = (status) => {
 };
 
 export default DemandesEnCours;
-        
