@@ -32,7 +32,9 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
             // --- AUTO PRE-FILL & SAVE LOGIC FOR MENUS ---
             if ((!initialAmount || initialAmount <= 0) && demande.type === 'COMMANDE_MENU') {
                 try {
-                    const { data: settings } = await supabase.from('settings').select('*').single();
+                    const { data: settingsList } = await supabase.from('settings').select('*').limit(1);
+                    const settings = settingsList?.[0];
+                    
                     if (settings) {
                         const formula = demande.details_json?.formulaName || "";
                         if (formula.includes('Découverte')) initialAmount = settings.menu_decouverte_price;
@@ -41,13 +43,11 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                         
                         if (initialAmount > 0) {
                             console.log(`[Dashboard] Auto-saving price for ${formula}: ${initialAmount}€`);
-                            // Auto-save to DB to enable Stripe link immediately
                             await supabase
                                 .from('demandes')
                                 .update({ total_amount: initialAmount })
                                 .eq('id', demande.id);
                             
-                            // On rafraîchit la liste en arrière-plan pour que le montant apparaisse aussi dans le tableau
                             if (onRefresh) onRefresh();
                         }
                     }
