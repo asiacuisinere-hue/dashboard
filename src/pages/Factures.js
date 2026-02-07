@@ -3,7 +3,7 @@ import { supabase } from '../supabaseClient';
 import ReactPaginate from 'react-paginate';
 import { useLocation } from 'react-router-dom';
 import { useBusinessUnit } from '../BusinessUnitContext';
-import { CreditCard, Send, ExternalLink, Trash2, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { CreditCard, CheckCircle } from 'lucide-react'; 
 
 const getFrenchStatus = (status) => {
     switch (status) {
@@ -212,7 +212,7 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
                 body: JSON.stringify({ 
-                    invoice_id: invoice.id, // On passe l'ID de la FACTURE
+                    invoice_id: invoice.id,
                     amount_type: type
                 })
             });
@@ -282,9 +282,5 @@ const statusBadgeStyle = (status) => {
     const colors = { 'pending': '#ffc107', 'deposit_paid': '#007bff', 'paid': '#28a745', 'cancelled': '#dc3545' };
     return { padding: '4px 10px', borderRadius: '20px', color: 'white', fontWeight: 'bold', fontSize: '11px', backgroundColor: colors[status] || '#6c757d' };
 };
-
-const containerStyle = { padding: '20px' };
-const filterContainerStyle = { marginBottom: '20px' };
-const inputStyle = { padding: '8px', border: '1px solid #ddd', borderRadius: '4px' };
 
 export default Factures;
