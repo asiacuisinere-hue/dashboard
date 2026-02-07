@@ -23,6 +23,11 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
 
     useEffect(() => {
         const initializeModal = async () => {
+            console.log("--- [DEBUG] Initializing Modal for Demande:", demande.id);
+            console.log("DEBUG: Demande Type:", demande.type);
+            console.log("DEBUG: Existing Total Amount:", demande.total_amount);
+            console.log("DEBUG: Details JSON:", demande.details_json);
+
             setDetails(demande.details_json || {});
             setRequestDate(demande.request_date ? new Date(demande.request_date).toISOString().split('T')[0] : '');
             setPaymentLink('');
@@ -32,27 +37,47 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
             // --- AUTO PRE-FILL & SAVE LOGIC FOR MENUS ---
             if ((!initialAmount || initialAmount <= 0) && demande.type === 'COMMANDE_MENU') {
                 try {
-                    const { data: settingsList } = await supabase.from('settings').select('*').limit(1);
+                    console.log("DEBUG: Attempting to fetch settings for auto-fill...");
+                    const { data: settingsList, error: settingsError } = await supabase.from('settings').select('*').limit(1);
+                    
+                    if (settingsError) {
+                        console.error("DEBUG: Settings fetch error:", settingsError);
+                    }
+
                     const settings = settingsList?.[0];
+                    console.log("DEBUG: Retrieved Settings:", settings);
                     
                     if (settings) {
                         const formula = demande.details_json?.formulaName || "";
+                        console.log("DEBUG: Formula to match:", formula);
+
                         if (formula.includes('Découverte')) initialAmount = settings.menu_decouverte_price;
                         else if (formula.includes('Standard')) initialAmount = settings.menu_standard_price;
                         else if (formula.includes('Duo')) initialAmount = settings.menu_duo_price;
                         
+                        console.log("DEBUG: Calculated initialAmount:", initialAmount);
+
                         if (initialAmount > 0) {
                             console.log(`[Dashboard] Auto-saving price for ${formula}: ${initialAmount}€`);
-                            await supabase
+                            const { error: updateError } = await supabase
                                 .from('demandes')
                                 .update({ total_amount: initialAmount })
                                 .eq('id', demande.id);
                             
-                            if (onRefresh) onRefresh();
+                            if (updateError) {
+                                console.error("DEBUG: Auto-save update error:", updateError);
+                            } else {
+                                console.log("DEBUG: Auto-save successful.");
+                                if (onRefresh) onRefresh();
+                            }
+                        } else {
+                            console.warn("DEBUG: initialAmount is still 0 or invalid after matching.");
                         }
+                    } else {
+                        console.warn("DEBUG: No settings record found in the database.");
                     }
                 } catch (err) {
-                    console.error("Error in auto-fill/save:", err);
+                    console.error("DEBUG: Catch error in auto-fill/save:", err);
                 }
             }
             
@@ -60,7 +85,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
         };
 
         initializeModal();
-    }, [demande, onRefresh]); // Added onRefresh to dependencies
+    }, [demande, onRefresh]);
 
     if (!demande) return null;
 
