@@ -23,7 +23,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
     const [paymentLink, setPaymentLink] = useState('');
 
     useEffect(() => {
-        // On ne lance l'initialisation que si l'ID de la demande a changé
+        // Sécurité : on ne lance l'initialisation qu'une seule fois par ID de demande
         if (initializedRef.current === demande.id) return;
         initializedRef.current = demande.id;
 
@@ -56,16 +56,13 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                         
                         if (calculated > 0) {
                             initialAmount = calculated;
-                            // Mise à jour immédiate de l'UI
                             setTotalAmount(calculated);
                             
-                            // Sauvegarde silencieuse en base de données
+                            // Sauvegarde silencieuse (sans onRefresh pour éviter boucle)
                             await supabase
                                 .from('demandes')
                                 .update({ total_amount: calculated })
                                 .eq('id', demande.id);
-                            
-                            // Note: On ne branche pas onRefresh() ici pour éviter le clignotement du parent
                         }
                     }
                 } catch (err) {
@@ -77,7 +74,8 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
         };
 
         initializeModal();
-    }, [demande.id]); // Dépend uniquement de l'ID
+    // Ajout de toutes les dépendances requises par ESLint
+    }, [demande.id, demande.details_json, demande.request_date, demande.total_amount, demande.type]); 
 
     if (!demande) return null;
 
