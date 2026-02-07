@@ -2,8 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 import ReactPaginate from 'react-paginate';
 import { useLocation } from 'react-router-dom';
+import { useBusinessUnit } from '../BusinessUnitContext';
+import { CreditCard, Send, ExternalLink, Trash2, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 
-// Helper function to get French status
 const getFrenchStatus = (status) => {
     switch (status) {
         case 'pending': return 'En attente';
@@ -14,8 +15,8 @@ const getFrenchStatus = (status) => {
     }
 };
 
-const InvoiceCard = ({ invoice, onSelect, statusBadgeStyle, renderCustomerName, getFrenchStatus }) => (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-4 hover:shadow-md transition-shadow">
+const InvoiceCard = ({ invoice, onSelect, statusBadgeStyle, renderCustomerName, themeColor }) => (   
+    <div className={`bg-white rounded-xl shadow-sm border-t-4 p-5 mb-4 hover:shadow-md transition-shadow ${themeColor === 'courtage' ? 'border-blue-500' : 'border-amber-500'}`}>
         <div className="flex justify-between items-start mb-4">
             <div>
                 <h3 className="font-bold text-gray-800">{renderCustomerName(invoice)}</h3>
@@ -27,11 +28,11 @@ const InvoiceCard = ({ invoice, onSelect, statusBadgeStyle, renderCustomerName, 
                 {getFrenchStatus(invoice.status)}
             </span>
         </div>
-        
+
         <div className="grid grid-cols-2 gap-4 mb-5 text-sm">
             <div>
                 <p className="text-gray-500 text-xs uppercase font-bold mb-1">Montant</p>
-                <p className="text-gray-800 font-bold">{(invoice.total_amount || 0).toFixed(2)} €</p>
+                <p className="text-gray-800 font-bold">{(invoice.total_amount || 0).toFixed(2)} €</p>   
             </div>
             <div>
                 <p className="text-gray-500 text-xs uppercase font-bold mb-1">Date</p>
@@ -39,9 +40,9 @@ const InvoiceCard = ({ invoice, onSelect, statusBadgeStyle, renderCustomerName, 
             </div>
         </div>
 
-        <button 
+        <button
             onClick={() => onSelect(invoice)}
-            className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded-lg transition-colors text-sm shadow-sm"
+            className={`w-full text-white font-bold py-2.5 rounded-lg transition-colors text-sm shadow-sm ${themeColor === 'courtage' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-amber-500 hover:bg-amber-600'}`}
         >
             Voir les détails
         </button>
@@ -49,6 +50,7 @@ const InvoiceCard = ({ invoice, onSelect, statusBadgeStyle, renderCustomerName, 
 );
 
 const Factures = () => {
+    const { businessUnit } = useBusinessUnit();
     const location = useLocation();
     const [invoices, setInvoices] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -56,7 +58,9 @@ const Factures = () => {
     const [statusFilter, setStatusFilter] = useState('all');
     const [selectedInvoice, setSelectedInvoice] = useState(null);
     const [currentPage, setCurrentPage] = useState(0);
-    const itemsPerPage = 10; // Items per page for pagination
+    const itemsPerPage = 10;
+
+    const themeColor = businessUnit === 'courtage' ? 'blue' : 'amber';
 
     useEffect(() => {
         const searchParams = new URLSearchParams(location.search);
@@ -72,17 +76,13 @@ const Factures = () => {
             clients (first_name, last_name, email),
             entreprises (nom_entreprise, contact_email),
             demandes (type, status, details_json)
-        `);
+        `)
+        .eq('business_unit', businessUnit);
 
-        // --- Always filter for RESERVATION_SERVICE invoices ---
-        query = query.not('quote_id', 'is', null);
-
-        // --- Apply Status Filter from state (synced with URL) ---
         if (statusFilter !== 'all') {
             query = query.eq('status', statusFilter);
         }
 
-        // --- Apply search term filter ---
         if (searchTerm) {
             const searchPattern = `%${searchTerm}%`;
             query = query.or(
@@ -93,453 +93,198 @@ const Factures = () => {
         const { data, error } = await query.order('created_at', { ascending: false });
 
         if (error) {
-            console.error('Erreur de chargement des factures:', error);
+            console.error('Erreur:', error);
         } else {
-            // --- Filter out demands in preparation or completed (done client-side) ---
-            const filteredData = (data || []).filter(invoice => {
-                const demandStatus = invoice.demandes?.status;
-                return !demandStatus || !['En attente de préparation', 'Préparation en cours', 'completed'].includes(demandStatus);
-            });
-            setInvoices(filteredData);
+            setInvoices(data || []);
         }
         setLoading(false);
-    }, [searchTerm, statusFilter]);
+    }, [searchTerm, statusFilter, businessUnit]);
 
     useEffect(() => {
-        const timer = setTimeout(() => {
-            fetchInvoices();
-        }, 300);
-        return () => clearTimeout(timer);
-    }, [fetchInvoices]);
-
-    const handleRefresh = () => {
         fetchInvoices();
-        setSelectedInvoice(null);
-    };
+    }, [fetchInvoices]);
 
     const renderCustomerName = (invoice) => {
         if (invoice.clients) return `${invoice.clients.first_name || ''} ${invoice.clients.last_name || ''}`.trim();
         if (invoice.entreprises) return invoice.entreprises.nom_entreprise;
         return 'N/A';
     };
-    
-    // Pagination logic
-    const handlePageClick = (event) => {
-        setCurrentPage(event.selected);
-    };
+
+    const handlePageClick = (event) => setCurrentPage(event.selected);
     const offset = currentPage * itemsPerPage;
     const currentInvoices = invoices.slice(offset, offset + itemsPerPage);
     const pageCount = Math.ceil(invoices.length / itemsPerPage);
 
-
-    if (loading) return <div className="p-6 text-center text-gray-500">Chargement des factures...</div>;
+    if (loading) return <div className="p-6 text-center text-gray-500">Chargement des factures...</div>;  
 
     return (
-        <div style={containerStyle}>
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold text-gray-800 mb-2">Gestion des Factures</h1>
-            </div>
+        <div className="p-6 bg-gray-50 min-h-screen">
+            <div className="max-w-7xl mx-auto">
+                <div className="mb-8">
+                    <h1 className="text-3xl font-bold text-gray-800 mb-2">Gestion des Factures</h1>
+                    <p className="text-gray-600">Suivez vos paiements et acomptes pour l'unité {businessUnit}.</p>
+                </div>
 
-            <div style={filterContainerStyle}>
-                <input
-                    type="text"
-                    placeholder="Rechercher par N° ou client..."
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                    style={inputStyle}
-                />
-                <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={inputStyle}>
-                    <option value="all">Tous les statuts</option>
-                    <option value="pending">{getFrenchStatus('pending')}</option>
-                    <option value="deposit_paid">{getFrenchStatus('deposit_paid')}</option>
-                    <option value="paid">{getFrenchStatus('paid')}</option>
-                    <option value="cancelled">{getFrenchStatus('cancelled')}</option>
-                </select>
-            </div>
+                <div className="bg-white rounded-lg shadow-md p-4 mb-6 flex flex-wrap gap-4">
+                    <input
+                        type="text"
+                        placeholder="Rechercher par N° ou client..."
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                        className="p-2 border rounded-md flex-1 min-w-[200px]"
+                    />
+                    <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="p-2 border rounded-md">
+                        <option value="all">Tous les statuts</option>
+                        <option value="pending">En attente</option>
+                        <option value="deposit_paid">Acompte versé</option>
+                        <option value="paid">Payée</option>
+                        <option value="cancelled">Annulée</option>
+                    </select>
+                </div>
 
-            {/* Vue Tableau (Desktop) */}
-            <div className="hidden lg:block">
-                <div style={tableContainerStyle}>
-                    <table style={tableStyle}>
-                        <thead>
+                {/* Desktop View */}
+                <div className="hidden lg:block bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
+                    <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
                             <tr>
-                                <th style={thStyle}>N° Facture</th>
-                                <th style={thStyle}>Client / Entreprise</th>
-                                <th style={thStyle}>Date</th>
-                                <th style={thStyle}>Montant</th>
-                                <th style={thStyle}>Statut</th>
-                                <th style={thStyle}>Actions</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">N° Facture</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client / Entreprise</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Montant</th>
+                                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="bg-white divide-y divide-gray-200">
                             {currentInvoices.map(invoice => (
-                                <tr key={invoice.id}>
-                                    <td style={tdStyle}>{invoice.document_number || invoice.id.substring(0, 8)}</td>
-                                    <td style={tdStyle}>{renderCustomerName(invoice)}</td>
-                                    <td style={tdStyle}>{new Date(invoice.created_at).toLocaleDateString('fr-FR')}</td>
-                                    <td style={tdStyle}>{(invoice.total_amount || 0).toFixed(2)} €</td>
-                                    <td style={tdStyle}><span style={statusBadgeStyle(invoice.status)}>{getFrenchStatus(invoice.status)}</span></td>
-                                    <td style={tdStyle}>
-                                        <button onClick={() => setSelectedInvoice(invoice)} style={detailsButtonStyle}>Voir Détails</button>
+                                <tr key={invoice.id} className="hover:bg-gray-50">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{invoice.document_number || invoice.id.substring(0, 8)}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{renderCustomerName(invoice)}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(invoice.created_at).toLocaleDateString('fr-FR')}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-gray-900">{(invoice.total_amount || 0).toFixed(2)} €</td> 
+                                    <td className="px-6 py-4 whitespace-nowrap text-center"><span className={`px-2 py-1 rounded-full text-xs font-bold text-white ${invoice.status === 'paid' ? 'bg-green-500' : (invoice.status === 'deposit_paid' ? 'bg-blue-500' : 'bg-amber-500')}`}>{getFrenchStatus(invoice.status)}</span></td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                        <button onClick={() => setSelectedInvoice(invoice)} className={`font-bold ${themeColor === 'courtage' ? 'text-blue-600' : 'text-amber-600'}`}>Détails</button>
                                     </td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 </div>
-            </div>
 
-            {/* Vue Cartes (Mobile/Tablette) */}
-            <div className="block lg:hidden mt-4">
-                {currentInvoices.length === 0 ? (
-                    <p className="text-center text-gray-500 py-10 bg-white rounded-xl">Aucune facture trouvée.</p>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {currentInvoices.map(invoice => (
-                            <InvoiceCard 
-                                key={invoice.id} 
-                                invoice={invoice} 
-                                onSelect={setSelectedInvoice}
-                                statusBadgeStyle={statusBadgeStyle}
-                                renderCustomerName={renderCustomerName}
-                                getFrenchStatus={getFrenchStatus}
-                            />
-                        ))}
-                    </div>
-                )}
-            </div>
+                {/* Mobile View */}
+                <div className="block lg:hidden space-y-4">
+                    {currentInvoices.map(invoice => (
+                        <InvoiceCard key={invoice.id} invoice={invoice} onSelect={setSelectedInvoice} statusBadgeStyle={statusBadgeStyle} renderCustomerName={renderCustomerName} themeColor={businessUnit === 'courtage' ? 'courtage' : 'cuisine'} />
+                    ))}
+                </div>
 
-            <div style={{ borderTop: '1px solid #eee', marginTop: '2rem', paddingTop: '1rem' }}>
-                <style>{`
-                    .pagination {
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        list-style: none;
-                        padding: 0;
-                        font-family: Arial, sans-serif;
-                    }
-                    .pagination li {
-                        margin: 0 4px;
-                    }
-                    .pagination li a {
-                        padding: 8px 14px;
-                        border-radius: 5px;
-                        cursor: pointer;
-                        color: #333;
-                        text-decoration: none;
-                        transition: background-color 0.2s, color 0.2s;
-                        border: 1px solid #ddd;
-                        font-weight: bold;
-                    }
-                    .pagination li.active a {
-                        background-color: #d4af37;
-                        color: white;
-                        border-color: #d4af37;
-                    }
-                    .pagination li.disabled a {
-                        color: #ccc;
-                        cursor: not-allowed;
-                    }
-                    .pagination li a:hover:not(.disabled) {
-                        background-color: #f5f5f5;
-                    }
-                `}</style>
-
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                    {pageCount > 1 && (
-                         <span style={{ marginRight: '1.5rem', color: '#555', fontSize: '14px', fontWeight: 'bold' }}>
-                            Page {currentPage + 1} sur {pageCount}
-                        </span>
-                    )}
+                <div className="mt-8 flex justify-center">
                     <ReactPaginate
-                        previousLabel={'<'}
-                        nextLabel={'>'}
-                        breakLabel={'...'}
-                        pageCount={pageCount}
-                        marginPagesDisplayed={1}
-                        pageRangeDisplayed={3}
-                        onPageChange={handlePageClick}
-                        containerClassName={'pagination'}
-                        activeClassName={'active'}
-                        disabledClassName={'disabled'}
+                        previousLabel={'<'} nextLabel={'>'} pageCount={pageCount} onPageChange={handlePageClick}
+                        containerClassName={'flex space-x-2 pagination'} activeClassName={'bg-amber-500 text-white rounded-md'}
+                        pageLinkClassName={'px-3 py-1 border rounded-md hover:bg-gray-100'}
                     />
                 </div>
             </div>
 
             {selectedInvoice && (
-                <InvoiceDetailModal 
-                    invoice={selectedInvoice} 
+                <InvoiceDetailModal
+                    invoice={selectedInvoice}
                     onClose={() => setSelectedInvoice(null)}
-                    onUpdate={handleRefresh}
+                    onUpdate={fetchInvoices}
+                    themeColor={themeColor}
                 />
             )}
         </div>
     );
 };
 
-// Modal Component for Invoice Details
-const InvoiceDetailModal = ({ invoice, onClose, onUpdate }) => {
-    const [isEnteringDeposit, setIsEnteringDeposit] = useState(false);
-    const [depositAmountInput, setDepositAmountInput] = useState('');
-    const [loadingAction, setLoadingAction] = useState(false);
+const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
+    const [loading, setLoading] = useState(false);
+    const [stripeLink, setStripeLink] = useState('');
 
-    const handleSaveDeposit = async () => {
-        const amount = parseFloat(depositAmountInput);
-        if (isNaN(amount) || amount <= 0) {
-            alert("Veuillez entrer un montant d'acompte valide.");
-            return;
-        }
-        setLoadingAction(true);
-        const { error } = await supabase
-            .from('invoices')
-            .update({
-                deposit_amount: amount,
-                deposit_date: new Date().toISOString(),
-                status: 'deposit_paid'
-            })
-            .eq('id', invoice.id);
-        setLoadingAction(false);
-
-        if (error) {
-            alert(`Erreur: ${error.message}`);
-        } else {
-            alert('Acompte enregistré avec succès !');
-            onUpdate();
-            onClose();
-        }
-    };
-    
-        const handleUpdateStatus = async (newStatus) => {
-            setLoadingAction(true);
-            const { error: invoiceError } = await supabase
-                .from('invoices')
-                .update({ status: newStatus })
-                .eq('id', invoice.id);
-    
-            if (invoiceError) {
-                setLoadingAction(false);
-                alert(`Erreur: ${invoiceError.message}`);
-                return;
-            }
-    
-            // If the invoice is marked as paid and is linked to a subscription demand, create the subscription
-                        if (newStatus === 'paid' && invoice.demandes?.type === 'SOUSCRIPTION_ABONNEMENT') {
-                            const subscriptionPayload = {
-                                client_id: invoice.client_id,
-                                entreprise_id: invoice.entreprise_id,
-                                formule_base: invoice.demandes.details_json?.formula || 'N/A',
-                                notes: invoice.demandes.details_json?.notes || '',
-                                status: 'actif',
-                                start_date: new Date().toISOString(),
-                                original_demand_id: invoice.demand_id // Link to the original demand
-                            };
-            
-                            const { error: subError } = await supabase.from('abonnements').insert([subscriptionPayload]);
-                
-                            if (subError) {
-                                alert(`Erreur lors de la création de l'abonnement: ${subError.message}`);
-                                // Note: The invoice status was still updated. You might want to handle this case.
-                            } else {
-                                alert('Abonnement activé avec succès !');
-                            }
-                        }            
-            setLoadingAction(false);
-            alert(`Statut de la facture mis à jour à "${getFrenchStatus(newStatus)}"!`);
-            onUpdate();
-            onClose();
-        };
-    const handlePrepareDemand = async () => {
-        if (!invoice.demand_id) {
-            alert("Erreur: Impossible de trouver la demande liée à cette facture.");
-            return;
-        }
-        if (!window.confirm("Confirmer le passage de la demande en préparation ?")) return;
-
-        setLoadingAction(true);
-        const { error } = await supabase
-            .from('demandes')
-            .update({ status: 'En attente de préparation' })
-            .eq('id', invoice.demand_id);
-        
-        setLoadingAction(false);
-        if (error) {
-            alert(`Erreur: ${error.message}`);
-        } else {
-            alert('La demande a été envoyée en préparation.');
-            onUpdate();
-            onClose();
-        }
-    };
-
-    const handleSendInvoice = async () => {
-        if (!window.confirm('Confirmer l\'envoi de la facture par email ?')) return;
-        setLoadingAction(true);
+    const handleGenerateStripe = async (type = 'deposit') => {
+        setLoading(true);
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            if (!session) throw new Error("Utilisateur non authentifié.");
-
-            const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/send-invoice-by-email`, {
+            const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/create-stripe-checkout`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session.access_token}`,
-                },
-                body: JSON.stringify({ invoiceId: invoice.id }),
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+                body: JSON.stringify({ 
+                    invoice_id: invoice.id, // On passe l'ID de la FACTURE
+                    amount_type: type
+                })
             });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Erreur lors de l\'envoi de la facture.');
-            }
-
-            alert('Facture envoyée avec succès !');
-        } catch (error) {
-            console.error('Error sending invoice:', error);
-            alert(`Erreur: ${error.message}`);
-        } finally {
-            setLoadingAction(false);
-        }
+            const res = await response.json();
+            if (!response.ok) throw new Error(res.error);
+            setStripeLink(res.url);
+        } catch (err) { alert(err.message); }
+        finally { setLoading(false); }
     };
 
-    const renderCustomerInfo = () => {
-        if (invoice.clients) return <p><strong>Nom:</strong> {invoice.clients.first_name || ''} {invoice.clients.last_name || ''}</p>;
-        if (invoice.entreprises) return <p><strong>Entreprise:</strong> {invoice.entreprises.nom_entreprise}</p>;
-        return <p>Informations client non disponibles.</p>;
+    const handleUpdateStatus = async (s) => {
+        setLoading(true);
+        await supabase.from('invoices').update({ status: s }).eq('id', invoice.id);
+        onUpdate();
+        onClose();
     };
-
-    const totalAmount = parseFloat(invoice.total_amount || 0);
-    const depositAmount = parseFloat(invoice.deposit_amount || 0);
-    const remainingBalance = totalAmount - depositAmount;
 
     return (
-        <div style={modalOverlayStyle}>
-            <div style={modalContentStyle}>
-                <button onClick={onClose} style={closeButtonStyle}>&times;</button>
-                <h2>Détails Facture #{invoice.document_number || invoice.id.substring(0, 8)}</h2>
-                
-                <div style={detailSectionStyle}>
-                    <h3 style={detailTitleStyle}>Client / Entreprise</h3>
-                    {renderCustomerInfo()}
+        <div className="fixed inset-0 bg-black/70 z-[1000] flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto relative p-8 shadow-2xl">
+                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+                <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-4">Facture #{invoice.document_number || invoice.id.substring(0, 8)}</h2>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                    <div className="space-y-3">
+                        <h3 className={`text-sm font-bold uppercase tracking-widest ${themeColor === 'blue' ? 'text-blue-600' : 'text-amber-600'}`}>Client</h3>
+                        <p className="font-bold text-gray-900">{invoice.clients ? `${invoice.clients.first_name} ${invoice.clients.last_name}` : invoice.entreprises?.nom_entreprise}</p>
+                        <p className="text-gray-500">{invoice.clients?.email || invoice.entreprises?.contact_email}</p>
+                    </div>
+                    <div className="space-y-3">
+                        <h3 className={`text-sm font-bold uppercase tracking-widest ${themeColor === 'blue' ? 'text-blue-600' : 'text-amber-600'}`}>Informations</h3>
+                        <div className="flex justify-between"><span className="text-gray-500">Statut:</span> <span className="font-bold">{getFrenchStatus(invoice.status)}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">Total:</span> <span className="font-bold text-lg">{invoice.total_amount?.toFixed(2)} €</span></div>
+                        {invoice.deposit_amount > 0 && <div className="flex justify-between text-blue-600"><span className="text-gray-500">Acompte payé:</span> <span>{invoice.deposit_amount?.toFixed(2)} €</span></div>}
+                    </div>
                 </div>
 
-                <div style={detailSectionStyle}>
-                    <h3 style={detailTitleStyle}>Informations</h3>
-                    <p><strong>Date:</strong> {new Date(invoice.created_at).toLocaleDateString('fr-FR')}</p>
-                    <p><strong>Statut:</strong> <span style={statusBadgeStyle(invoice.status)}>{getFrenchStatus(invoice.status)}</span></p>
-                    <p><strong>Total:</strong> {totalAmount.toFixed(2)} €</p>
-                    {invoice.deposit_amount > 0 && <p><strong>Acompte Versé:</strong> {depositAmount.toFixed(2)} € le {new Date(invoice.deposit_date).toLocaleDateString('fr-FR')}</p>}
-                    {(invoice.status === 'deposit_paid' && remainingBalance > 0) && <p><strong>Reste à Payer:</strong> {remainingBalance.toFixed(2)} €</p>}
-                </div>
+                {stripeLink && (
+                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-8 flex items-center gap-4">
+                        <input readOnly value={stripeLink} className="flex-1 p-2 bg-white border rounded text-xs" />
+                        <button onClick={() => { navigator.clipboard.writeText(stripeLink); alert('Copié !'); }} className="bg-blue-600 text-white px-4 py-2 rounded font-bold text-sm">Copier</button>
+                    </div>
+                )}
 
-                <div style={detailSectionStyle}>
-                    <h3 style={detailTitleStyle}>Articles</h3>
-                    {(invoice.items && invoice.items.length > 0) ? (
-                        <div style={tableContainerStyle}>
-                            <table style={tableStyle}>
-                                <thead>
-                                    <tr>
-                                        <th style={thStyle}>Description</th>
-                                        <th style={thStyle}>Qté</th>
-                                        <th style={thStyle}>Prix U. (€)</th>
-                                        <th style={thStyle}>Total (€)</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {(invoice.items || []).map((item, index) => (
-                                        <tr key={index}>
-                                            <td style={tdStyle}>{item.name || item.description}</td>
-                                            <td style={tdStyle}>{item.quantity || 0}</td>
-                                            <td style={tdStyle}>{(item.unit_price || 0).toFixed(2)}</td>
-                                            <td style={tdStyle}>{((item.quantity || 0) * (item.unit_price || 0)).toFixed(2)}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    ) : <p>Aucun article détaillé.</p>}
-                </div>
-
-                <div style={modalActionsStyle}>
-                    {invoice.storage_path && (
-                        <button 
-                            onClick={() => window.open(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/view-document?path=${invoice.storage_path}`, '_blank')}
-                            style={{ ...actionButtonStyle, backgroundColor: '#6c757d' }}
-                        >
-                            Voir
+                <div className="flex flex-wrap gap-3 justify-end border-t pt-6">
+                    {invoice.status === 'pending' && (
+                        <button onClick={() => handleGenerateStripe('deposit')} disabled={loading} className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700 transition-colors">
+                            <CreditCard size={18} /> {loading ? '...' : 'Générer Lien Acompte (30%)'}
                         </button>
                     )}
-                    <button onClick={handleSendInvoice} disabled={loadingAction} style={{ ...actionButtonStyle, backgroundColor: '#17a2b8', marginRight: 'auto' }}>
-                        {loadingAction ? 'Envoi...' : 'Envoyer par mail'}
+                    {invoice.status === 'deposit_paid' && (
+                        <button onClick={() => handleGenerateStripe('total')} disabled={loading} className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700 transition-colors">
+                            <CreditCard size={18} /> {loading ? '...' : 'Générer Lien Solde'}
+                        </button>
+                    )}
+                    <button onClick={() => handleUpdateStatus('paid')} className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition-colors">
+                        <CheckCircle size={18} /> Marquer comme Payée
                     </button>
-                    {!isEnteringDeposit && (
-                        <>
-                            {(invoice.status === 'pending' || invoice.status === 'deposit_paid') && (
-                                <button onClick={() => handleUpdateStatus('paid')} disabled={loadingAction} style={{...actionButtonStyle, backgroundColor: '#28a745'}}>
-                                    {loadingAction ? 'Mise à jour...' : 'Marquer comme Payée'}
-                                </button>
-                            )}
-                            {invoice.status === 'paid' && invoice.demandes?.type === 'RESERVATION_SERVICE' && (
-                                <button onClick={handlePrepareDemand} disabled={loadingAction} style={{...actionButtonStyle, backgroundColor: '#6f42c1'}}>
-                                    Mettre en préparation
-                                </button>
-                            )}
-                            {invoice.status === 'pending' && (
-                                <button onClick={() => setIsEnteringDeposit(true)} disabled={loadingAction} style={{...actionButtonStyle, backgroundColor: '#007bff'}}>
-                                    {loadingAction ? 'Mise à jour...' : 'Enregistrer un acompte'}
-                                </button>
-                            )}
-                            {(invoice.status !== 'cancelled') && (
-                                <button onClick={() => handleUpdateStatus('cancelled')} disabled={loadingAction} style={{...actionButtonStyle, backgroundColor: '#dc3545'}}>
-                                    {loadingAction ? 'Mise à jour...' : 'Annuler la facture'}
-                                </button>
-                            )}
-                        </>
-                    )}
-
-                    {isEnteringDeposit && (
-                        <div style={{width: '100%', display: 'flex', gap: '10px', alignItems: 'center'}}>
-                            <input
-                                type="number"
-                                placeholder="Montant de l'acompte"
-                                value={depositAmountInput}
-                                onChange={(e) => setDepositAmountInput(e.target.value)}
-                                style={inputStyle}
-                                autoFocus
-                            />
-                            <button onClick={handleSaveDeposit} disabled={loadingAction} style={{...actionButtonStyle, backgroundColor: '#28a745'}}>
-                                {loadingAction ? 'Confirmation...' : 'Confirmer'}
-                            </button>
-                            <button onClick={() => setIsEnteringDeposit(false)} disabled={loadingAction} style={{...actionButtonStyle, backgroundColor: '#6c757d'}}>Annuler</button>
-                        </div>
-                    )}
+                    <button onClick={onClose} className="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors font-bold">Fermer</button>
                 </div>
             </div>
         </div>
     );
 };
 
-// --- Styles for Factures component ---
-const containerStyle = { padding: '20px', maxWidth: '1200px', margin: '0 auto', fontFamily: 'Arial, sans-serif' };
-const filterContainerStyle = { display: 'flex', gap: '1rem', marginBottom: '2rem', alignItems: 'center', flexWrap: 'wrap' };
-const inputStyle = { padding: '8px', borderRadius: '5px', border: '1px solid #ccc', flex: '1 1 auto', minWidth: '200px' };
-const tableContainerStyle = { marginTop: '1rem', boxShadow: '0 4px 8px rgba(0,0,0,0.05)', borderRadius: '8px', overflowX: 'auto', background: 'white' };
-const tableStyle = { width: '100%', borderCollapse: 'collapse' };
-const thStyle = { background: '#f8f9fa', padding: '12px 15px', textAlign: 'left', fontWeight: 'bold', color: '#333', borderBottom: '2px solid #eee' };
-const tdStyle = { padding: '12px 15px', borderBottom: '1px solid #eee' };
-const detailsButtonStyle = { padding: '8px 12px', background: '#d4af37', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' };
 const statusBadgeStyle = (status) => {
     const colors = { 'pending': '#ffc107', 'deposit_paid': '#007bff', 'paid': '#28a745', 'cancelled': '#dc3545' };
-    return { padding: '4px 8px', borderRadius: '12px', color: 'white', fontWeight: 'bold', fontSize: '12px', backgroundColor: colors[status] || '#6c757d' };
+    return { padding: '4px 10px', borderRadius: '20px', color: 'white', fontWeight: 'bold', fontSize: '11px', backgroundColor: colors[status] || '#6c757d' };
 };
 
-// --- Styles for InvoiceDetailModal ---
-const modalOverlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 };
-const modalContentStyle = { background: 'white', padding: '30px', borderRadius: '8px', width: '90%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto', position: 'relative' };
-const closeButtonStyle = { position: 'absolute', top: '15px', right: '15px', background: 'transparent', border: 'none', fontSize: '24px', cursor: 'pointer' };
-const detailSectionStyle = { marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px solid #f0f0f0' };
-const detailTitleStyle = { fontSize: '18px', color: '#d4af37', marginBottom: '10px' };
-const actionButtonStyle = { padding: '10px 15px', border: 'none', borderRadius: '5px', cursor: 'pointer', color: 'white', fontWeight: 'bold' };
-const modalActionsStyle = { marginTop: '30px', display: 'flex', justifyContent: 'flex-end', gap: '10px' };
+const containerStyle = { padding: '20px' };
+const filterContainerStyle = { marginBottom: '20px' };
+const inputStyle = { padding: '8px', border: '1px solid #ddd', borderRadius: '4px' };
 
 export default Factures;

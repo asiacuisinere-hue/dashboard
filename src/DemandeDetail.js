@@ -22,8 +22,9 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
     const [isGeneratingStripeLink, setIsGeneratingStripeLink] = useState(false);
     const [paymentLink, setPaymentLink] = useState('');
 
+    const isMenuOrder = demande.type === 'COMMANDE_MENU' || demande.type === 'COMMANDE_SPECIALE';
+
     useEffect(() => {
-        // Sécurité : on ne lance l'initialisation qu'une seule fois par ID de demande
         if (initializedRef.current === demande.id) return;
         initializedRef.current = demande.id;
 
@@ -34,7 +35,6 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
 
             let initialAmount = demande.total_amount;
 
-            // --- AUTO PRE-FILL & SAVE LOGIC FOR MENUS ---
             if ((!initialAmount || initialAmount <= 0) && demande.type === 'COMMANDE_MENU') {
                 try {
                     const { data: settingsList } = await supabase
@@ -45,10 +45,8 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                     if (settingsList) {
                         const prices = {};
                         settingsList.forEach(s => { prices[s.key] = parseFloat(s.value); });
-                        
                         const formula = demande.details_json?.formulaName || "";
                         let calculated = 0;
-
                         if (formula.includes('Découverte')) calculated = prices['menu_decouverte_price'];
                         else if (formula.includes('Standard')) calculated = prices['menu_standard_price'];
                         else if (formula.includes('Confort')) calculated = prices['menu_confort_price'];
@@ -57,25 +55,15 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                         if (calculated > 0) {
                             initialAmount = calculated;
                             setTotalAmount(calculated);
-                            
-                            // Sauvegarde silencieuse (sans onRefresh pour éviter boucle)
-                            await supabase
-                                .from('demandes')
-                                .update({ total_amount: calculated })
-                                .eq('id', demande.id);
+                            await supabase.from('demandes').update({ total_amount: calculated }).eq('id', demande.id);
                         }
                     }
-                } catch (err) {
-                    console.error("Error in auto-fill:", err);
-                }
+                } catch (err) { console.error("Error in auto-fill:", err); }
             }
-            
             setTotalAmount(initialAmount || '');
         };
-
         initializeModal();
-    // Ajout de toutes les dépendances requises par ESLint
-    }, [demande.id, demande.details_json, demande.request_date, demande.total_amount, demande.type]); 
+    }, [demande.id, demande.details_json, demande.request_date, demande.total_amount, demande.type, onRefresh]);
 
     if (!demande) return null;
 
@@ -94,10 +82,8 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                     amount_type: amountType
                 })
             });
-
             const result = await response.json();
             if (!response.ok) throw new Error(result.error || 'Erreur lors de la génération du lien.'); 
-
             setPaymentLink(result.url);
             alert('Lien de paiement Stripe généré avec succès !');
         } catch (error) {
@@ -138,9 +124,8 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
             type: demande.clients ? 'client' : 'entreprise'
         } : null;
 
-        if ((demande.type === 'COMMANDE_MENU' || demande.type === 'COMMANDE_SPECIALE') && (demande.status === 'confirmed' || demande.status === 'En attente de traitement')) {
+        if (isMenuOrder && (demande.status === 'confirmed' || demande.status === 'En attente de traitement')) {
             if (!window.confirm("Cette action va générer la facture, l'envoyer au client, et la télécharger. Continuer ?")) return;
-
             setIsGenerating(true);
             try {
                 const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/send-invoice-by-email`, {
@@ -151,37 +136,23 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                     },
                     body: JSON.stringify({ demandeId: demande.id })
                 });
-
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ error: 'Erreur inattendue du serveur.' }));
-                    throw new Error(errorData.error || `Erreur ${response.status}`);
-                }
-
+                if (!response.ok) throw new Error('Erreur lors de l\'envoi.');
                 const blob = await response.blob();
-                const contentDisposition = response.headers.get('Content-Disposition');
-                let filename = 'facture.pdf';
-                if (contentDisposition) {
-                    const filenameMatch = contentDisposition.match(/filename="(.+)"/);
-                    if (filenameMatch && filenameMatch[1]) filename = filenameMatch[1];
-                }
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = filename;
+                a.download = 'facture.pdf';
                 document.body.appendChild(a);
                 a.click();
                 window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
                 if (onRefresh) onRefresh();
                 onClose();
-
             } catch (error) {
                 alert(`Erreur: ${error.message}`);
             } finally {
                 setIsGenerating(false);
             }
-
-        } else if ((demande.type === 'RESERVATION_SERVICE' || demande.type === 'SOUSCRIPTION_ABONNEMENT') && demande.status === 'confirmed') {
+        } else if (!isMenuOrder && demande.status === 'confirmed') {
             if (clientInfoWithTag) {
                 navigate('/devis', { state: { customer: clientInfoWithTag, demandeId: demande.id } });    
                 onClose();
@@ -195,31 +166,16 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
         if (!window.confirm("Confirmer la réception du paiement et envoyer le QR Code ?")) return;       
         setIsSendingQrCode(true);
         try {
-            const { data: companySettings, error: settingsError } = await supabase
-                .from('company_settings')
-                .select('*')
-                .limit(1)
-                .single();
-
-            if (settingsError || !companySettings) {
-                throw new Error(settingsError?.message || 'Impossible de récupérer les paramètres de l\'entreprise.');
-            }
-
-            const payload = {
-                demandeId: demande.id,
-                companySettings: companySettings
-            };
-
+            const { data: companySettings } = await supabase.from('company_settings').select('*').limit(1).single();
             const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/send-qrcode`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${process.env.REACT_APP_SUPABASE_ANON_KEY}`
                 },
-                body: JSON.stringify(payload)
+                body: JSON.stringify({ demandeId: demande.id, companySettings })
             });
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.error || 'Erreur lors de l\'envoi du QR Code.');     
+            if (!response.ok) throw new Error('Erreur QR Code.');     
             alert('Paiement confirmé et QR Code envoyé !');
             if (onRefresh) onRefresh();
             onClose();
@@ -325,37 +281,36 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                 </>
             );
         }
-                if (demande.type === 'COMMANDE_SPECIALE') {
-                    if (!d.items || !Array.isArray(d.items)) return <p>Détails de la commande non disponibles.</p>;
-
-                    const total = d.total || d.items.reduce((acc, item) => acc + (item.quantity * item.price), 0);
-
-                    return (
-                        <div>
-                            <ul style={{ listStyleType: 'none', padding: 0, marginBottom: '10px' }}>      
-                                {d.items.map((item, index) => (
-                                    <li key={index} style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
-                                        <span>{item.quantity} x {item.name} ({item.portion})</span>
-                                        <span>{(item.quantity * item.price).toFixed(2)} €</span>        
-                                    </li>
-                                ))}
-                            </ul>
-                            <hr style={{ margin: '10px 0' }} />
-                            <p style={{ textAlign: 'right', fontWeight: 'bold', fontSize: '1.1rem' }}>    
-                                <strong>Total:</strong> {parseFloat(total).toFixed(2)} €
-                            </p>
-                            {d.deliveryCity && <p style={{marginTop: '10px'}}><strong>Ville de livraison:</strong> {d.deliveryCity}</p>}
-                        </div>
-                    );
-                }
-                if (demande.type === 'SOUSCRIPTION_ABONNEMENT') {
-                    return (
-                        <>
-                            <p><strong>Formule :</strong> {d.formula || 'N/A'}</p>
-                            <p><strong>Notes :</strong> {d.notes || 'Aucune'}</p>
-                        </>
-                    );
-                }        return (
+        if (demande.type === 'COMMANDE_SPECIALE') {
+            if (!d.items || !Array.isArray(d.items)) return <p>Détails de la commande non disponibles.</p>;
+            const total = d.total || d.items.reduce((acc, item) => acc + (item.quantity * item.price), 0);
+            return (
+                <div>
+                    <ul style={{ listStyleType: 'none', padding: 0, marginBottom: '10px' }}>      
+                        {d.items.map((item, index) => (
+                            <li key={index} style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
+                                <span>{item.quantity} x {item.name} ({item.portion})</span>
+                                <span>{(item.quantity * item.price).toFixed(2)} €</span>        
+                            </li>
+                        ))}
+                    </ul>
+                    <hr style={{ margin: '10px 0' }} />
+                    <p style={{ textAlign: 'right', fontWeight: 'bold', fontSize: '1.1rem' }}>    
+                        <strong>Total:</strong> {parseFloat(total).toFixed(2)} €
+                    </p>
+                    {d.deliveryCity && <p style={{marginTop: '10px'}}><strong>Ville de livraison:</strong> {d.deliveryCity}</p>}
+                </div>
+            );
+        }
+        if (demande.type === 'SOUSCRIPTION_ABONNEMENT') {
+            return (
+                <>
+                    <p><strong>Formule :</strong> {d.formula || 'N/A'}</p>
+                    <p><strong>Notes :</strong> {d.notes || 'Aucune'}</p>
+                </>
+            );
+        }
+        return (
             <>
                 {Object.entries(d).map(([key, value]) => (
                     <p key={key}><strong>{key}:</strong> {String(value)}</p>
@@ -374,14 +329,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
         <div style={modalOverlayStyle}>
             <div style={modalContentStyle}>
                 <button onClick={onClose} style={closeButtonStyle}>&times;</button>
-                <h2>
-                    Détails demande #{demande.id.substring(0, 8)}
-                    {demande.invoices?.[0]?.document_number && (
-                        <span style={{ fontSize: '14px', color: '#6c757d', marginLeft: '10px' }}>
-                            (Facture: {demande.invoices[0].document_number})
-                        </span>
-                    )}
-                </h2>
+                <h2>Détails demande #{demande.id.substring(0, 8)}</h2>
 
                 <div style={detailSectionStyle}>
                     <h3 style={detailTitleStyle}>Client / Entreprise</h3>
@@ -400,117 +348,37 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                             value={totalAmount}
                             onChange={(e) => setTotalAmount(e.target.value)}
                         />
-                        <p style={{fontSize: '11px', color: '#856404', marginTop: '5px', marginBottom: 0}}>
-                            * Saisissez le montant final négocié pour pouvoir générer le lien Stripe.
-                        </p>
                     </div>
-                    
-                    <p>
-                        <strong>Statut:</strong>
-                        <span style={statusBadgeStyle(demande.status)}>{demande.status}</span>
-                    </p>
+                    <p><strong>Statut:</strong> <span style={statusBadgeStyle(demande.status)}>{demande.status}</span></p>
                     {demande.type === 'RESERVATION_SERVICE' ? renderReservationServiceForm() : renderReadOnlyDetails()}
                 </div>
 
                 {paymentLink && (
-                    <div style={{
-                        backgroundColor: '#f8f9ff',
-                        border: '1px solid #e0e4ff',
-                        borderRadius: '8px',
-                        padding: '15px',
-                        marginBottom: '20px'
-                    }}>
-                        <p style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: 'bold', color: '#635bff' }}>Lien de paiement généré :</p>
+                    <div style={{ backgroundColor: '#f8f9ff', border: '1px solid #e0e4ff', borderRadius: '8px', padding: '15px', marginBottom: '20px' }}>
+                        <p style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: 'bold', color: '#635bff' }}>Lien de paiement Stripe généré :</p>
                         <div style={{ display: 'flex', gap: '10px' }}>
-                            <input 
-                                readOnly 
-                                value={paymentLink} 
-                                style={{ ...inputStyle, flex: 1, backgroundColor: '#fff' }}
-                                onClick={(e) => e.target.select()}
-                            />
-                            <button 
-                                onClick={() => {
-                                    navigator.clipboard.writeText(paymentLink);
-                                    alert('Lien copié !');
-                                }}
-                                style={{ ...actionButtonStyle, backgroundColor: '#635bff' }}
-                            >
-                                Copier
-                            </button>
+                            <input readOnly value={paymentLink} style={{ ...inputStyle, flex: 1 }} onClick={(e) => e.target.select()} />
+                            <button onClick={() => { navigator.clipboard.writeText(paymentLink); alert('Lien copié !'); }} style={{ ...actionButtonStyle, backgroundColor: '#635bff' }}>Copier</button>
                         </div>
                     </div>
                 )}
 
                 <div style={modalActionsStyle}>
                     <>
-                        <button
-                            onClick={handleUpdateDetails}
-                            style={{ ...actionButtonStyle, backgroundColor: '#5a6268', marginRight: 'auto' }}
-                        >
-                            Sauvegarder
-                        </button>
+                        <button onClick={handleUpdateDetails} style={{ ...actionButtonStyle, backgroundColor: '#5a6268', marginRight: 'auto' }}>Sauvegarder</button>
+                        {demande.status === 'En attente de traitement' && <button onClick={() => onUpdateStatus(demande.id, 'confirmed')} style={{ ...actionButtonStyle, backgroundColor: '#28a745' }}>Confirmer</button>}
                         
-                        {demande.status === 'En attente de traitement' && (
-                            <button
-                                onClick={() => onUpdateStatus(demande.id, 'confirmed')}
-                                style={{ ...actionButtonStyle, backgroundColor: '#28a745' }}
-                            >
-                                Confirmer
-                            </button>
-                        )}
-                        {(demande.status === 'En attente de paiement' || demande.status === 'confirmed') && (
-                            <button
-                                onClick={() => handleGenerateStripeLink('total')}
-                                disabled={isGeneratingStripeLink}
-                                style={{ ...actionButtonStyle, backgroundColor: '#635bff' }}
-                            >
+                        {isMenuOrder && (demande.status === 'En attente de paiement' || demande.status === 'confirmed') && (
+                            <button onClick={() => handleGenerateStripeLink('total')} disabled={isGeneratingStripeLink} style={{ ...actionButtonStyle, backgroundColor: '#635bff' }}>
                                 {isGeneratingStripeLink ? 'Génération...' : 'Lien Stripe (Total)'}
                             </button>
                         )}
-                        {demande.status === 'En attente de paiement' && (
-                            <button 
-                                onClick={handleSendQrCodeAndPay}
-                                disabled={isSendingQrCode}
-                                style={{ ...actionButtonStyle, backgroundColor: '#28a745' }}
-                            >
-                                {isSendingQrCode ? 'Envoi...' : 'Paiement Reçu & Envoyer QR'}
-                            </button>
-                        )}
-                        {demande.status === 'En attente de préparation' && (
-                            <button
-                                onClick={() => onUpdateStatus(demande.id, 'Préparation en cours')}       
-                                style={{ ...actionButtonStyle, backgroundColor: '#17a2b8' }}
-                            >
-                                Mettre en préparation
-                            </button>
-                        )}
-                        {(demande.status === 'confirmed' && (demande.type === 'RESERVATION_SERVICE' || demande.type === 'SOUSCRIPTION_ABONNEMENT')) && (
-                            <button
-                                onClick={handleAction}
-                                style={{ ...actionButtonStyle, backgroundColor: '#007bff' }}
-                            >
-                                Créer Devis
-                            </button>
-                        )}
-                        {(demande.type === 'COMMANDE_MENU' || demande.type === 'COMMANDE_SPECIALE') && (demande.status === 'confirmed' || demande.status === 'En attente de traitement') && (
-                            <button
-                                onClick={handleAction}
-                                disabled={isGenerating}
-                                style={{ ...actionButtonStyle, backgroundColor: '#007bff' }}
-                            >
-                                {isGenerating ? 'Envoi...' : 'Générer & Envoyer Facture'}
-                            </button>
-                        )}
-                        <button
-                            onClick={() => {
-                                if (window.confirm('Êtes-vous sûr de vouloir annuler cette demande ? Cette action est irréversible.')) {
-                                    onUpdateStatus(demande.id, 'cancelled');
-                                }
-                            }}
-                            style={{ ...actionButtonStyle, backgroundColor: '#dc3545' }}
-                        >
-                            Annuler la commande
-                        </button>
+
+                        {demande.status === 'En attente de paiement' && <button onClick={handleSendQrCodeAndPay} disabled={isSendingQrCode} style={{ ...actionButtonStyle, backgroundColor: '#28a745' }}>{isSendingQrCode ? 'Envoi...' : 'Paiement Reçu & Envoyer QR'}</button>}
+                        {demande.status === 'En attente de préparation' && <button onClick={() => onUpdateStatus(demande.id, 'Préparation en cours')} style={{ ...actionButtonStyle, backgroundColor: '#17a2b8' }}>Mettre en préparation</button>}
+                        {(demande.status === 'confirmed' && !isMenuOrder) && <button onClick={handleAction} style={{ ...actionButtonStyle, backgroundColor: '#007bff' }}>Créer Devis</button>}
+                        {isMenuOrder && (demande.status === 'confirmed' || demande.status === 'En attente de traitement') && <button onClick={handleAction} disabled={isGenerating} style={{ ...actionButtonStyle, backgroundColor: '#007bff' }}>{isGenerating ? 'Envoi...' : 'Générer & Envoyer Facture'}</button>}
+                        <button onClick={() => window.confirm('Annuler ?') && onUpdateStatus(demande.id, 'cancelled')} style={{ ...actionButtonStyle, backgroundColor: '#dc3545' }}>Annuler</button>
                     </>
                 </div>
             </div>
@@ -519,91 +387,17 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
 };
 
 // Styles
-const modalOverlayStyle = {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    zIndex: 1000,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center'
-};
-
-const modalContentStyle = {
-    background: 'white',
-    padding: '30px',
-    borderRadius: '8px',
-    width: '90%',
-    maxWidth: '800px',
-    maxHeight: '90vh',
-    overflowY: 'auto',
-    position: 'relative'
-};
-
-const closeButtonStyle = {
-    position: 'absolute',
-    top: '15px',
-    right: '15px',
-    background: 'transparent',
-    border: 'none',
-    fontSize: '24px',
-    cursor: 'pointer' 
-};
-
-const detailSectionStyle = {
-    marginBottom: '20px',
-    paddingBottom: '20px',
-    borderBottom: '1px solid #f0f0f0'
-};
-
-const detailTitleStyle = {
-    fontSize: '18px',
-    color: '#d4af37',
-    marginBottom: '15px'
-};
-
-const actionButtonStyle = {
-    padding: '10px 15px',
-    border: 'none',
-    borderRadius: '5px',
-    cursor: 'pointer',
-    color: 'white',
-    fontWeight: 'bold'
-};
-
-const modalActionsStyle = {
-    marginTop: '30px',
-    display: 'flex',
-    justifyContent: 'flex-end',
-    gap: '10px'
-};
-
+const modalOverlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' };
+const modalContentStyle = { background: 'white', padding: '30px', borderRadius: '8px', width: '90%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto', position: 'relative' };
+const closeButtonStyle = { position: 'absolute', top: '15px', right: '15px', background: 'transparent', border: 'none', fontSize: '24px', cursor: 'pointer' };
+const detailSectionStyle = { marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px solid #f0f0f0' };
+const detailTitleStyle = { fontSize: '18px', color: '#d4af37', marginBottom: '15px' };
+const actionButtonStyle = { padding: '10px 15px', border: 'none', borderRadius: '5px', cursor: 'pointer', color: 'white', fontWeight: 'bold' };
+const modalActionsStyle = { marginTop: '30px', display: 'flex', justifyContent: 'flex-end', gap: '10px' };
 const statusBadgeStyle = (status) => {
-    const colors = {
-        'pending': '#ffc107',
-        'En attente de traitement': '#ffc107',
-        'confirmed': '#007bff',
-        'in_progress': '#17a2b8',
-        'completed': '#28a745',
-        'cancelled': '#dc3545',
-        'En attente de paiement': '#fd7e14',
-        'En attente de préparation': '#6f42c1',
-        'Préparation en cours': '#17a2b8',
-        'Payée': '#6f42c1'
-    };
-    return {
-        padding: '4px 8px',
-        borderRadius: '12px',
-        color: 'white',
-        fontWeight: 'bold',
-        fontSize: '12px',
-        backgroundColor: colors[status] || '#6c757d'
-    };
+    const colors = { 'pending': '#ffc107', 'confirmed': '#007bff', 'En attente de paiement': '#fd7e14', 'Payée': '#6f42c1' };
+    return { padding: '4px 8px', borderRadius: '12px', color: 'white', fontWeight: 'bold', fontSize: '12px', backgroundColor: colors[status] || '#6c757d' };
 };
-
 const formGroupStyle = { marginBottom: '15px' };
 const labelStyle = { display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#333' };
 const inputStyle = { width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' };
