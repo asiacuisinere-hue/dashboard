@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import QuoteDetailModal from './QuoteDetailModal';
 import ReactPaginate from 'react-paginate';
 import { useBusinessUnit } from '../BusinessUnitContext';
-import { PlusCircle, List, Search, User, ClipboardList, Utensils, Euro, FileText } from 'lucide-react';
+import { PlusCircle, List, Search, User, ClipboardList, Utensils, FileText } from 'lucide-react';
 
 const QuoteCard = ({ quote, onSelect, statusBadgeStyle, renderCustomerName, themeColor }) => {
     let dueDate = null;
@@ -31,7 +31,7 @@ const QuoteCard = ({ quote, onSelect, statusBadgeStyle, renderCustomerName, them
             <div className="grid grid-cols-2 gap-4 mb-5 text-sm">
                 <div>
                     <p className="text-gray-500 text-xs uppercase font-bold mb-1">Montant</p>
-                    <p className="text-gray-800 font-bold">{quote.total_amount.toFixed(2)} €</p>        
+                    <p className="text-gray-800 font-bold">{(quote.total_amount || 0).toFixed(2)} €</p>        
                 </div>
                 <div>
                     <p className="text-gray-500 text-xs uppercase font-bold mb-1">Échéance</p>
@@ -56,11 +56,8 @@ const Devis = () => {
     const { customer: prefilledCustomer, demandeId } = location.state || {};
 
     const themeColor = businessUnit === 'courtage' ? 'blue' : 'amber';
-    const mainHexColor = businessUnit === 'courtage' ? '#3b82f6' : '#d4af37';
 
-    // --- State pour les onglets ---
     const [activeTab, setActiveTab] = useState(prefilledCustomer ? 'create' : 'list');
-
     const [clients, setClients] = useState([]);
     const [entreprises, setEntreprises] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -102,7 +99,7 @@ const Devis = () => {
             query = query.or(`document_number.ilike.${term},clients.last_name.ilike.${term},entreprises.nom_entreprise.ilike.${term}`);
         }
         const { data, error } = await query;
-        if (!error) setExistingQuotes(data);
+        if (!error) setExistingQuotes(data || []);
         setIsLoading(false);
     }, [quoteSearchTerm, statusFilter, businessUnit]);
 
@@ -184,6 +181,10 @@ const Devis = () => {
         } catch (error) { alert(error.message); }
     };
 
+    const handlePageClick = (event) => {
+        setCurrentPage(event.selected);
+    };
+
     const renderCustomerName = (quote) => {
         if (quote.clients) return `${quote.clients.last_name} ${quote.clients.first_name || ''}`.trim();
         if (quote.entreprises) return quote.entreprises.nom_entreprise;
@@ -199,18 +200,11 @@ const Devis = () => {
             <div className="max-w-7xl mx-auto">
                 <h1 className="text-3xl font-bold text-gray-800 mb-8">Gestion des Devis</h1>
 
-                {/* --- SYSTÈME D'ONGLETS --- */}
                 <div className="flex space-x-1 bg-gray-200 p-1 rounded-xl mb-8 max-w-md">
-                    <button
-                        onClick={() => setActiveTab('create')}
-                        className={`flex-1 flex items-center justify-center py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'create' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                    >
+                    <button onClick={() => setActiveTab('create')} className={`flex-1 flex items-center justify-center py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'create' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
                         <PlusCircle size={16} className="mr-2" /> Créer un devis
                     </button>
-                    <button
-                        onClick={() => setActiveTab('list')}
-                        className={`flex-1 flex items-center justify-center py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'list' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                    >
+                    <button onClick={() => setActiveTab('list')} className={`flex-1 flex items-center justify-center py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'list' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
                         <List size={16} className="mr-2" /> Devis existants
                     </button>
                 </div>
@@ -218,60 +212,35 @@ const Devis = () => {
                 {successMessage && <div className="bg-green-100 text-green-700 p-4 rounded-lg mb-6 text-center font-bold border border-green-200">{successMessage}</div>}
                 {errorMessage && <div className="bg-red-100 text-red-700 p-4 rounded-lg mb-6 text-center font-bold border border-red-200">{errorMessage}</div>}
 
-                {/* --- ONGLET CRÉATION --- */}
                 {activeTab === 'create' && (
                     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        {/* 1. Client */}
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                             <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center"><User size={20} className="mr-2 text-amber-500"/> 1. Client / Entreprise</h3>
                             <div className="flex gap-2">
-                                <input type="text" placeholder="Rechercher..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="flex-1 p-2.5 border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none" />
-                                <button onClick={handleSearch} className="bg-gray-800 text-white px-6 rounded-lg font-bold hover:bg-gray-700 transition-colors">Rechercher</button>
+                                <input type="text" placeholder="Rechercher..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="flex-1 p-2.5 border rounded-lg outline-none" />
+                                <button onClick={handleSearch} className="bg-gray-800 text-white px-6 rounded-lg font-bold">Rechercher</button>
                             </div>
-                            {selectedCustomer && (
-                                <div className="mt-4 p-3 bg-amber-50 text-amber-800 rounded-lg flex justify-between items-center border border-amber-100">
-                                    <span>Sélection : <strong>{selectedCustomer.type === 'client' ? `${selectedCustomer.last_name} ${selectedCustomer.first_name}` : selectedCustomer.nom_entreprise}</strong></span>
-                                    <button onClick={() => setSelectedCustomer(null)} className="text-red-500 font-bold">X</button>
-                                </div>
-                            )}
+                            {selectedCustomer && <div className="mt-4 p-3 bg-amber-50 text-amber-800 rounded-lg flex justify-between border border-amber-100"><span>Sélection : <strong>{selectedCustomer.type === 'client' ? `${selectedCustomer.last_name} ${selectedCustomer.first_name}` : selectedCustomer.nom_entreprise}</strong></span><button onClick={() => setSelectedCustomer(null)} className="text-red-500 font-bold">X</button></div>}
                             {(clients.length > 0 || entreprises.length > 0) && !selectedCustomer && (
-                                <div className="mt-2 border rounded-lg overflow-hidden shadow-lg bg-white absolute z-10 w-full max-w-lg">
+                                <div className="mt-2 border rounded-lg shadow-lg bg-white absolute z-10 w-full max-w-lg">
                                     {clients.map(c => <div key={c.id} onClick={() => handleSelectCustomer(c, 'client')} className="p-3 hover:bg-gray-50 cursor-pointer border-b">👤 {c.last_name} {c.first_name}</div>)}
                                     {entreprises.map(e => <div key={e.id} onClick={() => handleSelectCustomer(e, 'entreprise')} className="p-3 hover:bg-gray-50 cursor-pointer border-b">🏢 {e.nom_entreprise}</div>)}
                                 </div>
                             )}
                         </div>
-
-                        {/* 2. Menu */}
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                             <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center"><Utensils size={20} className="mr-2 text-amber-500"/> 2. Détails du Menu</h3>
-                            <textarea value={menuDetails} onChange={(e) => setMenuDetails(e.target.value)} placeholder="Décrivez le menu convenu..." className="w-full h-32 p-3 border rounded-lg outline-none focus:ring-2 focus:ring-amber-500" />
+                            <textarea value={menuDetails} onChange={(e) => setMenuDetails(e.target.value)} placeholder="Décrivez le menu..." className="w-full h-32 p-3 border rounded-lg outline-none" />
                         </div>
-
-                        {/* 3. Services */}
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                             <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center"><ClipboardList size={20} className="mr-2 text-amber-500"/> 3. Services & Lignes</h3>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                                {services.map(s => (
-                                    <button key={s.id} onClick={() => handleAddServiceToQuote(s)} className="p-4 border rounded-xl hover:border-amber-500 transition-all text-left group">
-                                        <p className="font-bold text-gray-800 group-hover:text-amber-600">{s.name}</p>
-                                        <p className="text-xs text-gray-500">{s.default_price} €</p>
-                                    </button>
-                                ))}
+                                {services.map(s => <button key={s.id} onClick={() => handleAddServiceToQuote(s)} className="p-4 border rounded-xl hover:border-amber-500 text-left group"><p className="font-bold text-gray-800">{s.name}</p><p className="text-xs text-gray-500">{s.default_price} €</p></button>)}
                             </div>
-                            
                             {quoteItems.length > 0 && (
                                 <div className="overflow-x-auto border rounded-xl">
                                     <table className="min-w-full divide-y divide-gray-200">
-                                        <thead className="bg-gray-50">
-                                            <tr>
-                                                <th className="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase">Désignation</th>
-                                                <th className="px-4 py-2 text-center text-xs font-bold text-gray-500 uppercase">Qté</th>
-                                                <th className="px-4 py-2 text-right text-xs font-bold text-gray-500 uppercase">Prix (€)</th>
-                                                <th className="px-4 py-2 text-right text-xs font-bold text-gray-500 uppercase">Total</th>
-                                                <th className="px-4 py-2 text-center text-xs font-bold text-gray-500 uppercase"></th>
-                                            </tr>
-                                        </thead>
+                                        <thead className="bg-gray-50"><tr><th className="px-4 py-2 text-left text-xs font-bold text-gray-500">Désignation</th><th className="px-4 py-2 text-center text-xs font-bold text-gray-500">Qté</th><th className="px-4 py-2 text-right text-xs font-bold text-gray-500">Prix (€)</th><th className="px-4 py-2 text-right text-xs font-bold text-gray-500">Total</th><th className="px-4 py-2 text-center"></th></tr></thead>
                                         <tbody className="bg-white divide-y divide-gray-100">
                                             {quoteItems.map(item => (
                                                 <tr key={item.id}>
@@ -283,64 +252,34 @@ const Devis = () => {
                                                 </tr>
                                             ))}
                                         </tbody>
-                                        <tfoot className="bg-amber-50 font-black text-amber-900">
-                                            <tr>
-                                                <td colSpan="3" className="px-4 py-3 text-right">TOTAL DEVIS</td>
-                                                <td className="px-4 py-3 text-right text-lg">{calculateTotal().toFixed(2)} €</td>
-                                                <td></td>
-                                            </tr>
-                                        </tfoot>
+                                        <tfoot className="bg-amber-50 font-black"><tr><td colSpan="3" className="px-4 py-3 text-right">TOTAL</td><td className="px-4 py-3 text-right text-lg">{calculateTotal().toFixed(2)} €</td><td></td></tr></tfoot>
                                     </table>
                                 </div>
                             )}
                         </div>
-
-                        <button onClick={handleGenerateQuote} disabled={isLoading} className={`w-full py-4 rounded-2xl text-white font-black text-lg shadow-lg transition-all ${isLoading ? 'bg-gray-400' : 'bg-green-600 hover:bg-green-700 active:scale-95'}`}>
-                            {isLoading ? 'Génération...' : 'CRÉER ET ENREGISTRER LE DEVIS'}
-                        </button>
+                        <button onClick={handleGenerateQuote} disabled={isLoading} className={`w-full py-4 rounded-2xl text-white font-black text-lg shadow-lg ${isLoading ? 'bg-gray-400' : 'bg-green-600 hover:bg-green-700'}`}>CRÉER LE DEVIS</button>
                     </div>
                 )}
 
-                {/* --- ONGLET LISTE --- */}
                 {activeTab === 'list' && (
                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6 flex flex-wrap gap-4 items-center">
-                            <div className="flex-1 min-w-[250px] relative">
-                                <Search size={18} className="absolute left-3 top-3 text-gray-400"/>
-                                <input type="text" placeholder="Rechercher un devis ou client..." value={quoteSearchTerm} onChange={(e) => setQuoteSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2.5 border rounded-xl outline-none focus:ring-2 focus:ring-amber-500" />
-                            </div>
+                            <div className="flex-1 min-w-[250px] relative"><Search size={18} className="absolute left-3 top-3 text-gray-400"/><input type="text" placeholder="Rechercher..." value={quoteSearchTerm} onChange={(e) => setQuoteSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2.5 border rounded-xl outline-none focus:ring-2 focus:ring-amber-500" /></div>
                             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="p-2.5 border rounded-xl outline-none bg-white font-bold text-gray-700">
-                                <option value="all">Tous les statuts</option>
-                                <option value="draft">Brouillon</option>
-                                <option value="sent">Envoyé</option>
-                                <option value="accepted">Accepté</option>
-                                <option value="rejected">Refusé</option>
+                                <option value="all">Tous les statuts</option><option value="draft">Brouillon</option><option value="sent">Envoyé</option><option value="accepted">Accepté</option><option value="rejected">Refusé</option>
                             </select>
                         </div>
-
                         {existingQuotes.length === 0 ? (
-                            <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200">
-                                <FileText size={48} className="mx-auto text-gray-300 mb-4"/>
-                                <p className="text-gray-500">Aucun devis trouvé pour ces critères.</p>
-                            </div>
+                            <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200"><FileText size={48} className="mx-auto text-gray-300 mb-4"/><p className="text-gray-500">Aucun devis trouvé.</p></div>
                         ) : (
                             <>
                                 <div className="hidden lg:block bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
                                     <table className="min-w-full divide-y divide-gray-200">
-                                        <thead className="bg-gray-50">
-                                            <tr>
-                                                <th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase">N° Devis</th>
-                                                <th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase">Client</th>
-                                                <th className="px-6 py-4 text-center text-xs font-black text-gray-400 uppercase">Date</th>
-                                                <th className="px-6 py-4 text-right text-xs font-black text-gray-400 uppercase">Total</th>
-                                                <th className="px-6 py-4 text-center text-xs font-black text-gray-400 uppercase">Statut</th>
-                                                <th className="px-6 py-4 text-right text-xs font-black text-gray-400 uppercase">Action</th>
-                                            </tr>
-                                        </thead>
+                                        <thead className="bg-gray-50"><tr><th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase">N°</th><th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase">Client</th><th className="px-6 py-4 text-center text-xs font-black text-gray-400 uppercase">Date</th><th className="px-6 py-4 text-right text-xs font-black text-gray-400 uppercase">Total</th><th className="px-6 py-4 text-center text-xs font-black text-gray-400 uppercase">Statut</th><th className="px-6 py-4 text-right"></th></tr></thead>
                                         <tbody className="bg-white divide-y divide-gray-100">
                                             {currentQuotes.map(q => (
-                                                <tr key={q.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => setSelectedQuote(q)}>
-                                                    <td className="px-6 py-4 font-bold text-gray-900">{q.document_number?.substring(0, 18) || q.id.substring(0, 8)}</td>
+                                                <tr key={q.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedQuote(q)}>
+                                                    <td className="px-6 py-4 font-bold text-gray-900">{q.document_number || q.id.substring(0, 8)}</td>
                                                     <td className="px-6 py-4 text-gray-600">{renderCustomerName(q)}</td>
                                                     <td className="px-6 py-4 text-center text-gray-500 text-sm">{new Date(q.created_at).toLocaleDateString('fr-FR')}</td>
                                                     <td className="px-6 py-4 text-right font-black text-gray-900">{q.total_amount.toFixed(2)} €</td>
@@ -352,7 +291,7 @@ const Devis = () => {
                                     </table>
                                 </div>
                                 <div className="lg:hidden grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {currentQuotes.map(q => <QuoteCard key={q.id} quote={q} onSelect={setSelectedQuote} statusBadgeStyle={statusBadgeStyle} renderCustomerName={renderCustomerName} themeColor={businessUnit === 'courtage' ? 'blue' : 'amber'} />)}
+                                    {currentQuotes.map(q => <QuoteCard key={q.id} quote={q} onSelect={setSelectedQuote} statusBadgeStyle={statusBadgeStyle} renderCustomerName={renderCustomerName} themeColor={themeColor} />)}
                                 </div>
                                 <div className="mt-8">
                                     <ReactPaginate previousLabel={'<'} nextLabel={'>'} pageCount={pageCount} onPageChange={handlePageClick} containerClassName={'flex justify-center space-x-2'} pageLinkClassName={'px-4 py-2 border rounded-xl hover:bg-gray-100 font-bold'} activeClassName={'bg-amber-500 text-white rounded-xl'} />
@@ -362,17 +301,13 @@ const Devis = () => {
                     </div>
                 )}
             </div>
-
-            {selectedQuote && (
-                <QuoteDetailModal quote={selectedQuote} onClose={() => setSelectedQuote(null)} onUpdateStatus={handleUpdateQuoteStatus} fetchExistingQuotes={fetchExistingQuotes} />
-            )}
+            {selectedQuote && <QuoteDetailModal quote={selectedQuote} onClose={() => setSelectedQuote(null)} onUpdateStatus={handleUpdateQuoteStatus} fetchExistingQuotes={fetchExistingQuotes} />}
         </div>
     );
 };
 
-// Styles consolidés
 const statusBadgeStyle = (status) => {
-    const colors = { draft: '#6c757d', sent: '#17a2b8', accepted: '#28a745', rejected: '#dc3545' };
+    const colors = { draft: '#6c757d', sent: '#17a2b8', accepted: '#28a745', rejected: '#dc3545' };       
     return { backgroundColor: colors[status] || '#6c757d', color: 'white', padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: 'black', textTransform: 'uppercase' };
 };
 
