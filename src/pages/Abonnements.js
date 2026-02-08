@@ -1,492 +1,273 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
+import { useBusinessUnit } from '../BusinessUnitContext';
+import { 
+    Calendar, Clock, CreditCard, RefreshCw, AlertTriangle, 
+    CheckCircle, List, User, FileText, ArrowRight, PlusCircle, 
+    MoreVertical, PauseCircle, PlayCircle, XCircle, Search
+} from 'lucide-react';
 
-const Abonnements = () => {
-    const [abonnements, setAbonnements] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [selectedAbonnement, setSelectedAbonnement] = useState(null);
-    const [filter, setFilter] = useState({ status: '' });
-    const [isGenerating, setIsGenerating] = useState(null); // To track loading state for each button
-
-    const fetchAbonnements = useCallback(async () => {
-        setLoading(true);
-        let query = supabase
-            .from('abonnements')
-            .select(`
-                *,
-                clients (first_name, last_name, email, phone),
-                entreprises (nom_entreprise, contact_name, contact_email, contact_phone)
-            `);
-
-        if (filter.status) {
-            query = query.eq('status', filter.status);
-        }
-
-        const { data, error } = await query.order('created_at', { ascending: false });
-
-        if (error) {
-            console.error('Erreur de chargement des abonnements:', error);
-            alert(`Une erreur est survenue lors du chargement des abonnements : ${error.message}`);
-        } else {
-            setAbonnements(data);
-        }
-        setLoading(false);
-    }, [filter]);
-
-    useEffect(() => {
-        fetchAbonnements();
-    }, [fetchAbonnements]);
-
-    const handleFilterChange = (e) => {
-        const { name, value } = e.target;
-        setFilter(prev => ({ ...prev, [name]: value }));
-    };
-
-    const handleUpdateAbonnement = async (abonnementId, updates) => {
-        const { error } = await supabase
-            .from('abonnements')
-            .update({ ...updates, updated_at: new Date().toISOString() })
-            .eq('id', abonnementId);
-
-        if (error) {
-            alert(`Erreur lors de la mise à jour : ${error.message}`);
-        } else {
-            alert(`Abonnement ${abonnementId.substring(0, 8)} mis à jour.`);
-            fetchAbonnements(); // Rafraîchir la liste
-            setSelectedAbonnement(null); // Fermer les détails si ouverts
-        }
-    };
-
-        const handleGenerateInvoice = async (abonnementId) => {
-            // Find the abonnement to check monthly_price
-            const abonnement = abonnements.find(a => a.id === abonnementId);
-            
-            if (!abonnement) {
-                alert("Abonnement introuvable.");
-                return;
-            }
-    
-            if (!abonnement.monthly_price || abonnement.monthly_price <= 0) {
-                alert("Veuillez d'abord définir un prix mensuel pour cet abonnement avant de générer une facture.");
-                setSelectedAbonnement(abonnement); // Open the detail modal
-                return;
-            }
-    
-            if (!window.confirm(`Confirmer la génération d'une facture de ${abonnement.monthly_price}€ pour cet abonnement ?`)) return;
-    
-            setIsGenerating(abonnementId);
-            try {
-                const { data: { session } } = await supabase.auth.getSession();
-                if (!session) throw new Error("Utilisateur non authentifié.");
-    
-                // Use Supabase Edge Function URL
-                const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/generate-recurring-invoice`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${session.access_token}`,
-                    },
-                    body: JSON.stringify({ abonnementId }),
-                });
-    
-                // Check if response is ok before parsing JSON
-                if (!response.ok) {
-                    const contentType = response.headers.get('content-type');
-                    let errorMessage = 'Erreur inconnue lors de la génération de la facture.';
-                    
-                    if (contentType && contentType.includes('application/json')) {
-                        const result = await response.json();
-                        errorMessage = result.details || result.error || errorMessage;
-                    } else {
-                        const text = await response.text();
-                        errorMessage = text || `Erreur HTTP ${response.status}`;
-                    }
-                    
-                    throw new Error(errorMessage);
-                }
-    
-                const result = await response.json();
-                alert(result.message || 'Facture générée avec succès !');
-                fetchAbonnements(); // Refresh data to show new invoice date etc.
-    
-            } catch (error) {
-                console.error('Error generating recurring invoice:', error);
-                alert(`Erreur: ${error.message}`);
-            } finally {
-                setIsGenerating(null);
-            }
-        };
-
-    const renderCustomerName = (abonnement) => {
-        if (abonnement.clients) {
-            return `${abonnement.clients.last_name}${abonnement.clients.first_name ? ` ${abonnement.clients.first_name}` : ''}`;
-        } else if (abonnement.entreprises) {
-            return abonnement.entreprises.nom_entreprise;
-        }
-        return 'N/A';
-    };
-
-    if (loading) {
-        return <div>Chargement des abonnements...</div>;
+const getFrenchStatus = (status) => {
+    switch (status) {
+        case 'actif': return 'Actif';
+        case 'en_pause': return 'En pause';
+        case 'termine': return 'Terminé';
+        case 'en_attente': return 'En attente';
+        default: return status;
     }
+};
 
+const statusBadgeStyle = (status) => {
+    const colors = { 
+        'actif': { bg: 'rgba(40, 167, 69, 0.1)', text: '#28a745' }, 
+        'en_pause': { bg: 'rgba(212, 175, 55, 0.1)', text: '#d4af37' }, 
+        'termine': { bg: 'rgba(108, 117, 125, 0.1)', text: '#6c757d' },
+        'en_attente': { bg: 'rgba(59, 130, 246, 0.1)', text: '#3b82f6' }
+    };
+    const style = colors[status] || { bg: '#f3f4f6', text: '#6b7280' };
+    return { 
+        backgroundColor: style.bg, 
+        color: style.text, 
+        padding: '4px 12px', 
+        borderRadius: '20px', 
+        fontSize: '11px', 
+        fontWeight: 'bold', 
+        textTransform: 'uppercase' 
+    };
+};
+
+const SubscriptionCard = ({ sub, onSelect, onInvoice, isGenerating, renderCustomerName, themeColor }) => {
+    const hasPrice = sub.monthly_price && sub.monthly_price > 0;
+    
     return (
-        <div style={containerStyle}>
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold text-gray-800 mb-2">Gestion des Abonnements</h1>
-                <p className="text-gray-600">Liste et gestion des abonnements actifs, en pause ou terminés.</p>
+        <div className={`bg-white rounded-3xl shadow-sm border-t-4 p-6 mb-4 hover:shadow-md transition-all ${themeColor === 'blue' ? 'border-blue-500' : 'border-amber-500'}`}>
+            <div className="flex justify-between items-start mb-4">
+                <div className="flex items-center">
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mr-4 ${themeColor === 'blue' ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600'}`}>
+                        <RefreshCw size={24} />
+                    </div>
+                    <div>
+                        <h3 className="font-bold text-gray-800 text-lg">{renderCustomerName(sub)}</h3>
+                        <p className="text-xs text-gray-400 font-medium">Formule : {sub.formule_base || 'Standard'}</p>
+                    </div>
+                </div>
+                <span style={statusBadgeStyle(sub.status)}>{getFrenchStatus(sub.status)}</span>
             </div>
 
-            <div style={filterContainerStyle}>
-                <select
-                    name="status"
-                    value={filter.status}
-                    onChange={handleFilterChange}
-                    style={filterInputStyle}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="bg-gray-50 p-3 rounded-2xl">
+                    <p className="text-gray-400 text-[10px] uppercase font-bold mb-1">Mensualité</p>
+                    {hasPrice ? (
+                        <p className="text-gray-800 font-black text-xl">{sub.monthly_price.toFixed(2)} €</p>
+                    ) : (
+                        <p className="text-red-500 font-bold text-xs flex items-center gap-1"><AlertTriangle size={12}/> À définir</p>
+                    )}
+                </div>
+                <div className="bg-gray-50 p-3 rounded-2xl">
+                    <p className="text-gray-400 text-[10px] uppercase font-bold mb-1">Prochain RDV</p>
+                    <p className="text-gray-700 font-bold text-sm flex items-center gap-1.5">
+                        <Calendar size={12} /> {sub.next_billing_date ? new Date(sub.next_billing_date).toLocaleDateString('fr-FR') : 'Non planifié'}
+                    </p>
+                </div>
+            </div>
+
+            <div className="flex gap-2">
+                <button
+                    onClick={() => onSelect(sub)}
+                    className="flex-1 bg-gray-100 text-gray-600 font-bold py-3 rounded-xl hover:bg-gray-200 transition-all text-sm"
                 >
-                    <option value="">Tous les statuts</option>
-                    <option value="actif">Actif</option>
-                    <option value="en_pause">En pause</option>
-                    <option value="termine">Terminé</option>
-                </select>
+                    Détails
+                </button>
+                {sub.status === 'actif' && (
+                    <button
+                        onClick={() => onInvoice(sub.id)}
+                        disabled={isGenerating === sub.id}
+                        className={`flex-[2] text-white font-bold py-3 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 ${!hasPrice ? 'bg-red-400 cursor-not-allowed' : (themeColor === 'blue' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-green-600 hover:bg-green-700')}`}
+                    >
+                        {isGenerating === sub.id ? <RefreshCw size={16} className="animate-spin" /> : <CreditCard size={16} />}
+                        {hasPrice ? `Facturer ${sub.monthly_price}€` : 'Prix requis'}
+                    </button>
+                )}
             </div>
-
-            <div style={tableContainerStyle}>
-                <table style={tableStyle}>
-                    <thead>
-                        <tr>
-                            <th style={thStyle}>ID Abonnement</th>
-                            <th style={thStyle}>Client / Entreprise</th>
-                            <th style={thStyle}>Formule de base</th>
-                            <th style={thStyle}>Statut</th>
-                            <th style={thStyle}>Date de début</th>
-                            <th style={thStyle}>Facturation</th>
-                            <th style={thStyle}>Actions</th>
-                        </tr>
-                    </thead>
-                                        <tbody>
-                                            {abonnements.map(abonnement => {
-                                                const hasPrice = abonnement.monthly_price && abonnement.monthly_price > 0;
-                                                return (
-                                                    <tr key={abonnement.id}>
-                                                        <td style={tdStyle}>{abonnement.id.substring(0, 8)}</td>
-                                                        <td style={tdStyle}>{renderCustomerName(abonnement)}</td>
-                                                        <td style={tdStyle}>
-                                                            {abonnement.formule_base}
-                                                            {hasPrice ? (
-                                                                <span style={{display: 'block', fontSize: '12px', color: '#28a745', fontWeight: 'bold'}}>{abonnement.monthly_price} €/mois</span>
-                                                            ) : (
-                                                                <span style={{display: 'block', fontSize: '12px', color: '#dc3545'}}>⚠️ Prix non défini</span>
-                                                            )}
-                                                        </td>
-                                                        <td style={tdStyle}><span style={statusBadgeStyle(abonnement.status)}>{abonnement.status}</span></td>
-                                                        <td style={tdStyle}>{abonnement.start_date ? new Date(abonnement.start_date + 'T00:00').toLocaleDateString('fr-FR') : 'N/A'}</td>
-                                                        <td style={tdStyle}>
-                                                            {abonnement.status === 'actif' && (
-                                                                <button 
-                                                                    onClick={() => handleGenerateInvoice(abonnement.id)} 
-                                                                    style={{...detailsButtonStyle, backgroundColor: hasPrice ? '#28a745' : '#ffc107', color: hasPrice ? 'white' : 'black', opacity: isGenerating === abonnement.id ? 0.7 : 1}}
-                                                                    disabled={isGenerating === abonnement.id}
-                                                                >
-                                                                    {isGenerating === abonnement.id ? 'Génération...' : (hasPrice ? `Facturer ${abonnement.monthly_price}€` : '⚠️ Définir prix')}
-                                                                </button>
-                                                            )}
-                                                        </td>
-                                                        <td style={tdStyle}>
-                                                            <button onClick={() => setSelectedAbonnement(abonnement)} style={detailsButtonStyle}>Voir Détails</button>
-                                                        </td>
-                                                    </tr>
-                                                )
-                                            })}
-                                        </tbody>                </table>
-            </div>
-
-            {selectedAbonnement && (
-                <AbonnementDetailModal
-                    abonnement={selectedAbonnement}
-                    onClose={() => setSelectedAbonnement(null)}
-                    onUpdate={handleUpdateAbonnement}
-                />
-            )}
         </div>
     );
 };
 
-// --- Abonnement Detail Modal Component ---
-const AbonnementDetailModal = ({ abonnement, onClose, onUpdate }) => {
-    const [editedAbonnement, setEditedAbonnement] = useState(abonnement);
+const Abonnements = () => {
+    const { businessUnit } = useBusinessUnit();
+    const [abonnements, setAbonnements] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [activeTab, setActiveTab] = useState('actif'); // 'actif', 'attention', 'all'
+    const [selectedSub, setSelectedSub] = useState(null);
+    const [isGenerating, setIsGenerating] = useState(null);
 
-    const handleFieldChange = (e) => {
-        const { name, value } = e.target;
-        setEditedAbonnement(prev => ({ ...prev, [name]: value }));
+    const themeColor = businessUnit === 'courtage' ? 'blue' : 'amber';
+
+    const fetchAbonnements = useCallback(async () => {
+        setLoading(true);
+        let query = supabase.from('abonnements').select(`
+            *,
+            clients (first_name, last_name, email, phone),
+            entreprises (nom_entreprise, contact_name, contact_email, contact_phone)
+        `).eq('business_unit', businessUnit);
+
+        if (activeTab === 'actif') query = query.eq('status', 'actif');
+        else if (activeTab === 'attention') query = query.or('monthly_price.is.null,monthly_price.lte.0');
+
+        const { data, error } = await query.order('created_at', { ascending: false });
+        if (!error) setAbonnements(data || []);
+        setLoading(false);
+    }, [businessUnit, activeTab]);
+
+    useEffect(() => { fetchAbonnements(); }, [fetchAbonnements]);
+
+    const handleGenerateInvoice = async (id) => {
+        const sub = abonnements.find(a => a.id === id);
+        if (!sub?.monthly_price) return alert("Veuillez définir un prix.");
+        if (!window.confirm(`Générer la facture mensuelle ?`)) return;
+
+        setIsGenerating(id);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/generate-recurring-invoice`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+                body: JSON.stringify({ abonnementId: id }),
+            });
+            if (!response.ok) throw new Error("Erreur serveur");
+            alert('Facture générée !');
+            fetchAbonnements();
+        } catch (e) { alert(e.message); }
+        finally { setIsGenerating(null); }
     };
 
-        const handleSave = () => {
-            const updates = {
-                notes: editedAbonnement.notes,
-                start_date: editedAbonnement.start_date,
-                end_date: editedAbonnement.end_date,
-                monthly_price: editedAbonnement.monthly_price,
-                next_billing_date: editedAbonnement.next_billing_date,
-            };
-            onUpdate(abonnement.id, updates);
-        };
-    
-        const handleUpdateStatus = (newStatus) => {
-            onUpdate(abonnement.id, { status: newStatus });
-        };
-    
-        const renderCustomerInfo = () => {
-            if (abonnement.clients) {
-                return (
-                    <>
-                        <p><strong>Nom:</strong> {abonnement.clients.last_name} {abonnement.clients.first_name}</p>
-                        <p><strong>Email:</strong> {abonnement.clients.email}</p>
-                        <p><strong>Téléphone:</strong> {abonnement.clients.phone}</p>
-                    </>
-                );
-            } else if (abonnement.entreprises) {
-                return (
-                    <>
-                        <p><strong>Nom de l'entreprise:</strong> {abonnement.entreprises.nom_entreprise}</p>
-                        <p><strong>Contact:</strong> {abonnement.entreprises.contact_name}</p>
-                        <p><strong>Email du contact:</strong> {abonnement.entreprises.contact_email}</p>
-                        <p><strong>Téléphone du contact:</strong> {abonnement.entreprises.contact_phone}</p>
-                    </>
-                );
-            }
-            return <p>Informations client non disponibles.</p>;
-        };
-    
-        return (
-            <div style={modalOverlayStyle}>
-                <div style={modalContentStyle}>
-                    <button onClick={onClose} style={closeButtonStyle}>&times;</button>
-                    <h2 style={{ borderBottom: '2px solid #eee', paddingBottom: '10px', marginBottom: '20px' }}>Détails Abonnement #{abonnement.id.substring(0, 8)}</h2>
-    
-                    <div style={detailSectionStyle}>
-                        <h3 style={detailTitleStyle}>Client / Entreprise</h3>
-                        {renderCustomerInfo()}
+    const handleUpdateSub = async (id, updates) => {
+        const { error } = await supabase.from('abonnements').update(updates).eq('id', id);
+        if (!error) {
+            alert('Mise à jour réussie');
+            fetchAbonnements();
+            setSelectedSub(null);
+        } else alert(error.message);
+    };
+
+    const renderCustomerName = (sub) => {
+        if (sub.clients) return `${sub.clients.last_name} ${sub.clients.first_name || ''}`.trim();
+        if (sub.entreprises) return sub.entreprises.nom_entreprise;
+        return 'N/A';
+    };
+
+    const filteredSubs = abonnements.filter(s => 
+        renderCustomerName(s).toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (s.id.substring(0,8).includes(searchTerm.toLowerCase()))
+    );
+
+    return (
+        <div className="p-6 bg-gray-50 min-h-screen">
+            <div className="max-w-7xl mx-auto">
+                <div className="mb-8">
+                    <h1 className="text-3xl font-bold text-gray-800 mb-2">Gestion des Abonnements</h1>
+                    <p className="text-gray-600">Pilotez vos contrats récurrents pour l'unité {businessUnit}.</p>
+                </div>
+
+                <div className="flex space-x-1 bg-gray-200 p-1 rounded-xl mb-8 max-w-lg">
+                    <button onClick={() => setActiveTab('actif')} className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'actif' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Actifs</button>
+                    <button onClick={() => setActiveTab('attention')} className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'attention' ? 'bg-white text-red-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>À définir</button>
+                    <button onClick={() => setActiveTab('all')} className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'all' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Tous</button>
+                </div>
+
+                <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-8 flex items-center">
+                    <Search size={18} className="text-gray-400 mr-3 ml-2" />
+                    <input type="text" placeholder="Rechercher un client..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="flex-1 py-2 outline-none text-gray-700" />
+                </div>
+
+                {loading ? (
+                    <div className="flex justify-center py-20"><RefreshCw className="animate-spin text-amber-500" size={48} /></div>
+                ) : filteredSubs.length === 0 ? (
+                    <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200">
+                        <Clock size={48} className="mx-auto text-gray-200 mb-4"/>
+                        <p className="text-gray-500">Aucun abonnement trouvé.</p>
                     </div>
-    
-                    <div style={detailSectionStyle}>
-                        <h3 style={detailTitleStyle}>Informations de l'Abonnement</h3>
-                        <p><strong>Formule:</strong> {abonnement.formule_base}</p>
-                        <p><strong>Statut:</strong> <span style={statusBadgeStyle(abonnement.status)}>{abonnement.status}</span></p>
-                        {abonnement.last_invoice_date && <p><strong>Dernière facture:</strong> {new Date(abonnement.last_invoice_date).toLocaleDateString('fr-FR')}</p>}
-    
-                        <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px'}}>
-                            <div style={formGroupStyle}>
-                                <label style={labelStyle}>
-                                    Prix Mensuel (€) 
-                                    {!editedAbonnement.monthly_price && <span style={{color: '#dc3545'}}> ⚠️ Requis</span>}
-                                </label>
-                                <input 
-                                    type="number" 
-                                    name="monthly_price" 
-                                    value={editedAbonnement.monthly_price || ''} 
-                                    onChange={handleFieldChange} 
-                                    style={{...inputStyle, border: !editedAbonnement.monthly_price ? '2px solid #dc3545' : '1px solid #ddd'}}
-                                    placeholder="ex: 180"
-                                    min="0"
-                                    step="1"
-                                />
-                            </div>
-                            <div style={formGroupStyle}>
-                                <label style={labelStyle}>Prochaine facturation:</label>
-                                <input type="date" name="next_billing_date" value={editedAbonnement.next_billing_date || ''} onChange={handleFieldChange} style={inputStyle} />
-                            </div>
-                            <div style={formGroupStyle}>
-                                <label style={labelStyle}>Date de début:</label>
-                                <input type="date" name="start_date" value={editedAbonnement.start_date || ''} onChange={handleFieldChange} style={inputStyle} />
-                            </div>
-                            <div style={formGroupStyle}>
-                                <label style={labelStyle}>Date de fin:</label>
-                                <input type="date" name="end_date" value={editedAbonnement.end_date || ''} onChange={handleFieldChange} style={inputStyle} />
-                            </div>
-                        </div>
-                        <div style={formGroupStyle}>
-                            <label style={labelStyle}>Notes:</label>
-                            <textarea name="notes" value={editedAbonnement.notes || ''} onChange={handleFieldChange} style={{...inputStyle, minHeight: '80px'}}></textarea>
-                        </div>
-                        <button onClick={handleSave} style={{...actionButtonStyle, backgroundColor: '#007bff', marginTop: '10px' }}>Enregistrer les modifications</button>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in duration-700">
+                        {filteredSubs.map(sub => (
+                            <SubscriptionCard 
+                                key={sub.id} sub={sub} 
+                                onSelect={setSelectedSub} 
+                                onInvoice={handleGenerateInvoice}
+                                isGenerating={isGenerating}
+                                renderCustomerName={renderCustomerName}
+                                themeColor={themeColor}
+                            />
+                        ))}
                     </div>
-                    <div style={modalActionsStyle}>
-                    <h3 style={detailTitleStyle}>Changer le statut</h3>
-                    {abonnement.status === 'actif' && (
-                        <button onClick={() => handleUpdateStatus('en_pause')} style={{ ...actionButtonStyle, backgroundColor: '#ffc107' }}>Mettre en pause</button>
-                    )}
-                    {abonnement.status === 'en_pause' && (
-                        <button onClick={() => handleUpdateStatus('actif')} style={{ ...actionButtonStyle, backgroundColor: '#28a745' }}>Réactiver</button>
-                    )}
-                    {['en_attente', 'actif', 'en_pause'].includes(abonnement.status) && (
-                        <button onClick={() => handleUpdateStatus('termine')} style={{ ...actionButtonStyle, backgroundColor: '#dc3545' }}>Terminer</button>
-                    )}
+                )}
+            </div>
+
+            {selectedSub && <SubDetailModal sub={selectedSub} onClose={() => setSelectedSub(null)} onUpdate={handleUpdateSub} themeColor={themeColor} />}
+        </div>
+    );
+};
+
+const SubDetailModal = ({ sub, onClose, onUpdate, themeColor }) => {
+    const [form, setForm] = useState({...sub});
+
+    return (
+        <div className="fixed inset-0 bg-black/70 z-[1000] flex items-center justify-center p-4 backdrop-blur-sm">
+            <div className="bg-white rounded-[2.5rem] w-full max-w-2xl max-h-[90vh] overflow-y-auto relative p-10 shadow-2xl animate-in zoom-in duration-300">
+                <button onClick={onClose} className="absolute top-8 right-8 text-gray-400 hover:text-gray-600 transition-colors text-3xl font-light">&times;</button>
+                
+                <div className="mb-10">
+                    <span style={statusBadgeStyle(sub.status)} className="mb-3 inline-block">{getFrenchStatus(sub.status)}</span>
+                    <h2 className="text-3xl font-black text-gray-800">Contrat #{sub.id.substring(0, 8)}</h2>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+                    <div className="space-y-4">
+                        <h3 className={`text-xs font-black uppercase tracking-widest opacity-40 ${themeColor === 'blue' ? 'text-blue-600' : 'text-amber-600'}`}>Client</h3>
+                        <div className="p-5 bg-gray-50 rounded-3xl border border-gray-100">
+                            <p className="font-bold text-gray-900 text-lg">{sub.clients ? `${sub.clients.first_name} ${sub.clients.last_name}` : sub.entreprises?.nom_entreprise}</p>
+                            <p className="text-gray-500 text-sm mt-1">{sub.clients?.email || sub.entreprises?.contact_email}</p>
+                        </div>
+                    </div>
+                    <div className="space-y-4">
+                        <h3 className={`text-xs font-black uppercase tracking-widest opacity-40 ${themeColor === 'blue' ? 'text-blue-600' : 'text-amber-600'}`}>Paramètres Financiers</h3>
+                        <div className="space-y-3">
+                            <label className="block">
+                                <span className="text-xs font-bold text-gray-400 ml-2">PRIX MENSUEL (€)</span>
+                                <input type="number" value={form.monthly_price || ''} onChange={e => setForm({...form, monthly_price: parseFloat(e.target.value)})} className="w-full mt-1 p-3 bg-gray-50 border-0 rounded-2xl font-black text-lg focus:ring-2 focus:ring-amber-500" />
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mb-10">
+                    <label>
+                        <span className="text-xs font-bold text-gray-400 ml-2">DATE DÉBUT</span>
+                        <input type="date" value={form.start_date || ''} onChange={e => setForm({...form, start_date: e.target.value})} className="w-full mt-1 p-3 bg-gray-50 border-0 rounded-2xl" />
+                    </label>
+                    <label>
+                        <span className="text-xs font-bold text-gray-400 ml-2">PROCHAINE FACTURE</span>
+                        <input type="date" value={form.next_billing_date || ''} onChange={e => setForm({...form, next_billing_date: e.target.value})} className="w-full mt-1 p-3 bg-gray-50 border-0 rounded-2xl" />
+                    </label>
+                </div>
+
+                <div className="mb-10">
+                    <label className="text-xs font-bold text-gray-400 ml-2">NOTES INTERNES</label>
+                    <textarea value={form.notes || ''} onChange={e => setForm({...form, notes: e.target.value})} className="w-full mt-1 p-4 bg-gray-50 border-0 rounded-3xl h-24" placeholder="Détails de la prestation récurrente..." />
+                </div>
+
+                <div className="flex flex-wrap gap-3 justify-end border-t pt-8">
+                    <div className="flex-1 flex gap-2">
+                        {sub.status === 'actif' && <button onClick={() => onUpdate(sub.id, {status: 'en_pause'})} className="p-3 rounded-xl bg-amber-50 text-amber-600 hover:bg-amber-100 transition-all"><PauseCircle /></button>}
+                        {sub.status === 'en_pause' && <button onClick={() => onUpdate(sub.id, {status: 'actif'})} className="p-3 rounded-xl bg-green-50 text-green-600 hover:bg-green-100 transition-all"><PlayCircle /></button>}
+                        <button onClick={() => onUpdate(sub.id, {status: 'termine'})} className="p-3 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition-all"><XCircle /></button>
+                    </div>
+                    <button onClick={() => onUpdate(sub.id, form)} className="px-8 py-4 bg-gray-800 text-white rounded-2xl font-black shadow-lg hover:bg-black transition-all active:scale-95">Enregistrer les modifications</button>
                 </div>
             </div>
         </div>
     );
-};
-
-
-// --- Styles ---
-const containerStyle = {
-    padding: '20px',
-    maxWidth: '1200px',
-    margin: '0 auto',
-};
-
-const filterContainerStyle = {
-    display: 'flex',
-    gap: '1rem',
-    marginBottom: '2rem',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-};
-
-const filterInputStyle = {
-    padding: '8px',
-    borderRadius: '5px',
-    border: '1px solid #ccc',
-    flex: '1 1 auto',
-    minWidth: '150px',
-};
-
-const tableContainerStyle = {
-    marginTop: '2rem',
-    boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-    borderRadius: '8px',
-    overflowX: 'auto',
-    background: 'white'
-};
-
-const tableStyle = {
-    width: '100%',
-    borderCollapse: 'collapse',
-};
-
-const thStyle = {
-    background: '#f4f7fa',
-    padding: '12px 15px',
-    textAlign: 'left',
-    fontWeight: 'bold',
-    color: '#333',
-    borderBottom: '2px solid #ddd',
-    whiteSpace: 'nowrap',
-};
-
-const tdStyle = {
-    padding: '12px 15px',
-    borderBottom: '1px solid #eee',
-    color: '#555',
-    whiteSpace: 'nowrap',
-};
-
-const detailsButtonStyle = {
-    padding: '8px 12px',
-    background: '#d4af37',
-    color: 'white',
-    border: 'none',
-    borderRadius: '5px',
-    cursor: 'pointer',
-    marginRight: '5px',
-};
-
-const actionButtonStyle = {
-    padding: '10px 15px',
-    border: 'none',
-    borderRadius: '5px',
-    cursor: 'pointer',
-    color: 'white',
-    fontWeight: 'bold',
-};
-
-const statusBadgeStyle = (status) => {
-    const colors = {
-        'en_attente': '#007bff',
-        'actif': '#28a745',
-        'en_pause': '#ffc107',
-        'termine': '#6c757d',
-    };
-    return {
-        padding: '4px 8px',
-        borderRadius: '12px',
-        color: 'white',
-        fontWeight: 'bold',
-        fontSize: '12px',
-        backgroundColor: colors[status] || '#6c757d'
-    };
-};
-
-const modalOverlayStyle = { 
-    position: 'fixed', 
-    top: 0, 
-    left: 0, 
-    right: 0, 
-    bottom: 0, 
-    backgroundColor: 'rgba(0, 0, 0, 0.6)', 
-    display: 'flex', 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    zIndex: 1000 
-};
-const modalContentStyle = { 
-    background: 'white', 
-    padding: '30px', 
-    borderRadius: '8px', 
-    width: '90%', 
-    maxWidth: '700px', 
-    maxHeight: '90vh', 
-    overflowY: 'auto', 
-    position: 'relative',
-    boxSizing: 'border-box',
-};
-const closeButtonStyle = { 
-    position: 'absolute', 
-    top: '15px', 
-    right: '15px', 
-    background: 'transparent', 
-    border: 'none', 
-    fontSize: '24px', 
-    cursor: 'pointer' 
-};
-const detailSectionStyle = { 
-    marginBottom: '20px', 
-    paddingBottom: '20px', 
-    borderBottom: '1px solid #f0f0f0' 
-};
-const detailTitleStyle = { 
-    fontSize: '18px', 
-    color: '#d4af37', 
-    marginBottom: '10px' 
-};
-
-const modalActionsStyle = {
-    marginTop: '30px',
-    display: 'flex',
-    justifyContent: 'flex-end',
-    gap: '10px',
-    flexWrap: 'wrap',
-};
-
-const formGroupStyle = {
-    display: 'flex',
-    flexDirection: 'column',
-    marginBottom: '15px',
-};
-
-const labelStyle = {
-    fontWeight: 'bold',
-    marginBottom: '5px',
-    color: '#333',
-};
-
-const inputStyle = {
-    padding: '10px',
-    borderRadius: '4px',
-    border: '1px solid #ddd',
-    boxSizing: 'border-box',
-    width: '100%',
 };
 
 export default Abonnements;

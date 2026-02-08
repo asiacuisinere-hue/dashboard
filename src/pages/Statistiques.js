@@ -1,29 +1,38 @@
-import React, { useState, useEffect } from 'react';
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { TrendingUp, TrendingDown, Users, ShoppingCart, DollarSign, Package, AlertCircle, Download } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { 
+    BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, 
+    CartesianGrid, Tooltip, Legend, ResponsiveContainer 
+} from 'recharts';
+import { 
+    TrendingUp, TrendingDown, Users, ShoppingCart, DollarSign, 
+    Package, AlertCircle, Download, Calendar, PieChart as PieIcon, 
+    BarChart3, Activity, ArrowRight, Filter
+} from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useBusinessUnit } from '../BusinessUnitContext';
 
 const StatCard = ({ title, value, change, icon: Icon, color, isLoading, themeColor }) => (
-  <div className={`bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow border-t-4 ${themeColor === 'courtage' ? 'border-blue-500' : 'border-amber-500'}`}>
-    <div className="flex items-center justify-between mb-2">
-      <span className="text-gray-600 text-sm font-medium">{title}</span>
-      <Icon className={`w-5 h-5 ${color}`} />
+  <div className={`bg-white rounded-[2rem] shadow-sm p-8 hover:shadow-md transition-all border-t-4 border-transparent hover:border-${themeColor}-500 group`}>
+    <div className="flex items-center justify-between mb-4">
+      <div className={`p-3 rounded-2xl bg-gray-50 group-hover:bg-${themeColor}-50 transition-colors`}>
+        <Icon className={`w-6 h-6 ${color}`} />
+      </div>
+      {change !== null && !isLoading && (
+        <div className={`flex items-center px-2 py-1 rounded-full text-xs font-bold ${parseFloat(change) >= 0 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+          {parseFloat(change) >= 0 ? <TrendingUp size={12} className="mr-1" /> : <TrendingDown size={12} className="mr-1" />}
+          {Math.abs(parseFloat(change)).toFixed(1)}%
+        </div>
+      )}
     </div>
     {isLoading ? (
       <div className="space-y-2">
-        <div className="h-8 w-3/4 bg-gray-200 animate-pulse rounded-md"></div>
-        <div className="h-4 w-1/2 bg-gray-200 animate-pulse rounded-md"></div>
+        <div className="h-8 w-3/4 bg-gray-100 animate-pulse rounded-md"></div>
+        <div className="h-4 w-1/2 bg-gray-50 animate-pulse rounded-md"></div>
       </div>
     ) : (
       <>
-        <div className="text-3xl font-bold text-gray-800 mb-1">{value}</div>
-        {change !== null && change !== undefined && (
-          <div className={`flex items-center text-sm ${parseFloat(change) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {parseFloat(change) >= 0 ? <TrendingUp className="w-4 h-4 mr-1" /> : <TrendingDown className="w-4 h-4 mr-1" />}
-            <span>{Math.abs(parseFloat(change)).toFixed(1)}% vs période précédente</span>
-          </div>
-        )}
+        <div className="text-3xl font-black text-gray-800 mb-1">{value}</div>
+        <span className="text-gray-400 text-xs font-bold uppercase tracking-widest">{title}</span>
       </>
     )}
   </div>
@@ -32,26 +41,18 @@ const StatCard = ({ title, value, change, icon: Icon, color, isLoading, themeCol
 const Statistiques = () => {
     const { businessUnit } = useBusinessUnit();
     const [period, setPeriod] = useState('last30days');
-    
-    // Theme Colors based on Unit
+    const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'sales', 'expenses', 'export'
+
     const themeColor = businessUnit === 'courtage' ? 'blue' : 'amber';
     const mainHexColor = businessUnit === 'courtage' ? '#3b82f6' : '#d4af37';
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    
+
     const [kpis, setKpis] = useState({
-        revenue: '0.00',
-        revenueChange: 0,
-        totalExpenses: '0.00',
-        expensesChange: 0,
-        totalGrossMargin: '0.00',
-        grossMarginChange: 0,
-        orders: 0,
-        ordersChange: 0,
-        newClients: 0,
-        clientsChange: 0,
-        avgOrderValue: '0.00',
+        revenue: '0.00', revenueChange: 0, totalExpenses: '0.00', expensesChange: 0,
+        totalGrossMargin: '0.00', grossMarginChange: 0, orders: 0, ordersChange: 0,
+        newClients: 0, clientsChange: 0, avgOrderValue: '0.00',
     });
 
     const [revenueData, setRevenueData] = useState([]);
@@ -61,507 +62,274 @@ const Statistiques = () => {
     const [expenseDistributionData, setExpenseDistributionData] = useState([]);
     const [monthlyPerformanceData, setMonthlyPerformanceData] = useState([]);
     const [eventsData, setEventsData] = useState([]);
-    const [exportStartDate, setExportStartDate] = useState('');
-    const [exportEndDate, setExportEndDate] = useState('');
+    const [exportDates, setExportDates] = useState({ start: '', end: '' });
     const [isExporting, setIsExporting] = useState(false);
 
+    const fetchKpis = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) throw new Error("Non authentifié");
 
-    useEffect(() => {
-        const fetchKpis = async () => {
-            setLoading(true);
-            setError(null);
-            
-            // Reset KPIs to zero before fetching to avoid showing data from previous unit
+            const response = await fetch(
+                `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/get-kpis?period=${period}&businessUnit=${businessUnit}`,
+                { headers: { 'Authorization': `Bearer ${session.access_token}` } }
+            );
+
+            if (!response.ok) throw new Error("Erreur serveur");
+            const data = await response.json();
+
             setKpis({
-                revenue: '0.00', revenueChange: 0, totalExpenses: '0.00', expensesChange: 0,
-                totalGrossMargin: '0.00', grossMarginChange: 0, orders: 0, ordersChange: 0, 
-                newClients: 0, clientsChange: 0, avgOrderValue: '0.00' 
+                revenue: data.revenue || '0.00', revenueChange: data.revenueChange || 0,
+                totalExpenses: data.totalExpenses || '0.00', expensesChange: data.expensesChange || 0,
+                totalGrossMargin: data.totalGrossMargin || '0.00', grossMarginChange: data.grossMarginChange || 0,
+                orders: data.totalOrders || 0, ordersChange: data.ordersChange || 0,
+                newClients: data.newClients || 0, clientsChange: data.clientsChange || 0,
+                avgOrderValue: data.avgOrderValue || '0.00',
             });
-            setRevenueData([]);
-            setOrderTypeData([]);
-            setWeekdayData([]);
-            setTopProducts([]);
-            setExpenseDistributionData([]);
-            setMonthlyPerformanceData([]);
-            setEventsData([]);
 
-            try {
-                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-                if (sessionError) throw new Error(`Erreur de session: ${sessionError.message}`);
-                if (!session) throw new Error("Utilisateur non authentifié.");
+            setRevenueData((data.revenueData || []).map(item => ({
+                name: new Date(item.day).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
+                ca: parseFloat(item.revenue),
+            })));
 
-                const response = await fetch(
-                    `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/get-kpis?period=${period}&businessUnit=${businessUnit}`,
-                    {
-                        method: 'GET',
-                        headers: {
-                            'Authorization': `Bearer ${session.access_token}`,
-                            'Content-Type': 'application/json',
-                        }
-                    }
-                );
+            const typeLabels = { 'COMMANDE_MENU': 'Menus', 'COMMANDE_SPECIALE': 'Spéciales', 'RESERVATION_SERVICE': 'Prestations', 'SOUSCRIPTION_ABONNEMENT': 'Abonnements' };
+            const colorMapping = { 'COMMANDE_MENU': '#3b82f6', 'COMMANDE_SPECIALE': '#10b981', 'RESERVATION_SERVICE': '#f59e0b', 'SOUSCRIPTION_ABONNEMENT': '#8b5cf6' };
+            
+            setOrderTypeData((data.orderTypeData || []).map(item => ({
+                name: typeLabels[item.type] || item.type,
+                value: Number(item.count),
+                color: colorMapping[item.type] || '#6b7280'
+            })));
 
-                if (!response.ok) {
-                    const contentType = response.headers.get('content-type');
-                    let errorMessage = `Erreur du serveur (status ${response.status})`;
-                    if (contentType && contentType.includes('application/json')) {
-                        const errorData = await response.json();
-                        errorMessage = errorData.details || errorData.error || errorMessage;
-                    } else {
-                        const errorText = await response.text();
-                        errorMessage = errorText || errorMessage;
-                    }
-                    throw new Error(errorMessage);
-                }
+            setWeekdayData((data.weekdayData || []).map(item => ({
+                day: item.day_name,
+                commandes: item.total_orders,
+                ca: parseFloat(item.total_revenue),
+            })));
 
-                const data = await response.json();
-                
-                setKpis({
-                    revenue: data.revenue || '0.00',
-                    revenueChange: data.revenueChange || 0,
-                    totalExpenses: data.totalExpenses || '0.00',
-                    expensesChange: data.expensesChange || 0,
-                    totalGrossMargin: data.totalGrossMargin || '0.00',
-                    grossMarginChange: data.grossMarginChange || 0,
-                    orders: data.totalOrders || 0,
-                    ordersChange: data.ordersChange || 0,
-                    newClients: data.newClients || 0,
-                    clientsChange: data.clientsChange || 0,
-                    avgOrderValue: data.avgOrderValue || '0.00',
-                });
+            setTopProducts((data.topProductsData || []).map(item => ({
+                name: item.item_name, orders: item.total_orders, revenue: parseFloat(item.total_revenue), avgRevenue: parseFloat(item.average_revenue),
+            })));
 
-                const formattedRevenueData = (data.revenueData || []).map(item => ({
-                    name: new Date(item.day).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
-                    ca: parseFloat(item.revenue),
-                }));
-                setRevenueData(formattedRevenueData);
-                
-                const typeLabels = {
-                    'COMMANDE_MENU': 'Menus',
-                    'COMMANDE_SPECIALE': 'Commandes Spéciales',
-                    'RESERVATION_SERVICE': 'Réservations',
-                    'SOUSCRIPTION_ABONNEMENT': 'Abonnements'
-                };
-                const colorMapping = {
-                    'COMMANDE_MENU': '#3b82f6',
-                    'COMMANDE_SPECIALE': '#10b981',
-                    'RESERVATION_SERVICE': '#f59e0b',
-                    'SOUSCRIPTION_ABONNEMENT': '#8b5cf6'
-                };
-                const formattedOrderTypeData = (data.orderTypeData || []).map(item => ({
-                    name: typeLabels[item.type] || item.type,
-                    value: Number(item.count),
-                    color: colorMapping[item.type] || '#6b7280'
-                }));
-                setOrderTypeData(formattedOrderTypeData);
+            setExpenseDistributionData((data.expenseDistributionData || []).map(item => ({
+                name: item.name, value: Number(item.value)
+            })));
 
-                const formattedWeekdayData = (data.weekdayData || []).map(item => ({
-                    day: item.day_name,
-                    commandes: item.total_orders,
-                    ca: parseFloat(item.total_revenue),
-                }));
-                setWeekdayData(formattedWeekdayData);
+            setMonthlyPerformanceData((data.monthlyPerformanceData || []).map(item => ({
+                name: new Date(item.month_start).toISOString().substring(0, 7),
+                commandes: item.total_orders, ca: parseFloat(item.total_revenue),
+            })));
 
-                const formattedTopProducts = (data.topProductsData || []).map(item => ({
-                    name: item.item_name,
-                    orders: item.total_orders,
-                    revenue: parseFloat(item.total_revenue),
-                    avgRevenue: parseFloat(item.average_revenue),
-                }));
-                setTopProducts(formattedTopProducts);
-
-                const formattedExpenseData = (data.expenseDistributionData || []).map(item => ({
-                    name: item.name,
-                    value: Number(item.value)
-                }));
-                setExpenseDistributionData(formattedExpenseData);
-
-                const formattedMonthlyPerformanceData = (data.monthlyPerformanceData || []).map(item => ({
-                    name: new Date(item.month_start).toISOString().substring(0, 7), // YYYY-MM for matching
-                    commandes: item.total_orders,
-                    ca: parseFloat(item.total_revenue),
-                }));
-                setMonthlyPerformanceData(formattedMonthlyPerformanceData);
-
-                setEventsData(data.eventsData || []);
-
-
-            } catch (err) {
-                console.error('Error fetching KPIs:', err);
-                setError(err.message);
-                // Reset all states on error
-                setKpis({ 
-                    revenue: '0.00', revenueChange: 0, totalExpenses: '0.00', expensesChange: 0,
-                    totalGrossMargin: '0.00', grossMarginChange: 0, orders: 0, ordersChange: 0, 
-                    newClients: 0, clientsChange: 0, avgOrderValue: '0.00' 
-                });
-                setRevenueData([]);
-                setOrderTypeData([]);
-                setWeekdayData([]);
-                setTopProducts([]);
-                setExpenseDistributionData([]);
-                setMonthlyPerformanceData([]);
-                setEventsData([]);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchKpis();
+            setEventsData(data.eventsData || []);
+        } catch (err) { setError(err.message); }
+        finally { setLoading(false); }
     }, [period, businessUnit]);
 
-    const CustomTooltip = ({ active, payload, label }) => {
-        if (active && payload && payload.length) {
-            // Find events for the current month (label is 'YYYY-MM')
-            const eventsInMonth = eventsData.filter(event => 
-                new Date(event.start_date).toISOString().substring(0, 7) === label
-            );
-
-            return (
-                <div className="bg-white p-3 border border-gray-300 rounded-lg shadow-lg">
-                    {/* Display the formatted month and year */}
-                    <p className="font-semibold text-gray-800 mb-2">{formatMonthTick(label)}</p>
-                    
-                    {/* Display the standard payload (CA, Commandes) */}
-                    {payload.map((entry, index) => (
-                        <p key={`payload-${index}`} style={{ color: entry.color }}>
-                            {entry.name}: {typeof entry.value === 'number' ? entry.value.toFixed(2) : entry.value}
-                            {entry.name.includes('CA') && '€'}
-                        </p>
-                    ))}
-                    
-                    {/* Display the events if any */}
-                    {eventsInMonth.length > 0 && (
-                        <div className="mt-2 pt-2 border-t border-gray-200">
-                            <h4 className="font-semibold text-sm text-red-600">Événements ce mois-ci :</h4>
-                            <ul className="list-disc list-inside pl-2">
-                                {eventsInMonth.map(event => (
-                                    <li key={event.id} className="text-sm text-gray-700 mt-1">
-                                        {event.event_name} 
-                                        <span className="text-xs text-gray-500 ml-2">
-                                            ({new Date(event.start_date).toLocaleDateString('fr-FR', {day: 'numeric', month: 'short'})}
-                                            {' - '}
-                                            {new Date(event.end_date).toLocaleDateString('fr-FR', {day: 'numeric', month: 'short'})})
-                                        </span>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    )}
-                </div>
-            );
-        }
-        return null;
-    };
-    
-    const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658'];
-
-    const formatMonthTick = (tickItem) => {
-        const date = new Date(tickItem + '-02'); // Add '-02' to avoid timezone issues with first of month
-        return date.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
-    };
-
-    // Custom dot renderer for the 'commandes' line
-    const CustomDot = ({ cx, cy, stroke, payload }) => {
-        // Check if any event's start date falls in the month of the current data point
-        const hasEvent = eventsData.some(event => 
-            new Date(event.start_date).toISOString().substring(0, 7) === payload.name
-        );
-
-        if (hasEvent) {
-            // If there is an event, return a larger, more prominent dot (a "marker")
-            return <circle cx={cx} cy={cy} r={7} fill="red" stroke="white" strokeWidth={2} />;
-        }
-
-        // For other data points, render the standard dot
-        return <circle cx={cx} cy={cy} r={3} fill={stroke} />;
-    };
+    useEffect(() => { fetchKpis(); }, [fetchKpis]);
 
     const handleExport = async () => {
-        if (!exportStartDate || !exportEndDate) {
-            alert("Veuillez sélectionner une date de début et une date de fin.");
-            return;
-        }
-
+        if (!exportDates.start || !exportDates.end) return alert("Dates requises.");
         setIsExporting(true);
-        setError(null); // Clear previous errors
-
         try {
-            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-            if (sessionError || !session) {
-                throw new Error("Utilisateur non authentifié.");
-            }
-
-            const url = `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/export-data?startDate=${exportStartDate}&endDate=${exportEndDate}`;
-            
-            const response = await fetch(url, {
-                headers: {
-                    'Authorization': `Bearer ${session.access_token}`,
-                }
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Erreur lors de l'export : ${errorText}`);
-            }
-
+            const { data: { session } } = await supabase.auth.getSession();
+            const url = `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/export-data?startDate=${exportDates.start}&endDate=${exportDates.end}&businessUnit=${businessUnit}`;
+            const response = await fetch(url, { headers: { 'Authorization': `Bearer ${session.access_token}` } });
+            if (!response.ok) throw new Error("Erreur export");
             const blob = await response.blob();
-            const downloadUrl = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = downloadUrl;
-            a.download = `export_asiacuisine_${exportStartDate}_au_${exportEndDate}.csv`;
-            document.body.appendChild(a);
+            a.href = window.URL.createObjectURL(blob);
+            a.download = `export_${businessUnit}_${exportDates.start}.csv`;
             a.click();
-            a.remove();
-            window.URL.revokeObjectURL(downloadUrl);
-
-        } catch (err) {
-            console.error('Export error:', err);
-            setError(err.message);
-        } finally {
-            setIsExporting(false);
-        }
+        } catch (err) { alert(err.message); }
+        finally { setIsExporting(false); }
     };
 
-    // --- DÉBUT DU CODE DE DÉBOGAGE ---
-    console.log("DEBUG: Axe X du graphique mensuel (format YYYY-MM):", monthlyPerformanceData.map(d => d.name));
-    console.log("DEBUG: Coordonnées X des événements (format YYYY-MM):", eventsData.map(event => new Date(event.start_date).toISOString().substring(0, 7)));
-    // --- FIN DU CODE DE DÉBOGAGE ---
+    const formatMonthTick = (tick) => {
+        const d = new Date(tick + '-02');
+        return d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+    };
 
     return (
         <div className="min-h-screen bg-gray-50 p-6">
             <div className="max-w-7xl mx-auto">
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-gray-800 mb-2">Statistiques</h1>
-                    <p className="text-gray-600">Aperçu complet de la performance de votre activité</p>
-                </div>
-
-                <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-                    <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap justify-between items-end gap-4 mb-8">
+                    <div>
+                        <h1 className="text-3xl font-black text-gray-800 mb-2">Centre Analytics</h1>
+                        <p className="text-gray-500 font-medium">Performance de l'unité {businessUnit === 'courtage' ? 'Luxilo' : 'Asiacuisine'}</p>
+                    </div>
+                    
+                    <div className="flex bg-gray-200 p-1 rounded-2xl">
                         {[
-                            { value: 'last7days', label: '7 derniers jours' },
-                            { value: 'last30days', label: '30 derniers jours' },
-                            { value: 'currentMonth', label: 'Ce mois' },
-                            { value: 'currentYear', label: 'Cette année' }
-                        ].map((p) => (
-                            <button
-                                key={p.value}
-                                onClick={() => setPeriod(p.value)}
-                                disabled={loading}
-                                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                                    period === p.value
-                                        ? `bg-${themeColor}-500 text-white shadow-md`
-                                        : `bg-white text-${themeColor}-500 border border-${themeColor}-500 hover:bg-${themeColor}-50`
-                                } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            >
-                                {p.label}
+                            { v: 'last7days', l: '7j' },
+                            { v: 'last30days', l: '30j' },
+                            { v: 'currentMonth', l: 'Mois' },
+                            { v: 'currentYear', l: 'Année' }
+                        ].map(p => (
+                            <button key={p.v} onClick={() => setPeriod(p.v)} className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${period === p.v ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                                {p.l}
                             </button>
                         ))}
                     </div>
                 </div>
 
-                <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Export de Données</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                        <div>
-                            <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-1">Date de début</label>
-                            <input 
-                                type="date" 
-                                id="startDate" 
-                                value={exportStartDate}
-                                onChange={(e) => setExportStartDate(e.target.value)}
-                                className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-${themeColor}-500 focus:ring-${themeColor}-500 sm:text-sm px-3 py-2 border`}
-                            />
-                        </div>
-                        <div>
-                            <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-1">Date de fin</label>
-                            <input 
-                                type="date" 
-                                id="endDate" 
-                                value={exportEndDate}
-                                onChange={(e) => setExportEndDate(e.target.value)}
-                                className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-${themeColor}-500 focus:ring-${themeColor}-500 sm:text-sm px-3 py-2 border`}
-                            />
-                        </div>
-                        <div>
-                            <button
-                                onClick={handleExport}
-                                disabled={isExporting || !exportStartDate || !exportEndDate}
-                                className="w-full flex items-center justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {isExporting ? (
-                                    'Export en cours...'
-                                ) : (
-                                    <><Download className="mr-2 h-4 w-4" /> Exporter les données (CSV)</>
-                                )}
-                            </button>
-                        </div>
-                    </div>
+                {/* --- NAVIGATION PAR ONGLETS --- */}
+                <div className="flex space-x-1 bg-gray-200 p-1 rounded-2xl mb-8 max-w-2xl">
+                    <button onClick={() => setActiveTab('overview')} className={`flex-1 flex items-center justify-center py-3 rounded-xl text-xs font-black transition-all ${activeTab === 'overview' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}><Activity size={14} className="mr-2"/> Vue d'ensemble</button>
+                    <button onClick={() => setActiveTab('sales')} className={`flex-1 flex items-center justify-center py-3 rounded-xl text-xs font-black transition-all ${activeTab === 'sales' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}><ShoppingCart size={14} className="mr-2"/> Ventes & Produits</button>
+                    <button onClick={() => setActiveTab('expenses')} className={`flex-1 flex items-center justify-center py-3 rounded-xl text-xs font-black transition-all ${activeTab === 'expenses' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}><TrendingDown size={14} className="mr-2"/> Dépenses</button>
+                    <button onClick={() => setActiveTab('export')} className={`flex-1 flex items-center justify-center py-3 rounded-xl text-xs font-black transition-all ${activeTab === 'export' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}><Download size={14} className="mr-2"/> Exports</button>
                 </div>
 
-                {error && <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-lg flex items-start"><AlertCircle className="w-5 h-5 text-red-500 mr-3 mt-0.5 flex-shrink-0" /><div><h3 className="text-red-800 font-semibold">Erreur de chargement</h3><p className="text-red-700 text-sm mt-1">{error}</p></div></div>}
+                {error && <div className="bg-red-50 text-red-600 p-4 rounded-3xl mb-8 flex items-center gap-3 border border-red-100 font-bold"><AlertCircle /> {error}</div>}
 
-                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-6 mb-6">
-                    <StatCard title="Chiffre d'affaires" value={`${parseFloat(kpis.revenue).toFixed(2)}€`} change={kpis.revenueChange} icon={DollarSign} color={`text-${themeColor}-600`} isLoading={loading} themeColor={businessUnit} />
-                    <StatCard title="Total Dépenses" value={`${parseFloat(kpis.totalExpenses).toFixed(2)}€`} change={kpis.expensesChange} icon={Package} color="text-red-600" isLoading={loading} themeColor={businessUnit} />
-                    <StatCard title="Marge Brute" value={`${parseFloat(kpis.totalGrossMargin).toFixed(2)}€`} change={kpis.grossMarginChange} icon={DollarSign} color="text-green-600" isLoading={loading} themeColor={businessUnit} />
-                    <StatCard title="Nombre de commandes" value={kpis.orders} change={kpis.ordersChange} icon={ShoppingCart} color="text-blue-600" isLoading={loading} themeColor={businessUnit} />
-                    <StatCard title="Nouveaux clients" value={kpis.newClients} change={kpis.clientsChange} icon={Users} color="text-purple-600" isLoading={loading} themeColor={businessUnit} />
-                    <StatCard title="Panier moyen" value={`${parseFloat(kpis.avgOrderValue).toFixed(2)}€`} change={null} icon={Package} color="text-orange-600" isLoading={loading} themeColor={businessUnit} />
-                </div>
+                {/* --- CONTENU DES ONGLETS --- */}
+                {activeTab === 'overview' && (
+                    <div className="animate-in fade-in duration-700">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                            <StatCard title="Chiffre d'Affaires" value={`${parseFloat(kpis.revenue).toFixed(2)} €`} change={kpis.revenueChange} icon={DollarSign} color={`text-${themeColor}-600`} isLoading={loading} themeColor={themeColor} />
+                            <StatCard title="Marge Brute" value={`${parseFloat(kpis.totalGrossMargin).toFixed(2)} €`} change={kpis.grossMarginChange} icon={TrendingUp} color="text-green-600" isLoading={loading} themeColor={themeColor} />
+                            <StatCard title="Panier Moyen" value={`${parseFloat(kpis.avgOrderValue).toFixed(2)} €`} change={null} icon={Package} color="text-indigo-600" isLoading={loading} themeColor={themeColor} />
+                        </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                    <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow" style={{ minHeight: '400px' }}>
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Évolution du chiffre d'affaires</h3>
-                        {loading ? <div className="h-[300px] flex items-center justify-center"><div className={`animate-spin rounded-full h-12 w-12 border-b-2 border-${themeColor}-500`}></div></div> : revenueData.length > 0 ? (
-                            <div style={{ width: '100%', height: '300px' }}>
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={revenueData}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                        <XAxis dataKey="name" stroke="#6b7280" />
-                                        <YAxis stroke="#6b7280" />
-                                        <Tooltip content={<CustomTooltip />} />
-                                        <Legend />
-                                        <Line type="monotone" dataKey="ca" stroke={mainHexColor} strokeWidth={2} name="CA (€)" dot={{ fill: mainHexColor, r: 4 }} activeDot={{ r: 6 }} />
-                                    </LineChart>
-                                </ResponsiveContainer>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100">
+                                <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-6 flex items-center gap-2"><BarChart3 size={16} className="text-amber-500"/> Évolution du CA</h3>
+                                <div className="h-[300px]">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <LineChart data={revenueData}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 10}} />
+                                            <YAxis axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 10}} />
+                                            <Tooltip contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 20px rgba(0,0,0,0.05)'}} />
+                                            <Line type="monotone" dataKey="ca" stroke={mainHexColor} strokeWidth={4} dot={{r: 4, fill: mainHexColor}} activeDot={{r: 8}} />
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                </div>
                             </div>
-                        ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnée disponible pour cette période</div>}
+                            <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100">
+                                <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-6 flex items-center gap-2"><PieIcon size={16} className="text-blue-500"/> Mix de Ventes</h3>
+                                <div className="h-[300px]">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie data={orderTypeData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={5} dataKey="value">
+                                                {orderTypeData.map((e, i) => <Cell key={i} fill={e.color} />)}
+                                            </Pie>
+                                            <Tooltip />
+                                            <Legend verticalAlign="bottom" align="center" iconType="circle" />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+                        </div>
                     </div>
+                )}
 
-                                        <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow" style={{ minHeight: '400px' }}>
-
-                                            <h3 className="text-lg font-semibold text-gray-800 mb-4">Répartition par type de demande</h3>
-
-                                            {loading ? <div className="h-[300px] flex items-center justify-center"><div className={`animate-spin rounded-full h-12 w-12 border-b-2 border-${themeColor}-500`}></div></div> : orderTypeData.length > 0 ? (
-
-                                                <div style={{ width: '100%', height: '300px' }}>
-                                                    <ResponsiveContainer width="100%" height="100%">
-
-                                                        <PieChart>
-
-                                                            <Pie 
-
-                                                                data={orderTypeData} 
-
-                                                                cx="50%" 
-
-                                                                cy="50%" 
-
-                                                                labelLine={false} 
-
-                                                                label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
-
-                                                                outerRadius={100} 
-
-                                                                fill="#8884d8" 
-
-                                                                dataKey="value"
-
-                                                            >
-
-                                                                {orderTypeData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
-
-                                                            </Pie>
-
-                                                            <Tooltip />
-
-                                                            <Legend />
-
-                                                        </PieChart>
-
-                                                    </ResponsiveContainer>
-                                                </div>
-
-                                            ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnée disponible pour cette période</div>}
-
-                                        </div>
-                    
-                    <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Top produits/services</h3>
-                        {loading ? <div className="space-y-3">{[1, 2, 3, 4, 5].map(i => <div key={i} className="h-12 bg-gray-200 animate-pulse rounded-md"></div>)}</div> : topProducts.length > 0 ? (
+                {activeTab === 'sales' && (
+                    <div className="animate-in fade-in duration-700">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                            <StatCard title="Total Commandes" value={kpis.orders} change={kpis.ordersChange} icon={ShoppingCart} color="text-blue-600" isLoading={loading} themeColor={themeColor} />
+                            <StatCard title="Nouveaux Clients" value={kpis.newClients} change={kpis.clientsChange} icon={Users} color="text-purple-600" isLoading={loading} themeColor={themeColor} />
+                        </div>
+                        <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
+                            <div className="p-8 border-b border-gray-50 flex justify-between items-center">
+                                <h3 className="text-sm font-black uppercase tracking-widest text-gray-400">Top Performance Produits</h3>
+                            </div>
                             <div className="overflow-x-auto">
-                                <table className="w-full">
-                                    <thead>
-                                        <tr className="border-b-2 border-gray-200">
-                                            <th className="text-left py-3 px-4 text-gray-700 font-semibold">Produit/Service</th>
-                                            <th className="text-right py-3 px-4 text-gray-700 font-semibold">Commandes</th>
-                                            <th className="text-right py-3 px-4 text-gray-700 font-semibold">CA généré</th>
-                                            <th className="text-right py-3 px-4 text-gray-700 font-semibold">CA moyen</th>
+                                <table className="w-full text-left">
+                                    <thead className="bg-gray-50/50">
+                                        <tr>
+                                            <th className="px-8 py-4 text-[10px] font-black uppercase text-gray-400 tracking-widest">Produit/Service</th>
+                                            <th className="px-8 py-4 text-center text-[10px] font-black uppercase text-gray-400 tracking-widest">Ventes</th>
+                                            <th className="px-8 py-4 text-right text-[10px] font-black uppercase text-gray-400 tracking-widest">CA Total</th>
+                                            <th className="px-8 py-4 text-right text-[10px] font-black uppercase text-gray-400 tracking-widest">Moyenne</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
-                                        {topProducts.map((product, idx) => (
-                                            <tr key={idx} className="border-b border-gray-100 hover:bg-amber-50 transition-colors">
-                                                <td className="py-3 px-4 text-gray-800 font-medium">{product.name}</td>
-                                                <td className="text-right py-3 px-4 text-gray-600">{product.orders}</td>
-                                                <td className="text-right py-3 px-4 text-gray-800 font-semibold">{product.revenue.toFixed(2)}€</td>
-                                                <td className="text-right py-3 px-4 text-gray-600">{product.avgRevenue.toFixed(2)}€</td>
+                                    <tbody className="divide-y divide-gray-50 font-medium">
+                                        {topProducts.map((p, idx) => (
+                                            <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
+                                                <td className="px-8 py-5 text-gray-800">{p.name}</td>
+                                                <td className="px-8 py-5 text-center text-gray-500">{p.orders}</td>
+                                                <td className="px-8 py-5 text-right font-black text-gray-900">{p.revenue.toFixed(2)} €</td>
+                                                <td className="px-8 py-5 text-right text-green-600">{p.avgRevenue.toFixed(2)} €</td>
                                             </tr>
                                         ))}
                                     </tbody>
                                 </table>
                             </div>
-                        ) : <div className="py-8 text-center text-gray-500">Aucune donnée disponible pour cette période</div>}
+                        </div>
                     </div>
-                    
-                    <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Répartition des Dépenses</h3>
-                        {loading ? <div className="h-[300px] flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div></div> : expenseDistributionData.length > 0 ? (
+                )}
+
+                {activeTab === 'expenses' && (
+                    <div className="animate-in fade-in duration-700">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                            <StatCard title="Total Dépenses" value={`${parseFloat(kpis.totalExpenses).toFixed(2)} €`} change={kpis.expensesChange} icon={TrendingDown} color="text-red-600" isLoading={loading} themeColor={themeColor} />
+                            <div className="bg-white rounded-[2.5rem] shadow-sm p-8 border border-gray-100 flex items-center justify-between">
+                                <div>
+                                    <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1">Ratio Dépenses/CA</p>
+                                    <p className="text-2xl font-black text-gray-800">{((parseFloat(kpis.totalExpenses) / (parseFloat(kpis.revenue) || 1)) * 100).toFixed(1)}%</p>
+                                </div>
+                                <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center text-red-500"><TrendingDown /></div>
+                            </div>
+                        </div>
+                        <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 min-h-[400px]">
+                            <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-8">Répartition des charges</h3>
                             <ResponsiveContainer width="100%" height={300}>
                                 <PieChart>
-                                    <Pie data={expenseDistributionData} cx="50%" cy="50%" labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} outerRadius={100} fill="#8884d8" dataKey="value">
-                                        {expenseDistributionData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                                    <Pie data={expenseDistributionData} cx="50%" cy="50%" outerRadius={100} fill="#8884d8" dataKey="value" label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                                        {expenseDistributionData.map((e, i) => <Cell key={i} fill={['#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6', '#10b981'][i % 5]} />)}
                                     </Pie>
-                                    <Tooltip formatter={(value) => `${value.toFixed(2)}€`} />
-                                    <Legend />
+                                    <Tooltip />
                                 </PieChart>
                             </ResponsiveContainer>
-                        ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnée de dépense pour cette période</div>}
+                        </div>
                     </div>
-                </div>
+                )}
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                    <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow" style={{ minHeight: '400px' }}>
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Performance par jour de la semaine</h3>
-                        {loading ? <div className="h-[300px] flex items-center justify-center"><div className={`animate-spin rounded-full h-12 w-12 border-b-2 border-${themeColor}-500`}></div></div> : weekdayData.length > 0 ? (
-                            <div style={{ width: '100%', height: '300px' }}>
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={weekdayData}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                        <XAxis dataKey="day" stroke="#6b7280" />
-                                        <YAxis yAxisId="left" stroke="#6b7280" />
-                                        <YAxis yAxisId="right" orientation="right" stroke="#6b7280" />
-                                        <Tooltip content={<CustomTooltip />} />
-                                        <Legend />
-                                        <Bar yAxisId="left" dataKey="commandes" fill="#3b82f6" name="Commandes" radius={[4, 4, 0, 0]} />
-                                        <Bar yAxisId="right" dataKey="ca" fill={mainHexColor} name="CA (€)" radius={[4, 4, 0, 0]} />
-                                    </BarChart>
-                                </ResponsiveContainer>
+                {activeTab === 'export' && (
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-xl mx-auto">
+                        <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-gray-100 text-center">
+                            <div className="w-20 h-20 bg-green-50 text-green-600 rounded-3xl flex items-center justify-center mx-auto mb-6"><Download size={40}/></div>
+                            <h2 className="text-2xl font-black text-gray-800 mb-2">Export Comptable</h2>
+                            <p className="text-gray-500 mb-8 font-medium">Générez un fichier CSV complet de vos données pour la période sélectionnée.</p>
+                            
+                            <div className="grid grid-cols-2 gap-4 mb-8 text-left">
+                                <div>
+                                    <label className="text-[10px] font-black text-gray-400 uppercase ml-2 mb-1 block">Date Début</label>
+                                    <input type="date" value={exportDates.start} onChange={e => setExportDates({...exportDates, start: e.target.value})} className="w-full p-4 bg-gray-50 border-0 rounded-2xl font-bold focus:ring-2 focus:ring-green-500" />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-black text-gray-400 uppercase ml-2 mb-1 block">Date Fin</label>
+                                    <input type="date" value={exportDates.end} onChange={e => setExportDates({...exportDates, end: e.target.value})} className="w-full p-4 bg-gray-50 border-0 rounded-2xl font-bold focus:ring-2 focus:ring-green-500" />
+                                </div>
                             </div>
-                        ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnée disponible pour cette période</div>}
-                    </div>
-                </div>
 
-                <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow" style={{ minHeight: '400px' }}>
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Évolution Mensuelle (24 derniers mois)</h3>
-                    {loading ? <div className="h-[300px] flex items-center justify-center"><div className={`animate-spin rounded-full h-12 w-12 border-b-2 border-${themeColor}-500`}></div></div> : monthlyPerformanceData.length > 0 ? (
-                        <div style={{ width: '100%', height: '300px' }}>
+                            <button onClick={handleExport} disabled={isExporting || !exportDates.start || !exportDates.end} className="w-full py-5 bg-gray-800 text-white rounded-[2rem] font-black text-lg shadow-lg hover:bg-black transition-all active:scale-95 disabled:bg-gray-200 disabled:text-gray-400">
+                                {isExporting ? 'Préparation...' : 'Lancer l\'export (CSV)'}
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* --- ÉVOLUTION MENSUELLE (TOUJOURS VISIBLE EN BAS) --- */}
+                {activeTab === 'overview' && (
+                    <div className="mt-8 bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 animate-in fade-in duration-1000">
+                        <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-8 flex items-center gap-2"><Calendar size={16}/> Performance Mensuelle (24 mois)</h3>
+                        <div className="h-[300px]">
                             <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={monthlyPerformanceData}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                    <XAxis dataKey="name" stroke="#6b7280" tickFormatter={formatMonthTick} />
-                                    <YAxis yAxisId="left" stroke="#3b82f6" />
-                                    <YAxis yAxisId="right" orientation="right" stroke={mainHexColor} />
-                                    <Tooltip content={<CustomTooltip />} />
-                                    <Legend />
-                                    <Line yAxisId="left" type="monotone" dataKey="commandes" stroke="#3b82f6" strokeWidth={2} name="Commandes" dot={<CustomDot />} activeDot={{ r: 8, strokeWidth: 2 }} />
-                                    <Line yAxisId="right" type="monotone" dataKey="ca" stroke={mainHexColor} strokeWidth={2} name="CA (€)" />
-                                </LineChart>
+                                <BarChart data={monthlyPerformanceData}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                                    <XAxis dataKey="name" tickFormatter={formatMonthTick} axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 10}} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 10}} />
+                                    <Tooltip cursor={{fill: '#f9fafb'}} contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 20px rgba(0,0,0,0.05)'}} />
+                                    <Bar dataKey="ca" fill={mainHexColor} radius={[6, 6, 0, 0]} name="CA (€)" />
+                                </BarChart>
                             </ResponsiveContainer>
                         </div>
-                    ) : <div className="h-[300px] flex items-center justify-center text-gray-500">Aucune donnée mensuelle disponible</div>}
-                </div>
+                    </div>
+                )}
             </div>
         </div>
     );

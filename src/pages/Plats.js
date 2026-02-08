@@ -1,244 +1,174 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
+import { 
+    PlusCircle, List, Edit3, Trash2, Camera, 
+    Utensils, Globe, Flame, CheckCircle, XCircle, Search, RefreshCw,
+    Image as ImageIcon, Soup, ChefHat
+} from 'lucide-react';
+
+const DishCard = ({ dish, onEdit, onDelete }) => (
+    <div className={`bg-white rounded-[2.5rem] shadow-sm overflow-hidden hover:shadow-xl transition-all border border-gray-100 group ${!dish.is_available ? 'opacity-60 grayscale' : ''}`}>
+        <div className="relative h-56 overflow-hidden">
+            {dish.image_url ? (
+                <img src={dish.image_url} alt={dish.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+            ) : (
+                <div className="w-full h-full bg-gray-50 flex items-center justify-center text-gray-200">
+                    <ImageIcon size={60} />
+                </div>
+            )}
+            <div className="absolute top-4 right-4 flex gap-2">
+                {!dish.is_available && (
+                    <span className="bg-red-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg">Épuisé</span>
+                )}
+                <span className="bg-white/90 backdrop-blur-md text-gray-800 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg border border-white/20">
+                    {dish.category || 'Plat'}
+                </span>
+            </div>
+        </div>
+
+        <div className="p-6">
+            <div className="flex justify-between items-start mb-2">
+                <h3 className="font-black text-gray-800 text-xl leading-tight">{dish.name}</h3>
+            </div>
+            
+            <div className="flex items-center gap-3 mb-4 flex-wrap">
+                <div className="flex items-center text-xs font-bold text-gray-400 bg-gray-50 px-2.5 py-1 rounded-lg border border-gray-100">
+                    <Globe size={12} className="mr-1.5" /> {dish.country || 'International'}
+                </div>
+                <div className="flex items-center text-xs font-bold text-gray-400 bg-gray-50 px-2.5 py-1 rounded-lg border border-gray-100">
+                    <ChefHat size={12} className="mr-1.5" /> {dish.cooking_type || 'Artisanal'}
+                </div>
+                {dish.spice_level > 0 && (
+                    <div className="flex items-center text-orange-500 text-xs font-black px-2.5 py-1 rounded-lg bg-orange-50 border border-orange-100">
+                        <Flame size={12} className="mr-1" /> {'🌶️'.repeat(dish.spice_level)}
+                    </div>
+                )}
+            </div>
+
+            <p className="text-sm text-gray-500 line-clamp-2 italic mb-6 leading-relaxed">
+                {dish.description || "Aucune description pour ce plat."}
+            </p>
+
+            <div className="flex gap-2 border-t pt-5">
+                <button onClick={() => onEdit(dish)} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-gray-800 text-white font-black hover:bg-black transition-all text-xs shadow-md active:scale-95">
+                    <Edit3 size={14} /> MODIFIER
+                </button>
+                <button onClick={() => onDelete(dish.id)} className="p-3 rounded-2xl bg-red-50 text-red-600 hover:bg-red-100 transition-colors border border-red-100 active:scale-95">
+                    <Trash2 size={18} />
+                </button>
+            </div>
+        </div>
+    </div>
+);
 
 const Plats = () => {
     const [dishes, setDishes] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [editingDish, setEditingDish] = useState(null); // Plat en cours de modification
+    const [activeTab, setActiveTab] = useState('gallery'); // 'gallery' or 'create'
+    const [searchTerm, setSearchTerm] = useState('');
+    const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState({
-        name: '',
-        description: '',
-        image_url: '',
-        country: '',
-        main_ingredient: '',
-        cooking_type: '',
-        spice_level: 0,
-        category: 'Plat',
-        is_available: true
+        name: '', description: '', image_url: '', country: '',
+        main_ingredient: '', cooking_type: '', spice_level: 0,
+        category: 'Plat', is_available: true
     });
 
     const fetchDishes = async () => {
         setLoading(true);
-        const { data, error } = await supabase
-            .from('dishes')
-            .select('*')
-            .order('created_at', { ascending: false });
-        
-        if (error) console.error('Erreur chargement plats:', error);
-        else setDishes(data);
+        const { data, error } = await supabase.from('dishes').select('*').order('created_at', { ascending: false });
+        if (!error) setDishes(data || []);
         setLoading(false);
     };
 
-    useEffect(() => {
-        fetchDishes();
-    }, []);
+    useEffect(() => { fetchDishes(); }, []);
 
-    const handleInputChange = (e) => {
-        const { name, value, type, checked } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: type === 'checkbox' ? checked : value
-        }));
-    };
-
-    const handleSubmit = async (e) => {
+    const handleSave = async (e) => {
         e.preventDefault();
-        
-        // Préparation des données (gestion du niveau d'épices en entier)
-        const payload = {
-            ...formData,
-            spice_level: parseInt(formData.spice_level)
-        };
-
-        let error;
-        if (editingDish) {
-            const { error: updateError } = await supabase
-                .from('dishes')
-                .update(payload)
-                .eq('id', editingDish.id);
-            error = updateError;
-        } else {
-            const { error: insertError } = await supabase
-                .from('dishes')
-                .insert([payload]);
-            error = insertError;
-        }
-
-        if (error) {
-            alert('Erreur lors de la sauvegarde : ' + error.message);
-        } else {
-            alert(editingDish ? 'Plat modifié !' : 'Plat ajouté !');
-            resetForm();
+        const payload = { ...formData, spice_level: parseInt(formData.spice_level) };
+        const op = formData.id ? supabase.from('dishes').update(payload).eq('id', formData.id) : supabase.from('dishes').insert([payload]);
+        const { error } = await op;
+        if (!error) {
+            alert('Sauvegarde réussie !');
+            handleCancel();
             fetchDishes();
-        }
+        } else alert(error.message);
     };
 
     const handleEdit = (dish) => {
-        setEditingDish(dish);
-        setFormData({
-            name: dish.name,
-            description: dish.description || '',
-            image_url: dish.image_url || '',
-            country: dish.country || '',
-            main_ingredient: dish.main_ingredient || '',
-            cooking_type: dish.cooking_type || '',
-            spice_level: dish.spice_level || 0,
-            category: dish.category || 'Plat',
-            is_available: dish.is_available
-        });
+        setFormData(dish);
+        setIsEditing(true);
+        setActiveTab('create');
+    };
+
+    const handleCancel = () => {
+        setFormData({ name: '', description: '', image_url: '', country: '', main_ingredient: '', cooking_type: '', spice_level: 0, category: 'Plat', is_available: true });
+        setIsEditing(false);
+        setActiveTab('gallery');
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm('Voulez-vous vraiment supprimer ce plat ?')) {
-            const { error } = await supabase.from('dishes').delete().eq('id', id);
-            if (error) alert('Erreur suppression: ' + error.message);
-            else fetchDishes();
-        }
+        if (!window.confirm('Supprimer ce plat ?')) return;
+        const { error } = await supabase.from('dishes').delete().eq('id', id);
+        if (!error) fetchDishes();
     };
 
-    const resetForm = () => {
-        setEditingDish(null);
-        setFormData({
-            name: '',
-            description: '',
-            image_url: '',
-            country: '',
-            main_ingredient: '',
-            cooking_type: '',
-            spice_level: 0,
-            category: 'Plat',
-            is_available: true
-        });
-    };
+    const filteredDishes = dishes.filter(d => 
+        d.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        d.country?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     return (
-        <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold text-gray-800 mb-2">Gestion de la Galerie des Plats</h1>
-                <p className="text-gray-600">Gérez les plats qui apparaissent dans la "Galerie des Possibles" pour vos clients.</p>
-            </div>
-            
-            <div style={formContainerStyle}>
-                <h2>{editingDish ? 'Modifier le plat' : 'Ajouter un nouveau plat'}</h2>
-                <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '15px', gridTemplateColumns: '1fr 1fr' }}>
-                    <div style={{ gridColumn: 'span 2' }}>
-                        <label style={labelStyle}>Nom du plat *</label>
-                        <input type="text" name="name" value={formData.name} onChange={handleInputChange} required style={inputStyle} />
-                    </div>
+        <div className="p-6 bg-gray-50 min-h-screen">
+            <div className="max-w-7xl mx-auto">
+                <div className="mb-8">
+                    <h1 className="text-3xl font-black text-gray-800 mb-2">Galerie des Possibles</h1>
+                    <p className="text-gray-500 font-medium">Gérez votre portfolio culinaire et les menus de saison.</p>
+                </div>
 
-                    <div style={{ gridColumn: 'span 2' }}>
-                        <label style={labelStyle}>Description</label>
-                        <textarea name="description" value={formData.description} onChange={handleInputChange} style={{...inputStyle, height: '60px'}} />
-                    </div>
+                <div className="flex space-x-1 bg-gray-200 p-1 rounded-2xl mb-8 max-w-md">
+                    <button onClick={() => { setActiveTab('gallery'); setIsEditing(false); }} className={`flex-1 flex items-center justify-center py-3 rounded-xl text-xs font-black transition-all ${activeTab === 'gallery' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}><List size={16} className="mr-2"/> Galerie</button>
+                    <button onClick={() => setActiveTab('create')} className={`flex-1 flex items-center justify-center py-3 rounded-xl text-xs font-black transition-all ${activeTab === 'create' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}><PlusCircle size={16} className="mr-2"/> {isEditing ? 'Modifier' : 'Nouveau'}</button>
+                </div>
 
-                    <div style={{ gridColumn: 'span 2' }}>
-                        <label style={labelStyle}>URL de l'image (ex: /assets/images/mon-plat.jpg)</label>
-                        <input type="text" name="image_url" value={formData.image_url} onChange={handleInputChange} style={inputStyle} placeholder="https://..." />
-                    </div>
-
-                    <div>
-                        <label style={labelStyle}>Pays / Style</label>
-                        <select name="country" value={formData.country} onChange={handleInputChange} style={inputStyle}>
-                            <option value="">-- Choisir --</option>
-                            <option value="Chine">Chine</option>
-                            <option value="Japon">Japon</option>
-                            <option value="Thaïlande">Thaïlande</option>
-                            <option value="Vietnam">Vietnam</option>
-                            <option value="Corée">Corée</option>
-                            <option value="Autre">Autre</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label style={labelStyle}>Ingrédient principal</label>
-                        <select name="main_ingredient" value={formData.main_ingredient} onChange={handleInputChange} style={inputStyle}>
-                            <option value="">-- Choisir --</option>
-                            <option value="Poulet">Poulet</option>
-                            <option value="Porc">Porc</option>
-                            <option value="Bœuf">Bœuf</option>
-                            <option value="Poisson">Poisson/Fruits de mer</option>
-                            <option value="Légumes">Légumes / Tofu</option>
-                            <option value="Riz/Nouilles">Riz / Nouilles</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label style={labelStyle}>Type de cuisson</label>
-                        <select name="cooking_type" value={formData.cooking_type} onChange={handleInputChange} style={inputStyle}>
-                            <option value="">-- Choisir --</option>
-                            <option value="Wok">Sauté Wok</option>
-                            <option value="Vapeur">Vapeur</option>
-                            <option value="Mijoté">Mijoté</option>
-                            <option value="Frit">Frit / Croustillant</option>
-                            <option value="Grillé">Grillé / Rôti</option>
-                            <option value="Soupe">Soupe / Bouillon</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label style={labelStyle}>Niveau d'épices (0-3)</label>
-                        <input type="number" name="spice_level" min="0" max="3" value={formData.spice_level} onChange={handleInputChange} style={inputStyle} />
-                    </div>
-
-                    <div>
-                        <label style={labelStyle}>Catégorie</label>
-                        <select name="category" value={formData.category} onChange={handleInputChange} style={inputStyle}>
-                            <option value="Entrée">Entrée</option>
-                            <option value="Plat">Plat Principal</option>
-                            <option value="Accompagnement">Accompagnement</option>
-                            <option value="Dessert">Dessert</option>
-                        </select>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <input type="checkbox" name="is_available" checked={formData.is_available} onChange={handleInputChange} style={{ marginRight: '10px' }} />
-                        <label style={labelStyle}>Disponible actuellement ?</label>
-                    </div>
-
-                    <div style={{ gridColumn: 'span 2', marginTop: '10px' }}>
-                        <button type="submit" style={submitBtnStyle}>{editingDish ? 'Mettre à jour' : 'Ajouter le plat'}</button>
-                        {editingDish && <button type="button" onClick={resetForm} style={cancelBtnStyle}>Annuler</button>}
-                    </div>
-                </form>
-            </div>
-
-            <div style={listContainerStyle}>
-                <h2>Vos Plats ({dishes.length})</h2>
-                {loading ? <p>Chargement...</p> : (
-                    <div style={gridStyle}>
-                        {dishes.map(dish => (
-                            <div key={dish.id} style={{...cardStyle, opacity: dish.is_available ? 1 : 0.6}}>
-                                {dish.image_url && <img src={dish.image_url} alt={dish.name} style={imgStyle} />}
-                                <div style={{padding: '10px'}}>
-                                    <h3>{dish.name}</h3>
-                                    <p style={{fontSize: '0.9em', color: '#666'}}>{dish.country} • {dish.cooking_type}</p>
-                                    <p>{'🌶️'.repeat(dish.spice_level)}</p>
-                                    <div style={{marginTop: '10px'}}>
-                                        <button onClick={() => handleEdit(dish)} style={editBtnStyle}>Modifier</button>
-                                        <button onClick={() => handleDelete(dish.id)} style={deleteBtnStyle}>Supprimer</button>
-                                    </div>
-                                    {!dish.is_available && <p style={{color: 'red', fontWeight: 'bold', marginTop: '5px'}}>Non disponible</p>}
-                                </div>
+                {activeTab === 'create' ? (
+                    <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-gray-100 max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <h2 className="text-2xl font-black text-gray-800 mb-10 flex items-center gap-3"><ChefHat className="text-amber-500" size={32}/> {isEditing ? 'Modifier les détails' : 'Créer un nouveau chef-d\'œuvre'}</h2>
+                        <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="md:col-span-2 space-y-6">
+                                <div><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 block mb-2">Nom du Plat</label><input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-4 bg-gray-50 border-0 rounded-2xl font-black text-lg focus:ring-2 focus:ring-amber-500 outline-none" /></div>
+                                <div><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 block mb-2">Description</label><textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full p-4 bg-gray-50 border-0 rounded-2xl font-medium h-24 focus:ring-2 focus:ring-amber-500 outline-none" /></div>
                             </div>
-                        ))}
+                            <div><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 block mb-2">Catégorie</label><select value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full p-4 bg-gray-50 border-0 rounded-2xl font-bold"><option value="Entrée">Entrée</option><option value="Plat">Plat Principal</option><option value="Accompagnement">Accompagnement</option><option value="Dessert">Dessert</option></select></div>
+                            <div><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 block mb-2">Pays / Style</label><select value={formData.country} onChange={e => setFormData({...formData, country: e.target.value})} className="w-full p-4 bg-gray-50 border-0 rounded-2xl font-bold"><option value="">-- Choisir --</option><option value="Chine">Chine</option><option value="Japon">Japon</option><option value="Thaïlande">Thaïlande</option><option value="Vietnam">Vietnam</option><option value="Corée">Corée</option><option value="Autre">Autre</option></select></div>
+                            <div><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 block mb-2">Niveau d'Épices</label><input type="range" min="0" max="3" value={formData.spice_level} onChange={e => setFormData({...formData, spice_level: e.target.value})} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-500 my-4" /><div className="flex justify-between text-xs font-black text-gray-400 px-1"><span>Doux</span><span>🔥</span><span>🔥🔥</span><span>🔥🔥🔥</span></div></div>
+                            <div className="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl"><input type="checkbox" checked={formData.is_available} onChange={e => setFormData({...formData, is_available: e.target.checked})} className="w-6 h-6 rounded-lg text-amber-500 focus:ring-amber-500 border-0" /><label className="font-bold text-gray-700">Disponible actuellement ?</label></div>
+                            <div className="md:col-span-2"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 block mb-2">URL Image</label><input type="text" value={formData.image_url} onChange={e => setFormData({...formData, image_url: e.target.value})} className="w-full p-4 bg-gray-50 border-0 rounded-2xl font-mono text-xs focus:ring-2 focus:ring-amber-500 outline-none" placeholder="/assets/images/..." /></div>
+                            <div className="md:col-span-2 flex gap-4 pt-10 border-t">
+                                <button type="submit" className="flex-1 bg-gray-800 text-white py-5 rounded-[2rem] font-black text-lg shadow-lg hover:bg-black transition-all active:scale-95 uppercase tracking-widest">Enregistrer le plat</button>
+                                <button type="button" onClick={handleCancel} className="px-10 py-5 bg-gray-100 text-gray-500 rounded-[2rem] font-black text-lg hover:bg-gray-200 transition-all uppercase tracking-widest">Annuler</button>
+                            </div>
+                        </form>
+                    </div>
+                ) : (
+                    <div className="animate-in fade-in duration-700">
+                        <div className="bg-white p-4 rounded-[2rem] shadow-sm border border-gray-100 mb-8 flex items-center">
+                            <Search size={20} className="text-gray-300 mr-3 ml-2" />
+                            <input type="text" placeholder="Rechercher un plat, une origine..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="flex-1 py-2 outline-none text-gray-700 font-medium" />
+                        </div>
+                        {loading ? (
+                            <div className="flex justify-center py-20 animate-spin text-amber-500"><RefreshCw size={48} /></div>
+                        ) : filteredDishes.length === 0 ? (
+                            <div className="text-center py-32 bg-white rounded-[3rem] border-2 border-dashed border-gray-100"><Soup size={60} className="mx-auto text-gray-100 mb-4"/><p className="text-gray-400 font-bold">Aucun plat dans la galerie.</p></div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+                                {filteredDishes.map(dish => <DishCard key={dish.id} dish={dish} onEdit={handleEdit} onDelete={handleDelete} />)}
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
         </div>
     );
 };
-
-// Styles
-const formContainerStyle = { background: '#fff', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', marginBottom: '30px' };
-const labelStyle = { display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#333' };
-const inputStyle = { width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' };
-const submitBtnStyle = { padding: '10px 20px', background: '#28a745', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '16px' };
-const cancelBtnStyle = { padding: '10px 20px', background: '#6c757d', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', marginLeft: '10px', fontSize: '16px' };
-const listContainerStyle = { marginTop: '20px' };
-const gridStyle = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '20px' };
-const cardStyle = { background: '#fff', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', border: '1px solid #eee' };
-const imgStyle = { width: '100%', height: '150px', objectFit: 'cover' };
-const editBtnStyle = { padding: '5px 10px', background: '#007bff', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', marginRight: '5px' };
-const deleteBtnStyle = { padding: '5px 10px', background: '#dc3545', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' };
 
 export default Plats;
