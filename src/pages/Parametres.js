@@ -1,554 +1,337 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-
-// Styles CSS pour l'effet de survol des cartes
-const CardHoverStyles = () => (
-    <style>{`
-        .setting-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 15px rgba(0,0,0,0.1) !important;
-            border-color: #d4af37 !important;
-            background-color: #fffdf5 !important;
-        }
-        .setting-card:hover h2 {
-            color: #d4af37;
-        }
-    `}</style>
-);
+import { useBusinessUnit } from '../BusinessUnitContext';
+import { 
+    Building2, MessageSquare, UtensilsCrossed, 
+    Save, Calendar, Users, ShieldCheck, Megaphone, 
+    MailX, Layout, Info, Euro, Clock, MapPin, Globe, Trash2, PlusCircle, FileText
+} from 'lucide-react';
 
 const Parametres = () => {
-    // --- États Généraux ---
+    const { businessUnit } = useBusinessUnit();
+    const [activeTab, setActiveTab] = useState('company'); // 'company', 'messages', 'menus', 'links'
     const [status, setStatus] = useState({ message: '', type: 'info' });
 
-    // --- États pour les informations de l'entreprise ---
+    const themeColor = businessUnit === 'courtage' ? 'blue' : 'amber';
+
+    // --- États ---
     const [companySettings, setCompanySettings] = useState({
         id: null, name: '', owner: '', address: '', city: '', phone: '', email: '',
         website: '', siret: '', tva_message: '', logo_url: '',
-        order_cutoff_days: 2,
-        order_cutoff_hour: 11,
-        payment_conditions: '',
-        payment_methods: ''
+        order_cutoff_days: 2, order_cutoff_hour: 11,
+        payment_conditions: '', payment_methods: ''
     });
-    const [isCompanyLoading, setIsCompanyLoading] = useState(true);
 
-    // --- Autres états ---
     const [welcomeMessage, setWelcomeMessage] = useState('');
     const [refusalTemplate, setRefusalTemplate] = useState('');
-    const [isOtherSettingsLoading, setIsOtherSettingsLoading] = useState(true);
     const [menuDecouverte, setMenuDecouverte] = useState('');
     const [menuStandard, setMenuStandard] = useState('');
     const [menuConfort, setMenuConfort] = useState('');
     const [menuDuo, setMenuDuo] = useState('');
     const [menuOverrideMessage, setMenuOverrideMessage] = useState('');
     const [menuOverrideEnabled, setMenuOverrideEnabled] = useState(false);
-    const [isMenuLoading, setIsMenuLoading] = useState(true);
-
-    // --- États pour les prix des menus ---
     const [menuDecouvertePrice, setMenuDecouvertePrice] = useState('');
     const [menuStandardPrice, setMenuStandardPrice] = useState('');
     const [menuConfortPrice, setMenuConfortPrice] = useState('');
     const [menuDuoPrice, setMenuDuoPrice] = useState('');
-
-    // --- États pour les annonces ---
     const [announcementMessage, setAnnouncementMessage] = useState('');
     const [announcementStyle, setAnnouncementStyle] = useState('info');
-        const [announcementEnabled, setAnnouncementEnabled] = useState(false);
-    
-        // --- États pour l'offre spéciale ---
-        const [specialOfferEnabled, setSpecialOfferEnabled] = useState(false);
-        const [specialOffer, setSpecialOffer] = useState({ title: '', description: '', dishes: [] });
-        const [specialOfferDisablesFormulas, setSpecialOfferDisablesFormulas] = useState(true);
-    
-    // Styles disponibles pour les annonces
+    const [announcementEnabled, setAnnouncementEnabled] = useState(false);
+    const [specialOfferEnabled, setSpecialOfferEnabled] = useState(false);
+    const [specialOffer, setSpecialOffer] = useState({ title: '', description: '', dishes: [] });
+    const [specialOfferDisablesFormulas, setSpecialOfferDisablesFormulas] = useState(true);
+
     const announcementStyles = [
-        { value: 'info', label: '📘 Info (bleu)', color: '#e3f2fd', border: '#2196f3' },
-        { value: 'attention', label: '⚠️ Attention (jaune)', color: '#fff9e6', border: '#ff9800' },
-        { value: 'fete', label: '🎉 Fête (festif)', color: '#ffebee', border: '#e91e63' },
-        { value: 'promotion', label: '⭐ Promotion (doré)', color: '#fffaf0', border: '#d4af37' },
-        { value: 'annonce', label: '📢 Annonce (violet)', color: '#f3e5f5', border: '#9c27b0' }
+        { value: 'info', label: '🔵 Info', color: 'rgba(59, 130, 246, 0.1)', border: '#3b82f6' },
+        { value: 'attention', label: '⚠️ Attention', color: 'rgba(245, 158, 11, 0.1)', border: '#f59e0b' },
+        { value: 'fete', label: '🎉 Fête', color: 'rgba(236, 72, 153, 0.1)', border: '#ec4899' },
+        { value: 'promotion', label: '⭐ Promotion', color: 'rgba(212, 175, 55, 0.1)', border: '#d4af37' },
+        { value: 'annonce', label: '📢 Annonce', color: 'rgba(139, 92, 246, 0.1)', border: '#8b5cf6' }
     ];
 
-    // Fonction générique pour sauvegarder un paramètre unique
-    const saveSetting = async (key, value, suppressStatus = false) => {
-        if (!suppressStatus) {
-            setStatus({ message: 'Enregistrement...', type: 'info' });
-        }
+    const saveSetting = async (key, value, silent = false) => {
+        if (!silent) setStatus({ message: 'Enregistrement...', type: 'info' });
         const { error } = await supabase.from('settings').upsert({ key, value }, { onConflict: 'key' });
-        if (error) {
-            if (!suppressStatus) {
-                setStatus({ message: `Erreur: ${error.message}`, type: 'error' });
-            }
-            return { error: true, message: error.message };
-        } else {
-            if (!suppressStatus) {
-                setStatus({ message: `Paramètre '${key}' enregistré !`, type: 'success' });
-                setTimeout(() => setStatus({ message: '', type: 'info' }), 3000);
-            }
-            return { error: false };
+        if (!error && !silent) {
+            setStatus({ message: `Sauvegardé !`, type: 'success' });
+            setTimeout(() => setStatus({ message: '', type: 'info' }), 2000);
         }
+        return !error;
     };
 
-    // Fonction pour charger tous les paramètres au montage
     const fetchAllSettings = useCallback(async () => {
-        // 1. Charger les paramètres de l'entreprise
-        setIsCompanyLoading(true);
-        const { data: companyDataArray, error: companyError } = await supabase.from('company_settings').select('*').limit(1);
+        // 1. Company
+        const { data: companyData } = await supabase.from('company_settings').select('*').limit(1).single();
+        if (companyData) setCompanySettings(companyData);
 
-        if (companyError) {
-            console.error("Erreur chargement infos entreprise:", companyError);
-        } else if (companyDataArray && companyDataArray.length > 0) {
-            setCompanySettings(prev => ({
-                ...prev,
-                ...companyDataArray[0],
-                order_cutoff_days: companyDataArray[0].order_cutoff_days ?? 2,
-                order_cutoff_hour: companyDataArray[0].order_cutoff_hour ?? 11,
-                payment_conditions: companyDataArray[0].payment_conditions ?? '',
-                payment_methods: companyDataArray[0].payment_methods ?? ''
-            }));
-        }
-        setIsCompanyLoading(false);
-
-        // 2. Charger les autres paramètres (welcome, menus, annonces, etc.)
-        setIsOtherSettingsLoading(true);
-        setIsMenuLoading(true);
-        const { data: settingsData, error: settingsError } = await supabase.from('settings').select('key, value');
-        if (settingsError) {
-            console.error("Erreur chargement settings:", settingsError);
-            setStatus({ message: `Erreur settings: ${settingsError.message}`, type: 'error' });
-        } else if (settingsData) {
-            const settingsMap = settingsData.reduce((acc, setting) => {
-                acc[setting.key] = setting.value;
-                return acc;
-            }, {});
-            setWelcomeMessage(settingsMap.welcomePopupMessage || '');
-            setRefusalTemplate(settingsMap.refusalEmailTemplate || '');
-            setMenuDecouverte(settingsMap.menu_decouverte || '');
-            setMenuStandard(settingsMap.menu_standard || '');
-            setMenuConfort(settingsMap.menu_confort || '');
-            setMenuDuo(settingsMap.menu_duo || '');
-            setMenuOverrideMessage(settingsMap.menu_override_message || '');
-            setMenuOverrideEnabled(settingsMap.menu_override_enabled === 'true');
-            
-            // Charger les prix
-            setMenuDecouvertePrice(settingsMap.menu_decouverte_price || '39');
-            setMenuStandardPrice(settingsMap.menu_standard_price || '49');
-            setMenuConfortPrice(settingsMap.menu_confort_price || '59');
-            setMenuDuoPrice(settingsMap.menu_duo_price || '94');
-
-            // Charger les annonces
-            setAnnouncementMessage(settingsMap.announcement_message || '');
-            setAnnouncementStyle(settingsMap.announcement_style || 'info');
-            setAnnouncementEnabled(settingsMap.announcement_enabled === 'true');
-            
-            // Charger l'offre spéciale
-            setSpecialOfferEnabled(settingsMap.special_offer_enabled === 'true');
-            setSpecialOfferDisablesFormulas(settingsMap.special_offer_disables_formulas === 'true');
-            if (settingsMap.special_offer_details) {
-                try {
-                    const parsedOffer = JSON.parse(settingsMap.special_offer_details);
-                    // Ensure dishes is always an array
-                    if (!Array.isArray(parsedOffer.dishes)) {
-                        parsedOffer.dishes = [];
-                    }
-                    setSpecialOffer(parsedOffer);
-                } catch (e) {
-                    console.error("Erreur au parsing des détails de l'offre spéciale:", e);
-                    setSpecialOffer({ title: '', description: '', dishes: [] });
-                }
-            } else {
-                 setSpecialOffer({ title: '', description: '', dishes: [] });
+        // 2. Settings table
+        const { data: settingsData } = await supabase.from('settings').select('key, value');
+        if (settingsData) {
+            const map = settingsData.reduce((acc, s) => ({ ...acc, [s.key]: s.value }), {});
+            setWelcomeMessage(map.welcomePopupMessage || '');
+            setRefusalTemplate(map.refusalEmailTemplate || '');
+            setMenuDecouverte(map.menu_decouverte || '');
+            setMenuStandard(map.menu_standard || '');
+            setMenuConfort(map.menu_confort || '');
+            setMenuDuo(map.menu_duo || '');
+            setMenuOverrideMessage(map.menu_override_message || '');
+            setMenuOverrideEnabled(map.menu_override_enabled === 'true');
+            setMenuDecouvertePrice(map.menu_decouverte_price || '39');
+            setMenuStandardPrice(map.menu_standard_price || '49');
+            setMenuConfortPrice(map.menu_confort_price || '59');
+            setMenuDuoPrice(map.menu_duo_price || '94');
+            setAnnouncementMessage(map.announcement_message || '');
+            setAnnouncementStyle(map.announcement_style || 'info');
+            setAnnouncementEnabled(map.announcement_enabled === 'true');
+            setSpecialOfferEnabled(map.special_offer_enabled === 'true');
+            setSpecialOfferDisablesFormulas(map.special_offer_disables_formulas === 'true');
+            if (map.special_offer_details) {
+                try { setSpecialOffer(JSON.parse(map.special_offer_details)); } catch(e) { setSpecialOffer({title:'', description:'', dishes:[]}); }
             }
         }
-        setIsOtherSettingsLoading(false);
-        setIsMenuLoading(false);
     }, []);
-    
-    useEffect(() => {
-        fetchAllSettings();
-    }, [fetchAllSettings]);
 
-    // --- Handlers ---
-    const handleCompanyInputChange = (e) => {
-        const { name, value } = e.target;
-        setCompanySettings(prev => ({ ...prev, [name]: value }));
-    };
+    useEffect(() => { fetchAllSettings(); }, [fetchAllSettings]);
 
-    const handleSaveCompanySettings = async (e) => {
+    const handleSaveCompany = async (e) => {
         e.preventDefault();
         setStatus({ message: 'Enregistrement...', type: 'info' });
-        
-        const payload = {
-            ...companySettings,
-            order_cutoff_days: parseInt(companySettings.order_cutoff_days, 10) || 2,
-            order_cutoff_hour: parseInt(companySettings.order_cutoff_hour, 10) || 11,
-        };
-
-        const { error } = await supabase
-            .from('company_settings')
-            .upsert(payload, { onConflict: 'id' });
-
-        if (error) {
-            console.error('Erreur sauvegarde infos entreprise:', error);
-            setStatus({ message: `Erreur: ${error.message}`, type: 'error' });
-        } else {
-            setStatus({ message: "Informations de l'entreprise enregistrées avec succès !", type: 'success' });
-            fetchAllSettings();
-        }
+        const { error } = await supabase.from('company_settings').upsert(companySettings, { onConflict: 'id' });
+        if (!error) setStatus({ message: 'Infos entreprise mises à jour !', type: 'success' });
+        else setStatus({ message: error.message, type: 'error' });
     };
 
     const handleSaveMenus = async () => {
         setStatus({ message: 'Enregistrement...', type: 'info' });
-        setIsMenuLoading(true);
-        try {
-            await Promise.all([
-                saveSetting('menu_decouverte', menuDecouverte),
-                saveSetting('menu_standard', menuStandard),
-                saveSetting('menu_confort', menuConfort),
-                saveSetting('menu_duo', menuDuo),
-                saveSetting('menu_override_message', menuOverrideMessage),
-                saveSetting('menu_override_enabled', String(menuOverrideEnabled)),
-                // Sauvegarder les prix
-                saveSetting('menu_decouverte_price', menuDecouvertePrice),
-                saveSetting('menu_standard_price', menuStandardPrice),
-                saveSetting('menu_confort_price', menuConfortPrice),
-                saveSetting('menu_duo_price', menuDuoPrice),
-            ]);
-        } finally {
-            setIsMenuLoading(false);
-            setStatus({ message: 'Menus et prix enregistrés !', type: 'success' });
-            setTimeout(() => setStatus({ message: '', type: 'info' }), 3000);
-        }
+        await Promise.all([
+            saveSetting('menu_decouverte', menuDecouverte, true),
+            saveSetting('menu_standard', menuStandard, true),
+            saveSetting('menu_confort', menuConfort, true),
+            saveSetting('menu_duo', menuDuo, true),
+            saveSetting('menu_override_message', menuOverrideMessage, true),
+            saveSetting('menu_override_enabled', String(menuOverrideEnabled), true),
+            saveSetting('menu_decouverte_price', menuDecouvertePrice, true),
+            saveSetting('menu_standard_price', menuStandardPrice, true),
+            saveSetting('menu_confort_price', menuConfortPrice, true),
+            saveSetting('menu_duo_price', menuDuoPrice, true),
+        ]);
+        setStatus({ message: 'Cartes et prix enregistrés !', type: 'success' });
     };
 
-    const handleSaveAnnouncement = async () => {
+    const handleSaveMessages = async () => {
         setStatus({ message: 'Enregistrement...', type: 'info' });
-        try {
-            const results = await Promise.all([
-                saveSetting('announcement_message', announcementMessage, true),
-                saveSetting('announcement_style', announcementStyle, true),
-                saveSetting('announcement_enabled', String(announcementEnabled), true),
-            ]);
-
-            const hasError = results.some(result => result.error);
-
-            if (hasError) {
-                const errorMessage = results.map(result => result.error ? result.message : '').filter(Boolean).join('; ');
-                setStatus({ message: `Erreur lors de l'enregistrement de l'annonce : ${errorMessage}`, type: 'error' });
-            } else {
-                setStatus({ message: 'Annonce enregistrée avec succès !', type: 'success' });
-                setTimeout(() => setStatus({ message: '', type: 'info' }), 3000);
-            }
-        } catch (error) {
-            setStatus({ message: "Erreur lors de l'enregistrement de l'annonce.", type: 'error' });
-        }
+        await Promise.all([
+            saveSetting('welcomePopupMessage', welcomeMessage, true),
+            saveSetting('refusalEmailTemplate', refusalTemplate, true),
+            saveSetting('announcement_message', announcementMessage, true),
+            saveSetting('announcement_style', announcementStyle, true),
+            saveSetting('announcement_enabled', String(announcementEnabled), true),
+        ]);
+        setStatus({ message: 'Communications mises à jour !', type: 'success' });
     };
 
-    const handleSpecialOfferChange = (e) => {
-        const { name, value } = e.target;
-        setSpecialOffer(prev => ({ ...prev, [name]: value }));
-    };
-
-    const handleDishChange = (index, e) => {
-        const { name, value } = e.target;
-        const newDishes = [...specialOffer.dishes];
-        newDishes[index] = { ...newDishes[index], [name]: value };
-        setSpecialOffer(prev => ({ ...prev, dishes: newDishes }));
-    };
-
-    const addDish = () => {
-        setSpecialOffer(prev => ({
-            ...prev,
-            dishes: [...(prev.dishes || []), { 
-                name: '', 
-                label1: '500g', 
-                price1: '', 
-                label2: '1000g', 
-                price2: '' 
-            }]
-        }));
-    };
-
-    const removeDish = (index) => {
-        const newDishes = [...specialOffer.dishes];
-        newDishes.splice(index, 1);
-        setSpecialOffer(prev => ({ ...prev, dishes: newDishes }));
-    };
-    
     const handleSaveSpecialOffer = async () => {
-        setStatus({ message: "Enregistrement de l'offre spéciale...", type: 'info' });
-        try {
-            await Promise.all([
-                saveSetting('special_offer_enabled', String(specialOfferEnabled), true),
-                saveSetting('special_offer_details', JSON.stringify(specialOffer), true),
-                saveSetting('special_offer_disables_formulas', String(specialOfferDisablesFormulas), true),
-            ]);
-            setStatus({ message: 'Offre spéciale enregistrée avec succès !', type: 'success' });
-            setTimeout(() => setStatus({ message: '', type: 'info' }), 3000);
-        } catch (error) {
-             setStatus({ message: "Erreur lors de l'enregistrement de l'offre spéciale.", type: 'error' });
-        }
+        setStatus({ message: 'Enregistrement...', type: 'info' });
+        await Promise.all([
+            saveSetting('special_offer_enabled', String(specialOfferEnabled), true),
+            saveSetting('special_offer_details', JSON.stringify(specialOffer), true),
+            saveSetting('special_offer_disables_formulas', String(specialOfferDisablesFormulas), true),
+        ]);
+        setStatus({ message: 'Offre spéciale mise à jour !', type: 'success' });
     };
 
-    // Aperçu de l'annonce
-    const getAnnouncementPreviewStyle = () => {
-        const style = announcementStyles.find(s => s.value === announcementStyle);
-        return {
-            padding: '1.5rem',
-            backgroundColor: style?.color || '#f9f9f9',
-            borderLeft: `4px solid ${style?.border || '#999'}`, 
-            borderRadius: '4px',
-            marginTop: '1rem'
-        };
-    };
-    
     return (
-        <div style={containerStyle}>
-            <CardHoverStyles />
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold text-gray-800 mb-2">Paramètres</h1>
-                <p className="text-gray-600">Gérez ici les différentes configurations de votre application.</p>
-            </div>
-            {status.message && <div style={statusStyle(status.type)}>{status.message}</div>}
-
-            <div style={gridStyle}>
-                <Link to="/calendrier" className="setting-card" style={cardStyle}><h2>Gestion du Calendrier</h2><p>Bloquer des dates et des jours.</p></Link>
-                <Link to="/abonnements" className="setting-card" style={cardStyle}><h2>Gestion des Abonnements</h2><p>Gérer les demandes d'abonnements.</p></Link>
-                <Link to="/admin-account" className="setting-card" style={cardStyle}><h2>Compte Administrateur</h2><p>Gérer les informations de connexion.</p></Link>
-            </div>
-
-            <div style={sectionStyle}>
-                <h2>Informations de l'entreprise</h2>
-                {isCompanyLoading ? <p>Chargement...</p> : (
-                    <form onSubmit={handleSaveCompanySettings}>
-                        <div style={formGridStyle}>
-                            <InputField label="Nom de l'entreprise" name="name" value={companySettings.name} onChange={handleCompanyInputChange} />
-                            <InputField label="Nom du propriétaire" name="owner" value={companySettings.owner} onChange={handleCompanyInputChange} />
-                            <InputField label="Adresse" name="address" value={companySettings.address} onChange={handleCompanyInputChange} />
-                            <InputField label="Ville" name="city" value={companySettings.city} onChange={handleCompanyInputChange} />
-                            <InputField label="Téléphone" name="phone" value={companySettings.phone} onChange={handleCompanyInputChange} />
-                            <InputField label="Email" name="email" type="email" value={companySettings.email} onChange={handleCompanyInputChange} />
-                            <InputField label="SIRET" name="siret" value={companySettings.siret} onChange={handleCompanyInputChange} />
-                            <InputField label="Site Web" name="website" value={companySettings.website} onChange={handleCompanyInputChange} />
-                            <div style={{gridColumn: '1 / -1'}}><InputField label="URL du Logo" name="logo_url" value={companySettings.logo_url} onChange={handleCompanyInputChange} /></div>
-                            <div style={{gridColumn: '1 / -1'}}><InputField label="Mention TVA" name="tva_message" value={companySettings.tva_message} onChange={handleCompanyInputChange} /></div>
-                            
-                            <InputField label="Délai de commande (jours)" name="order_cutoff_days" type="number" value={companySettings.order_cutoff_days} onChange={handleCompanyInputChange} />
-                            <InputField label="Heure limite de commande (0-23)" name="order_cutoff_hour" type="number" value={companySettings.order_cutoff_hour} onChange={handleCompanyInputChange} />
-                            <InputField label="Conditions de paiement" name="payment_conditions" value={companySettings.payment_conditions} onChange={handleCompanyInputChange} />
-                            <InputField label="Moyens de paiement" name="payment_methods" value={companySettings.payment_methods} onChange={handleCompanyInputChange} />
+        <div className="p-6 bg-gray-50 min-h-screen">
+            <div className="max-w-7xl mx-auto">
+                <div className="flex justify-between items-end mb-8">
+                    <div>
+                        <h1 className="text-3xl font-black text-gray-800 mb-2">Configuration Système</h1>
+                        <p className="text-gray-500 font-medium italic">Gérez vos infos, vos messages et vos cartes tarifaires.</p>
+                    </div>
+                    {status.message && (
+                        <div className={`px-6 py-3 rounded-2xl text-white font-bold shadow-lg animate-in slide-in-from-top-4 duration-300 ${status.type === 'success' ? 'bg-green-500' : (status.type === 'error' ? 'bg-red-500' : 'bg-blue-500')}`}>
+                            {status.message}
                         </div>
-                        <button type="submit" style={saveButtonStyle}>Enregistrer les informations</button>
-                    </form>
-                )}
-            </div>
+                    )}
+                </div>
 
-                        {/* Offre Spéciale Section */}
-                        <div style={sectionStyle}>
-                            <h2>Gestion de l'Offre Spéciale</h2>
-                            {isOtherSettingsLoading ? <p>Chargement...</p> : (
-                            <>
-                                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
-                                    <input
-                                        type="checkbox"
-                                        id="special-offer-enabled"
-                                        checked={specialOfferEnabled}
-                                        onChange={(e) => setSpecialOfferEnabled(e.target.checked)}
-                                        style={{ marginRight: '10px', height: '18px', width: '18px' }}
-                                    />
-                                    <label htmlFor="special-offer-enabled" style={{ fontWeight: 'bold' }}>Activer l'offre spéciale</label>
+                {/* --- SYSTÈME D'ONGLETS --- */}
+                <div className="flex space-x-1 bg-gray-200 p-1.5 rounded-[2rem] mb-10 max-w-4xl overflow-x-auto scrollbar-hide">
+                    <button onClick={() => setActiveTab('company')} className={`flex-1 min-w-[140px] flex items-center justify-center py-3.5 rounded-[1.5rem] text-xs font-black transition-all ${activeTab === 'company' ? 'bg-white text-gray-800 shadow-md' : 'text-gray-500 hover:text-gray-700'}`}><Building2 size={16} className="mr-2"/> Entreprise</button>
+                    <button onClick={() => setActiveTab('messages')} className={`flex-1 min-w-[140px] flex items-center justify-center py-3.5 rounded-[1.5rem] text-xs font-black transition-all ${activeTab === 'messages' ? 'bg-white text-gray-800 shadow-md' : 'text-gray-500 hover:text-gray-700'}`}><MessageSquare size={16} className="mr-2"/> Messages</button>
+                    <button onClick={() => setActiveTab('menus')} className={`flex-1 min-w-[140px] flex items-center justify-center py-3.5 rounded-[1.5rem] text-xs font-black transition-all ${activeTab === 'menus' ? 'bg-white text-gray-800 shadow-md' : 'text-gray-500 hover:text-gray-700'}`}><UtensilsCrossed size={16} className="mr-2"/> Cartes & Menus</button>
+                    <button onClick={() => setActiveTab('links')} className={`flex-1 min-w-[140px] flex items-center justify-center py-3.5 rounded-[1.5rem] text-xs font-black transition-all ${activeTab === 'links' ? 'bg-white text-gray-800 shadow-md' : 'text-gray-500 hover:text-gray-700'}`}><Layout size={16} className="mr-2"/> Raccourcis</button>
+                </div>
+
+                <div className="animate-in fade-in duration-700">
+                    {/* --- ONGLET ENTREPRISE --- */}
+                    {activeTab === 'company' && (
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                            <div className="lg:col-span-2 space-y-8">
+                                <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-gray-100">
+                                    <h2 className="text-xl font-black text-gray-800 mb-8 flex items-center gap-2"><Info className={`text-${themeColor}-500`}/> Informations Identité</h2>
+                                    <form onSubmit={handleSaveCompany} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="md:col-span-2"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 block mb-2">Nom de l'enseigne</label><input type="text" value={companySettings.name} onChange={e => setCompanySettings({...companySettings, name: e.target.value})} className="w-full p-4 bg-gray-50 border-0 rounded-2xl font-bold" /></div>
+                                        <div><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 block mb-2">Propriétaire</label><input type="text" value={companySettings.owner} onChange={e => setCompanySettings({...companySettings, owner: e.target.value})} className="w-full p-4 bg-gray-50 border-0 rounded-2xl" /></div>
+                                        <div><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 block mb-2">SIRET</label><input type="text" value={companySettings.siret} onChange={e => setCompanySettings({...companySettings, siret: e.target.value})} className="w-full p-4 bg-gray-50 border-0 rounded-2xl" /></div>
+                                        <div className="md:col-span-2"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 block mb-2">Mention légale TVA</label><input type="text" value={companySettings.tva_message} onChange={e => setCompanySettings({...companySettings, tva_message: e.target.value})} className="w-full p-4 bg-gray-50 border-0 rounded-2xl" /></div>
+                                        <div className="md:col-span-2 pt-6 border-t"><button type="submit" className={`w-full py-4 rounded-2xl text-white font-black shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${themeColor === 'blue' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-amber-500 hover:bg-amber-600'}`}><Save size={18}/> ENREGISTRER L'IDENTITÉ</button></div>
+                                    </form>
                                 </div>
-            
-                                <div style={{ opacity: specialOfferEnabled ? 1 : 0.5, pointerEvents: specialOfferEnabled ? 'auto' : 'none' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0' }}>
-                                        <input
-                                            type="checkbox"
-                                            id="special-offer-disables-formulas"
-                                            checked={specialOfferDisablesFormulas}
-                                            onChange={(e) => setSpecialOfferDisablesFormulas(e.target.checked)}
-                                            style={{ marginRight: '10px', height: '18px', width: '18px' }}
-                                        />
-                                        <label htmlFor="special-offer-disables-formulas">
-                                            Désactiver les formules habituelles lorsque l'offre spéciale est active
-                                        </label>
+                                <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-gray-100">
+                                    <h2 className="text-xl font-black text-gray-800 mb-8 flex items-center gap-2"><MapPin className={`text-${themeColor}-500`}/> Contact & Localisation</h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 block mb-2">Adresse</label><input type="text" value={companySettings.address} onChange={e => setCompanySettings({...companySettings, address: e.target.value})} className="w-full p-4 bg-gray-50 border-0 rounded-2xl" /></div>
+                                        <div><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 block mb-2">Ville</label><input type="text" value={companySettings.city} onChange={e => setCompanySettings({...companySettings, city: e.target.value})} className="w-full p-4 bg-gray-50 border-0 rounded-2xl" /></div>
+                                        <div><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 block mb-2">Téléphone</label><input type="tel" value={companySettings.phone} onChange={e => setCompanySettings({...companySettings, phone: e.target.value})} className="w-full p-4 bg-gray-50 border-0 rounded-2xl font-bold" /></div>
+                                        <div><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 block mb-2">Email Public</label><input type="email" value={companySettings.email} onChange={e => setCompanySettings({...companySettings, email: e.target.value})} className="w-full p-4 bg-gray-50 border-0 rounded-2xl font-bold" /></div>
+                                        <div className="md:col-span-2"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 block mb-2">Site Web (ex: https://...)</label><input type="text" value={companySettings.website} onChange={e => setCompanySettings({...companySettings, website: e.target.value})} className="w-full p-4 bg-gray-50 border-0 rounded-2xl font-mono text-xs" /></div>
                                     </div>
-                                    
-                                    <InputField label="Titre de l'offre" name="title" value={specialOffer.title} onChange={handleSpecialOfferChange} />
+                                </div>
+                            </div>
+                            <div className="space-y-8">
+                                <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100">
+                                    <h2 className="text-lg font-black text-gray-800 mb-6 flex items-center gap-2"><Clock className="text-red-500"/> Délais de Commande</h2>
+                                    <div className="space-y-6">
+                                        <div><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2 ml-2">Jours de battement</label><input type="number" value={companySettings.order_cutoff_days} onChange={e => setCompanySettings({...companySettings, order_cutoff_days: e.target.value})} className="w-full p-4 bg-gray-50 border-0 rounded-2xl font-black text-xl" /></div>
+                                        <div><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2 ml-2">Heure limite (0-23)</label><input type="number" value={companySettings.order_cutoff_hour} onChange={e => setCompanySettings({...companySettings, order_cutoff_hour: e.target.value})} className="w-full p-4 bg-gray-50 border-0 rounded-2xl font-black text-xl" /></div>
+                                    </div>
+                                </div>
+                                <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100">
+                                    <h2 className="text-lg font-black text-gray-800 mb-6 flex items-center gap-2"><Globe className="text-indigo-500"/> Logo Public</h2>
+                                    <div className="mb-6 aspect-video bg-gray-50 rounded-2xl overflow-hidden border border-dashed border-gray-200 flex items-center justify-center">
+                                        {companySettings.logo_url ? <img src={companySettings.logo_url} alt="Logo Preview" className="max-h-20" /> : <Building2 size={40} className="text-gray-200"/>}
+                                    </div>
+                                    <input type="text" value={companySettings.logo_url} onChange={e => setCompanySettings({...companySettings, logo_url: e.target.value})} placeholder="URL de l'image..." className="w-full p-3 bg-gray-50 border-0 rounded-xl text-[10px] font-mono" />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* --- ONGLET MESSAGES --- */}
+                    {activeTab === 'messages' && (
+                        <div className="space-y-8 max-w-4xl mx-auto">
+                            <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-gray-100">
+                                <h2 className="text-xl font-black text-gray-800 mb-8 flex items-center gap-3"><Megaphone className="text-purple-500"/> Annonce Temporaire (Haut de page)</h2>
+                                <div className="flex items-center gap-4 mb-8 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                                    <input type="checkbox" checked={announcementEnabled} onChange={e => setAnnouncementEnabled(e.target.checked)} className="w-6 h-6 rounded-lg text-purple-500" />
+                                    <label className="font-bold text-gray-700">Activer l'affichage du message d'annonce</label>
+                                </div>
+                                <div className={`space-y-6 transition-all ${announcementEnabled ? 'opacity-100' : 'opacity-40 grayscale pointer-events-none'}`}>
                                     <div>
-                                        <label style={labelStyle}>Description de l'offre</label>
-                                        <textarea
-                                            name="description"
-                                            value={specialOffer.description}
-                                            onChange={handleSpecialOfferChange}
-                                            style={{ ...inputStyle, height: '80px' }}
-                                            placeholder="ex: Composez votre menu de fête avec nos plats d'exception..."
-                                        />
-                                    </div>
-            
-                                    <h3 style={{ marginTop: '20px', fontSize: '1.1rem' }}>Plats de l'offre</h3>
-                                    {(specialOffer.dishes || []).map((dish, index) => (
-                                        <div key={index} style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '15px', marginTop: '15px', position: 'relative' }}>
-                                            <button onClick={() => removeDish(index)} style={removeButtonStyle}>&times;</button>
-                                            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '15px' }}>
-                                                <InputField label={`Plat #${index + 1}`} name="name" value={dish.name} onChange={(e) => handleDishChange(index, e)} />
-                                                <InputField label="Libellé 1" name="label1" value={dish.label1} onChange={(e) => handleDishChange(index, e)} />
-                                                <InputField label="Prix 1 (€)" name="price1" type="number" value={dish.price1} onChange={(e) => handleDishChange(index, e)} />
-                                                <InputField label="Libellé 2" name="label2" value={dish.label2} onChange={(e) => handleDishChange(index, e)} />
-                                                <InputField label="Prix 2 (€)" name="price2" type="number" value={dish.price2} onChange={(e) => handleDishChange(index, e)} />
-                                            </div>
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 block mb-2">Style visuel</label>
+                                        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                                            {announcementStyles.map(s => (
+                                                <button key={s.value} onClick={() => setAnnouncementStyle(s.value)} className={`py-2 rounded-xl text-[10px] font-black transition-all border-2 ${announcementStyle === s.value ? 'border-gray-800 bg-white shadow-md' : 'border-transparent bg-gray-50 opacity-60'}`}>{s.label}</button>
+                                            ))}
                                         </div>
-                                    ))}
-                                    <button type="button" onClick={addDish} style={{...saveButtonStyle, marginTop: '15px', backgroundColor: '#555'}}>Ajouter un plat</button>
-                                </div>
-            
-                                <button onClick={handleSaveSpecialOffer} style={saveButtonStyle}>Enregistrer l'Offre Spéciale</button>
-                            </>
-                            )}
-                        </div>
-            <div style={sectionStyle}>
-                <h2>Message d'accueil (Popup)</h2>
-                {isOtherSettingsLoading ? <p>Chargement...</p> : (
-                    <>
-                        <textarea value={welcomeMessage} onChange={(e) => setWelcomeMessage(e.target.value)} style={{...inputStyle, height: '100px'}} placeholder="Saisissez le message ici..."/>
-                        <button onClick={() => saveSetting('welcomePopupMessage', welcomeMessage)} style={{...saveButtonStyle, alignSelf: 'flex-start', fontSize: '14px'}}>Enregistrer le message</button>
-                    </>
-                )}
-            </div>
-
-            <div style={sectionStyle}>
-                <h2>Modèle e-mail de refus</h2>
-                {isOtherSettingsLoading ? <p>Chargement...</p> : (
-                    <>
-                        <textarea value={refusalTemplate} onChange={(e) => setRefusalTemplate(e.target.value)} style={{...inputStyle, height: '150px'}} placeholder="Saisissez le modèle d'e-mail de refus ici..."/>
-                        <button onClick={() => saveSetting('refusalEmailTemplate', refusalTemplate)} style={{...saveButtonStyle, alignSelf: 'flex-start', fontSize: '14px'}}>Enregistrer le modèle</button>
-                    </>
-                )}
-            </div>
-
-            {/* NOUVELLE SECTION : Annonces */}
-            <div style={sectionStyle}>
-                <h2>Message d'annonce (affiché sur la page Menu)</h2>
-                {isOtherSettingsLoading ? <p>Chargement...</p> : (
-                    <>
-                        <div style={{ marginBottom: '20px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '15px' }}>
-                                <input 
-                                    type="checkbox" 
-                                    id="announcement-enabled" 
-                                    checked={announcementEnabled} 
-                                    onChange={(e) => setAnnouncementEnabled(e.target.checked)} 
-                                    style={{ marginRight: '10px', height: '18px', width: '18px' }} 
-                                />
-                                <label htmlFor="announcement-enabled" style={{ fontWeight: 'bold' }}>Activer le message d'annonce</label>
-                            </div>
-
-                            <div style={{ marginBottom: '15px' }}>
-                                <label style={labelStyle}>Style du message</label>
-                                <select 
-                                    value={announcementStyle} 
-                                    onChange={(e) => setAnnouncementStyle(e.target.value)}
-                                    style={inputStyle}
-                                    disabled={!announcementEnabled}
-                                >
-                                    {announcementStyles.map(style => (
-                                        <option key={style.value} value={style.value}>{style.label}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div style={{ marginBottom: '15px' }}>
-                                <label style={labelStyle}>Message (Markdown supporté)</label>
-                                <textarea 
-                                    value={announcementMessage} 
-                                    onChange={(e) => setAnnouncementMessage(e.target.value)} 
-                                    style={{...inputStyle, height: '120px', backgroundColor: announcementEnabled ? '#fff' : '#f9f9f9', fontFamily: 'monospace'}} 
-                                    placeholder="**Exemple**: Profitez de nos offres spéciales pour Noël ! 🎄&#10;&#10;- 10% de réduction sur tous les menus&#10;- Livraison gratuite jusqu'au 31/12"
-                                    disabled={!announcementEnabled}
-                                />
-                                <small style={{ color: '#666', display: 'block', marginTop: '5px' }}>
-                                    Syntaxe Markdown : **gras**, *italique*, # Titre, - liste, [lien](url)
-                                </small>
-                            </div>
-
-                            {announcementEnabled && announcementMessage && (
-                                <div>
-                                    <label style={{ ...labelStyle, marginTop: '15px', display: 'block' }}>Aperçu :</label>
-                                    <div style={getAnnouncementPreviewStyle()}>
-                                        <div dangerouslySetInnerHTML={{ __html: announcementMessage.replace(/\n/g, '<br>') }} />
                                     </div>
-                                    <small style={{ color: '#999', display: 'block', marginTop: '5px' }}>
-                                        Note : L'aperçu réel avec Markdown sera visible sur la page Menu
-                                    </small>
+                                    <div>
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 block mb-2">Texte du message (Markdown possible)</label>
+                                        <textarea value={announcementMessage} onChange={e => setAnnouncementMessage(e.target.value)} className="w-full p-4 bg-gray-50 border-0 rounded-2xl font-medium h-32 focus:ring-2 focus:ring-purple-500" placeholder="Ex: Fermeture exceptionnelle cette semaine..." />
+                                    </div>
                                 </div>
-                            )}
-                        </div>
-                        <button onClick={handleSaveAnnouncement} style={saveButtonStyle}>Enregistrer l'annonce</button>
-                    </>
-                )}
-            </div>
+                                <div className="pt-8 mt-8 border-t flex justify-end"><button onClick={handleSaveMessages} className="bg-gray-800 text-white px-10 py-4 rounded-2xl font-black shadow-lg hover:bg-black transition-all active:scale-95">SAUVEGARDER COMMUNICATIONS</button></div>
+                            </div>
 
-            <div style={sectionStyle}>
-                <h2>Gestion des Menus de la Semaine</h2>
-                {isMenuLoading ? <p>Chargement...</p> : (
-                    <>
-                        <div style={{ border: '1px solid #eee', borderRadius: '8px', padding: '15px', marginTop: '15px' }}>
-                            <h3 style={{ marginTop: 0, fontSize: '1.1rem' }}>Message personnalisé (prioritaire)</h3>
-                            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-                                <input type="checkbox" id="override-enabled" checked={menuOverrideEnabled} onChange={(e) => setMenuOverrideEnabled(e.target.checked)} style={{ marginRight: '10px', height: '18px', width: '18px' }} />
-                                <label htmlFor="override-enabled">Activer le message personnalisé (remplace les menus)</label>
-                            </div>
-                            <textarea value={menuOverrideMessage} onChange={(e) => setMenuOverrideMessage(e.target.value)} style={{...inputStyle, height: '80px', backgroundColor: menuOverrideEnabled ? '#fff' : '#f9f9f9' }} placeholder="Ex: Les livraisons reprendront le 2 janvier." disabled={!menuOverrideEnabled}/>
-                        </div>
-                        
-                        <div style={{ marginTop: '20px' }}>
-                            <h3 style={{ marginTop: 0, fontSize: '1.1rem' }}>Prix des formules (€)</h3>
-                            <div style={formGridStyle}>
-                                <InputField label="Prix Découverte" name="menu_decouverte_price" type="number" value={menuDecouvertePrice} onChange={(e) => setMenuDecouvertePrice(e.target.value)} />
-                                <InputField label="Prix Standard" name="menu_standard_price" type="number" value={menuStandardPrice} onChange={(e) => setMenuStandardPrice(e.target.value)} />
-                                <InputField label="Prix Confort" name="menu_confort_price" type="number" value={menuConfortPrice} onChange={(e) => setMenuConfortPrice(e.target.value)} />
-                                <InputField label="Prix Duo" name="menu_duo_price" type="number" value={menuDuoPrice} onChange={(e) => setMenuDuoPrice(e.target.value)} />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100">
+                                    <h2 className="text-lg font-black text-gray-800 mb-6 flex items-center gap-2"><Layout className="text-amber-500"/> Popup Bienvenue</h2>
+                                    <textarea value={welcomeMessage} onChange={e => setWelcomeMessage(e.target.value)} className="w-full p-4 bg-gray-50 border-0 rounded-2xl font-medium h-48 focus:ring-2 focus:ring-amber-500" placeholder="Message qui s'affiche à l'ouverture du site..." />
+                                </div>
+                                <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100">
+                                    <h2 className="text-lg font-black text-gray-800 mb-6 flex items-center gap-2"><MailX className="text-red-500"/> Email de Refus</h2>
+                                    <textarea value={refusalTemplate} onChange={e => setRefusalTemplate(e.target.value)} className="w-full p-4 bg-gray-50 border-0 rounded-2xl font-medium h-48 focus:ring-2 focus:ring-red-500" placeholder="Modèle de réponse pour les dates indisponibles..." />
+                                </div>
                             </div>
                         </div>
+                    )}
 
-                        <div style={{ marginTop: '20px' }}>
-                            <h3 style={{ marginTop: 0, fontSize: '1.1rem' }}>Contenu des formules</h3>
-                            <div style={formGridStyle}>
-                                <div><label style={labelStyle}>Formule Découverte</label><textarea value={menuDecouverte} onChange={(e) => setMenuDecouverte(e.target.value)} style={{...inputStyle, height: '120px'}} /></div>
-                                <div><label style={labelStyle}>Formule Standard</label><textarea value={menuStandard} onChange={(e) => setMenuStandard(e.target.value)} style={{...inputStyle, height: '120px'}} /></div>
-                                <div><label style={labelStyle}>Formule Confort</label><textarea value={menuConfort} onChange={(e) => setMenuConfort(e.target.value)} style={{...inputStyle, height: '120px'}} /></div>
-                                <div><label style={labelStyle}>Option Duo</label><textarea value={menuDuo} onChange={(e) => setMenuDuo(e.target.value)} style={{...inputStyle, height: '120px'}} /></div>
+                    {/* --- ONGLET MENUS --- */}
+                    {activeTab === 'menus' && (
+                        <div className="space-y-8">
+                            <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-gray-100">
+                                <h2 className="text-xl font-black text-gray-800 mb-8 flex items-center gap-3"><Euro className="text-green-500"/> Tarification des Formules (€)</h2>
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                                    <div><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 block mb-2">DÉCOUVERTE</label><input type="number" value={menuDecouvertePrice} onChange={e => setMenuDecouvertePrice(e.target.value)} className="w-full p-4 bg-gray-50 border-0 rounded-2xl font-black text-2xl" /></div>
+                                    <div><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 block mb-2">STANDARD</label><input type="number" value={menuStandardPrice} onChange={e => setMenuStandardPrice(e.target.value)} className="w-full p-4 bg-gray-50 border-0 rounded-2xl font-black text-2xl" /></div>
+                                    <div><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 block mb-2">CONFORT</label><input type="number" value={menuConfortPrice} onChange={e => setMenuConfortPrice(e.target.value)} className="w-full p-4 bg-gray-50 border-0 rounded-2xl font-black text-2xl" /></div>
+                                    <div><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 block mb-2">DUO</label><input type="number" value={menuDuoPrice} onChange={e => setMenuDuoPrice(e.target.value)} className="w-full p-4 bg-gray-50 border-0 rounded-2xl font-black text-2xl" /></div>
+                                </div>
                             </div>
-                            <small style={{ color: '#666', display: 'block', marginTop: '10px' }}>
-                                Syntaxe Markdown supportée : **gras**, *italique*, - liste.
-                            </small>
+
+                            <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-gray-100">
+                                <h2 className="text-xl font-black text-gray-800 mb-8 flex items-center gap-3"><FileText className="text-amber-500"/> Composition du Menu Semaine</h2>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 block mb-2">Contenu Découverte</label><textarea value={menuDecouverte} onChange={e => setMenuDecouverte(e.target.value)} className="w-full p-4 bg-gray-50 border-0 rounded-2xl font-medium h-32" /></div>
+                                    <div><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 block mb-2">Contenu Standard</label><textarea value={menuStandard} onChange={e => setMenuStandard(e.target.value)} className="w-full p-4 bg-gray-50 border-0 rounded-2xl font-medium h-32" /></div>
+                                    <div><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 block mb-2">Contenu Confort</label><textarea value={menuConfort} onChange={e => setMenuConfort(e.target.value)} className="w-full p-4 bg-gray-50 border-0 rounded-2xl font-medium h-32" /></div>
+                                    <div><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 block mb-2">Contenu Duo</label><textarea value={menuDuo} onChange={e => setMenuDuo(e.target.value)} className="w-full p-4 bg-gray-50 border-0 rounded-2xl font-medium h-32" /></div>
+                                </div>
+                                <div className="pt-10 mt-10 border-t flex justify-between items-center">
+                                    <p className="text-xs text-gray-400 font-bold max-w-md italic">Note : Utilisez des tirets "-" pour les listes. Le gras se fait avec des étoiles "**gras**".</p>
+                                    <button onClick={handleSaveMenus} className="bg-green-600 text-white px-10 py-4 rounded-2xl font-black shadow-lg hover:bg-green-700 transition-all active:scale-95 flex items-center gap-2"><Save size={18}/> SAUVEGARDER CARTE SEMAINIER</button>
+                                </div>
+                            </div>
+
+                            <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-red-100 bg-red-50/20">
+                                <h2 className="text-xl font-black text-gray-800 mb-8 flex items-center gap-3"><PlusCircle className="text-red-500"/> Gestion Offre Spéciale (Fêtes / Événements)</h2>
+                                <div className="flex flex-wrap gap-6 mb-8">
+                                    <div className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-red-100 shadow-sm"><input type="checkbox" checked={specialOfferEnabled} onChange={e => setSpecialOfferEnabled(e.target.checked)} className="w-6 h-6 text-red-500 rounded-lg"/><label className="font-bold text-gray-700">Activer l'offre spéciale</label></div>
+                                    <div className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm"><input type="checkbox" checked={specialOfferDisablesFormulas} onChange={e => setSpecialOfferDisablesFormulas(e.target.checked)} className="w-6 h-6 text-gray-400 rounded-lg"/><label className="font-bold text-gray-500">Désactiver formules habituelles</label></div>
+                                </div>
+                                <div className={`space-y-8 transition-all ${specialOfferEnabled ? 'opacity-100' : 'opacity-40 grayscale pointer-events-none'}`}>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2 ml-2">Titre de l'Offre</label><input type="text" value={specialOffer.title} onChange={e => setSpecialOffer({...specialOffer, title: e.target.value})} className="w-full p-4 bg-white border border-gray-100 rounded-2xl font-black" /></div>
+                                        <div><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2 ml-2">Description</label><input type="text" value={specialOffer.description} onChange={e => setSpecialOffer({...specialOffer, description: e.target.value})} className="w-full p-4 bg-white border border-gray-100 rounded-2xl" /></div>
+                                    </div>
+                                    <div className="space-y-4">
+                                        <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest ml-2">Plats de l'offre</h3>
+                                        <div className="grid grid-cols-1 gap-4">
+                                            {specialOffer.dishes?.map((dish, idx) => (
+                                                <div key={idx} className="bg-white p-6 rounded-2xl border border-gray-100 flex flex-wrap gap-4 items-end relative group">
+                                                    <button onClick={() => { const d = [...specialOffer.dishes]; d.splice(idx, 1); setSpecialOffer({...specialOffer, dishes: d}) }} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={14}/></button>
+                                                    <div className="flex-1 min-w-[200px]"><label className="text-[9px] font-black text-gray-300 uppercase block mb-1">Désignation</label><input type="text" value={dish.name} onChange={e => { const d = [...specialOffer.dishes]; d[idx].name = e.target.value; setSpecialOffer({...specialOffer, dishes: d}) }} className="w-full p-3 bg-gray-50 border-0 rounded-xl font-bold" /></div>
+                                                    <div className="w-24"><label className="text-[9px] font-black text-gray-300 uppercase block mb-1">Unit 1</label><input type="text" value={dish.label1} onChange={e => { const d = [...specialOffer.dishes]; d[idx].label1 = e.target.value; setSpecialOffer({...specialOffer, dishes: d}) }} className="w-full p-3 bg-gray-50 border-0 rounded-xl" /></div>
+                                                    <div className="w-24"><label className="text-[9px] font-black text-gray-300 uppercase block mb-1">Prix 1</label><input type="number" value={dish.price1} onChange={e => { const d = [...specialOffer.dishes]; d[idx].price1 = e.target.value; setSpecialOffer({...specialOffer, dishes: d}) }} className="w-full p-3 bg-gray-50 border-0 rounded-xl font-black text-center" /></div>
+                                                    <div className="w-24"><label className="text-[9px] font-black text-gray-300 uppercase block mb-1">Unit 2</label><input type="text" value={dish.label2} onChange={e => { const d = [...specialOffer.dishes]; d[idx].label2 = e.target.value; setSpecialOffer({...specialOffer, dishes: d}) }} className="w-full p-3 bg-gray-50 border-0 rounded-xl" /></div>
+                                                    <div className="w-24"><label className="text-[9px] font-black text-gray-300 uppercase block mb-1">Prix 2</label><input type="number" value={dish.price2} onChange={e => { const d = [...specialOffer.dishes]; d[idx].price2 = e.target.value; setSpecialOffer({...specialOffer, dishes: d}) }} className="w-full p-3 bg-gray-50 border-0 rounded-xl font-black text-center" /></div>
+                                                </div>
+                                            ))}
+                                            <button onClick={() => setSpecialOffer({...specialOffer, dishes: [...(specialOffer.dishes || []), {name: '', label1:'500g', price1:'', label2:'1kg', price2:''}]})} className="w-full py-4 border-2 border-dashed border-gray-200 rounded-2xl text-gray-400 font-bold hover:bg-gray-50 transition-all flex items-center justify-center gap-2"><PlusCircle size={18}/> Ajouter un plat à l'offre</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="pt-10 mt-10 border-t flex justify-end"><button onClick={handleSaveSpecialOffer} className="bg-red-600 text-white px-10 py-4 rounded-2xl font-black shadow-lg hover:bg-red-700 transition-all active:scale-95">SAUVEGARDER L'OFFRE SPÉCIALE</button></div>
+                            </div>
                         </div>
-                        <button onClick={handleSaveMenus} style={saveButtonStyle}>Enregistrer les Menus et Prix</button>
-                    </>
-                )}
+                    )}
+
+                    {/* --- ONGLET RACCOURCIS --- */}
+                    {activeTab === 'links' && (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                            <Link to="/calendrier" className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-gray-100 hover:shadow-xl transition-all group text-center">
+                                <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform"><Calendar size={40}/></div>
+                                <h3 className="text-xl font-black text-gray-800 mb-2">Calendrier</h3>
+                                <p className="text-sm text-gray-400 font-medium leading-relaxed">Gérez vos jours de fermeture et les indisponibilités.</p>
+                            </Link>
+                            <Link to="/abonnements" className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-gray-100 hover:shadow-xl transition-all group text-center">
+                                <div className="w-20 h-20 bg-amber-50 text-amber-600 rounded-3xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform"><Users size={40}/></div>
+                                <h3 className="text-xl font-black text-gray-800 mb-2">Abonnements</h3>
+                                <p className="text-sm text-gray-400 font-medium leading-relaxed">Pilotez vos contrats récurrents et la facturation mensuelle.</p>
+                            </Link>
+                            <Link to="/admin-account" className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-gray-100 hover:shadow-xl transition-all group text-center">
+                                <div className="w-20 h-20 bg-green-50 text-green-600 rounded-3xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform"><ShieldCheck size={40}/></div>
+                                <h3 className="text-xl font-black text-gray-800 mb-2">Accès Sécurité</h3>
+                                <p className="text-sm text-gray-400 font-medium leading-relaxed">Mettez à jour vos informations de connexion administrateur.</p>
+                            </Link>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
 };
-
-// Composant utilitaire
-const InputField = ({ label, name, value, onChange, type = 'text' }) => (
-    <div style={inputGroupStyle}>
-        <label htmlFor={name} style={labelStyle}>{label}</label>
-        <input type={type} id={name} name={name} value={value || ''} onChange={onChange} style={inputStyle} />
-    </div>
-);
-
-// Styles
-const containerStyle = { padding: '20px', maxWidth: '1200px', margin: '0 auto', fontFamily: 'Arial, sans-serif' };
-const gridStyle = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', marginBottom: '30px' };
-const cardStyle = { background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 4px 8px rgba(0,0,0,0.1)', textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column' };
-const sectionStyle = { background: 'white', padding: '25px', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', marginBottom: '30px' };
-const formGridStyle = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' };
-const inputGroupStyle = { display: 'flex', flexDirection: 'column', marginBottom: '15px' };
-const labelStyle = { marginBottom: '5px', fontWeight: 'bold', color: '#333' };
-const inputStyle = { padding: '10px', borderRadius: '4px', border: '1px solid #ddd', boxSizing: 'border-box', width: '100%' };
-const saveButtonStyle = { marginTop: '20px', padding: '12px 25px', backgroundColor: '#d4af37', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold' };
-const removeButtonStyle = { position: 'absolute', top: '10px', right: '10px', background: '#ff4d4d', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', fontSize: '16px', lineHeight: '24px', textAlign: 'center' };
-const statusStyle = (type) => ({ padding: '15px', marginBottom: '20px', borderRadius: '5px', color: 'white', backgroundColor: type === 'success' ? '#28a745' : (type === 'error' ? '#dc3545' : '#17a2b8') });
 
 export default Parametres;
