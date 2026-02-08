@@ -5,8 +5,8 @@ import { Users, Building2, Search, PlusCircle, User, Edit3, Trash2, Mail, Phone,
 
 const statusBadgeStyle = (type) => {
     return {
-        backgroundColor: type === 'Particulier' ? 'rgba(212, 175, 55, 0.1)' : 'rgba(59, 130, 246, 0.1)',
-        color: type === 'Particulier' ? '#d4af37' : '#3b82f6',
+        backgroundColor: type === 'Particulier' || type === 'client' ? 'rgba(212, 175, 55, 0.1)' : 'rgba(59, 130, 246, 0.1)',
+        color: type === 'Particulier' || type === 'client' ? '#d4af37' : '#3b82f6',
         padding: '4px 12px',
         borderRadius: '20px',
         fontSize: '11px',
@@ -24,7 +24,7 @@ const ClientCard = ({ client, type, onEdit, onDelete, themeColor }) => (
                 </div>
                 <div>
                     <h3 className="font-bold text-gray-800 text-lg">
-                        {type === 'client' ? `${client.last_name} ${client.first_name}` : client.nom_entreprise}
+                        {type === 'client' ? `${client.last_name || ''} ${client.first_name || ''}`.trim() : (client.nom_entreprise || 'Entreprise')}
                     </h3>
                     <span style={statusBadgeStyle(type === 'client' ? 'Particulier' : 'Entreprise')}>
                         {type === 'client' ? 'Particulier' : 'Entreprise'}
@@ -68,6 +68,7 @@ const Clients = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [data, setData] = useState([]);
     
+    // Form state
     const [isEditing, setIsEditing] = useState(false);
     const [editId, setEditId] = useState(null);
     const [formData, setFormData] = useState({});
@@ -115,15 +116,20 @@ const Clients = () => {
         e.preventDefault();
         const table = activeTab === 'particuliers' ? 'clients' : 'entreprises';
         
+        const finalData = { ...formData };
+        if (activeTab === 'particuliers') {
+            finalData.type = 'client'; // Internal value used in DB to satisfy NOT NULL
+        }
+
         if (editId) {
-            const { error } = await supabase.from(table).update(formData).eq('id', editId);
+            const { error } = await supabase.from(table).update(finalData).eq('id', editId);
             if (!error) {
                 alert('Mise à jour réussie !');
                 handleCloseEdit();
                 fetchData();
             } else alert(error.message);
         } else {
-            const { error } = await supabase.from(table).insert([formData]);
+            const { error } = await supabase.from(table).insert([finalData]);
             if (!error) {
                 alert('Ajout réussi !');
                 handleCloseEdit();
@@ -184,10 +190,8 @@ const Clients = () => {
                         <form onSubmit={handleSave} className="space-y-4">
                             {activeTab === 'particuliers' ? (
                                 <>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div><label className="block text-xs font-bold text-gray-400 uppercase mb-1">Nom</label><input required type="text" value={formData.last_name || ''} onChange={e => setFormData({...formData, last_name: e.target.value})} className="w-full p-3 border rounded-xl" /></div>
-                                        <div><label className="block text-xs font-bold text-gray-400 uppercase mb-1">Prénom</label><input type="text" value={formData.first_name || ''} onChange={e => setFormData({...formData, first_name: e.target.value})} className="w-full p-3 border rounded-xl" /></div>
-                                    </div>
+                                    <div><label className="block text-xs font-bold text-gray-400 uppercase mb-1">Nom Complet</label><input required type="text" value={formData.last_name || ''} onChange={e => setFormData({...formData, last_name: e.target.value})} className="w-full p-3 border rounded-xl" placeholder="Ex: Jean Dupont" /></div>
+                                    <div className="hidden"><label className="block text-xs font-bold text-gray-400 uppercase mb-1">Prénom</label><input type="text" value={formData.first_name || ''} onChange={e => setFormData({...formData, first_name: e.target.value})} className="w-full p-3 border rounded-xl" /></div>
                                     <div><label className="block text-xs font-bold text-gray-400 uppercase mb-1">Email</label><input required type="email" value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full p-3 border rounded-xl" /></div>
                                     <div><label className="block text-xs font-bold text-gray-400 uppercase mb-1">Téléphone</label><input type="tel" value={formData.phone || ''} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full p-3 border rounded-xl" /></div>
                                     <div><label className="block text-xs font-bold text-gray-400 uppercase mb-1">Adresse</label><textarea value={formData.address || ''} onChange={e => setFormData({...formData, address: e.target.value})} className="w-full p-3 border rounded-xl h-24" /></div>
@@ -225,7 +229,7 @@ const Clients = () => {
                         ) : data.length === 0 ? (
                             <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200">
                                 <Users size={48} className="mx-auto text-gray-200 mb-4"/>
-                                <p className="text-gray-500">Aucun résultat pour cette recherche.</p>
+                                <p className="text-gray-400">Aucun résultat pour cette recherche.</p>
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
