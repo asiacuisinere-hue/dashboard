@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { 
-    PlusCircle, List, Edit3, Trash2, Camera, 
-    Utensils, Globe, Flame, CheckCircle, XCircle, Search, RefreshCw,
+    PlusCircle, List, Edit3, Trash2, 
+    Globe, Flame, Search, RefreshCw,
     Image as ImageIcon, Soup, ChefHat
 } from 'lucide-react';
 
@@ -64,7 +64,7 @@ const DishCard = ({ dish, onEdit, onDelete }) => (
 const Plats = () => {
     const [dishes, setDishes] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState('gallery'); // 'gallery' or 'create'
+    const [activeTab, setActiveTab] = useState('gallery'); 
     const [searchTerm, setSearchTerm] = useState('');
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState({
@@ -125,7 +125,7 @@ const Plats = () => {
                     <p className="text-gray-500 font-medium">Gérez votre portfolio culinaire et les menus de saison.</p>
                 </div>
 
-                <div className="flex space-x-1 bg-gray-200 p-1 rounded-2xl mb-8 max-w-md">
+                <div className="flex space-x-1 bg-gray-200 p-1 rounded-2xl mb-8 max-md">
                     <button onClick={() => { setActiveTab('gallery'); setIsEditing(false); }} className={`flex-1 flex items-center justify-center py-3 rounded-xl text-xs font-black transition-all ${activeTab === 'gallery' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}><List size={16} className="mr-2"/> Galerie</button>
                     <button onClick={() => setActiveTab('create')} className={`flex-1 flex items-center justify-center py-3 rounded-xl text-xs font-black transition-all ${activeTab === 'create' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}><PlusCircle size={16} className="mr-2"/> {isEditing ? 'Modifier' : 'Nouveau'}</button>
                 </div>
@@ -158,7 +158,7 @@ const Plats = () => {
                         {loading ? (
                             <div className="flex justify-center py-20 animate-spin text-amber-500"><RefreshCw size={48} /></div>
                         ) : filteredDishes.length === 0 ? (
-                            <div className="text-center py-32 bg-white rounded-[3rem] border-2 border-dashed border-gray-100"><Soup size={60} className="mx-auto text-gray-100 mb-4"/><p className="text-gray-400 font-bold">Aucun plat dans la galerie.</p></div>
+                            <div className="text-center py-32 bg-white rounded-[3rem] border-2 border-dashed border-gray-200"><Soup size={60} className="mx-auto text-gray-100 mb-4"/><p className="text-gray-400 font-bold">Aucun plat dans la galerie.</p></div>
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
                                 {filteredDishes.map(dish => <DishCard key={dish.id} dish={dish} onEdit={handleEdit} onDelete={handleDelete} />)}

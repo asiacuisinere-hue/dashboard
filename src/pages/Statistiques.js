@@ -6,7 +6,7 @@ import {
 import { 
     TrendingUp, TrendingDown, Users, ShoppingCart, DollarSign, 
     Package, AlertCircle, Download, Calendar, PieChart as PieIcon, 
-    BarChart3, Activity, ArrowRight, Filter
+    BarChart3, Activity
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useBusinessUnit } from '../BusinessUnitContext';
@@ -41,7 +41,7 @@ const StatCard = ({ title, value, change, icon: Icon, color, isLoading, themeCol
 const Statistiques = () => {
     const { businessUnit } = useBusinessUnit();
     const [period, setPeriod] = useState('last30days');
-    const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'sales', 'expenses', 'export'
+    const [activeTab, setActiveTab] = useState('overview'); 
 
     const themeColor = businessUnit === 'courtage' ? 'blue' : 'amber';
     const mainHexColor = businessUnit === 'courtage' ? '#3b82f6' : '#d4af37';
@@ -57,11 +57,9 @@ const Statistiques = () => {
 
     const [revenueData, setRevenueData] = useState([]);
     const [orderTypeData, setOrderTypeData] = useState([]);
-    const [weekdayData, setWeekdayData] = useState([]);
     const [topProducts, setTopProducts] = useState([]);
     const [expenseDistributionData, setExpenseDistributionData] = useState([]);
     const [monthlyPerformanceData, setMonthlyPerformanceData] = useState([]);
-    const [eventsData, setEventsData] = useState([]);
     const [exportDates, setExportDates] = useState({ start: '', end: '' });
     const [isExporting, setIsExporting] = useState(false);
 
@@ -103,12 +101,6 @@ const Statistiques = () => {
                 color: colorMapping[item.type] || '#6b7280'
             })));
 
-            setWeekdayData((data.weekdayData || []).map(item => ({
-                day: item.day_name,
-                commandes: item.total_orders,
-                ca: parseFloat(item.total_revenue),
-            })));
-
             setTopProducts((data.topProductsData || []).map(item => ({
                 name: item.item_name, orders: item.total_orders, revenue: parseFloat(item.total_revenue), avgRevenue: parseFloat(item.average_revenue),
             })));
@@ -122,7 +114,6 @@ const Statistiques = () => {
                 commandes: item.total_orders, ca: parseFloat(item.total_revenue),
             })));
 
-            setEventsData(data.eventsData || []);
         } catch (err) { setError(err.message); }
         finally { setLoading(false); }
     }, [period, businessUnit]);
@@ -174,7 +165,6 @@ const Statistiques = () => {
                     </div>
                 </div>
 
-                {/* --- NAVIGATION PAR ONGLETS --- */}
                 <div className="flex space-x-1 bg-gray-200 p-1 rounded-2xl mb-8 max-w-2xl">
                     <button onClick={() => setActiveTab('overview')} className={`flex-1 flex items-center justify-center py-3 rounded-xl text-xs font-black transition-all ${activeTab === 'overview' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}><Activity size={14} className="mr-2"/> Vue d'ensemble</button>
                     <button onClick={() => setActiveTab('sales')} className={`flex-1 flex items-center justify-center py-3 rounded-xl text-xs font-black transition-all ${activeTab === 'sales' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}><ShoppingCart size={14} className="mr-2"/> Ventes & Produits</button>
@@ -184,7 +174,6 @@ const Statistiques = () => {
 
                 {error && <div className="bg-red-50 text-red-600 p-4 rounded-3xl mb-8 flex items-center gap-3 border border-red-100 font-bold"><AlertCircle /> {error}</div>}
 
-                {/* --- CONTENU DES ONGLETS --- */}
                 {activeTab === 'overview' && (
                     <div className="animate-in fade-in duration-700">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -313,7 +302,6 @@ const Statistiques = () => {
                     </div>
                 )}
 
-                {/* --- ÉVOLUTION MENSUELLE (TOUJOURS VISIBLE EN BAS) --- */}
                 {activeTab === 'overview' && (
                     <div className="mt-8 bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 animate-in fade-in duration-1000">
                         <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-8 flex items-center gap-2"><Calendar size={16}/> Performance Mensuelle (24 mois)</h3>

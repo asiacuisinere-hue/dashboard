@@ -3,8 +3,7 @@ import { supabase } from '../supabaseClient';
 import { useBusinessUnit } from '../BusinessUnitContext';
 import { 
     Calendar, Clock, CreditCard, RefreshCw, AlertTriangle, 
-    CheckCircle, List, User, FileText, ArrowRight, PlusCircle, 
-    MoreVertical, PauseCircle, PlayCircle, XCircle, Search
+    PauseCircle, PlayCircle, XCircle, Search 
 } from 'lucide-react';
 
 const getFrenchStatus = (status) => {

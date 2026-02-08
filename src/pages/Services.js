@@ -3,7 +3,7 @@ import { supabase } from '../supabaseClient';
 import { useBusinessUnit } from '../BusinessUnitContext';
 import { 
     PlusCircle, List, Edit3, Trash2, Euro, 
-    ClipboardList, Info, CheckCircle, XCircle, Search, RefreshCw
+    ClipboardList, Search, RefreshCw
 } from 'lucide-react';
 
 const ServiceCard = ({ service, onEdit, onDelete, themeColor }) => (

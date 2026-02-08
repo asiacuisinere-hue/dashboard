@@ -5,7 +5,7 @@ import { useLocation } from 'react-router-dom';
 import { useBusinessUnit } from '../BusinessUnitContext';
 import { 
     CreditCard, CheckCircle, Send, Clock, AlertTriangle, 
-    Search, List, BellRing, Euro, User, Calendar, FileText, ArrowRight, Mail
+    Search, List, BellRing, User, Calendar, FileText, ArrowRight, Mail
 } from 'lucide-react'; 
 
 const getFrenchStatus = (status) => {
@@ -88,12 +88,11 @@ const Factures = () => {
     const { businessUnit } = useBusinessUnit();
     const location = useLocation();
     const [invoices, setInvoices] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [selectedInvoice, setSelectedInvoice] = useState(null);
     const [currentPage, setCurrentPage] = useState(0);
-    const [activeTab, setActiveTab] = useState('all'); // 'all' or 'overdue'
+    const [activeTab, setActiveTab] = useState('all'); 
     const itemsPerPage = 10;
 
     const themeColor = businessUnit === 'courtage' ? 'blue' : 'amber';
@@ -104,8 +103,7 @@ const Factures = () => {
         if (urlStatus) setStatusFilter(urlStatus);
     }, [location.search]);
 
-    const fetchInvoices = useCallback(async (isSilent = false) => {
-        if (!isSilent) setLoading(true);
+    const fetchInvoices = useCallback(async () => {
         let query = supabase.from('invoices').select(`
             *,
             demand_id,
@@ -115,7 +113,6 @@ const Factures = () => {
         `)
         .eq('business_unit', businessUnit);
 
-        // Filter by tab logic
         if (activeTab === 'overdue') {
             query = query.in('status', ['pending', 'deposit_paid']);
         } else if (statusFilter !== 'all') {
@@ -133,14 +130,12 @@ const Factures = () => {
 
         if (error) console.error('Erreur:', error);
         else setInvoices(data || []);
-        setLoading(false);
     }, [searchTerm, statusFilter, businessUnit, activeTab]);
 
     useEffect(() => {
         fetchInvoices();
     }, [fetchInvoices]);
 
-    // Update modal if data changes in background
     useEffect(() => {
         if (selectedInvoice && invoices.length > 0) {
             const updated = invoices.find(i => i.id === selectedInvoice.id);
@@ -169,7 +164,6 @@ const Factures = () => {
                     <p className="text-gray-600">Suivez vos paiements et acomptes pour l'unité {businessUnit}.</p>
                 </div>
 
-                {/* --- NAVIGATION PAR ONGLETS --- */}
                 <div className="flex space-x-1 bg-gray-200 p-1 rounded-xl mb-8 max-w-md">
                     <button
                         onClick={() => { setActiveTab('all'); setStatusFilter('all'); }}
@@ -185,7 +179,6 @@ const Factures = () => {
                     </button>
                 </div>
 
-                {/* --- BARRE DE FILTRES --- */}
                 <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6 flex flex-wrap gap-4 items-center animate-in fade-in duration-500">
                     <div className="flex-1 min-w-[250px] relative">
                         <Search size={18} className="absolute left-3 top-3 text-gray-400"/>
@@ -212,7 +205,6 @@ const Factures = () => {
                     )}
                 </div>
 
-                {/* --- VUE TABLEAU (DESKTOP) --- */}
                 <div className="hidden lg:block bg-white rounded-3xl shadow-sm overflow-hidden border border-gray-100 animate-in fade-in duration-700">
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
@@ -249,7 +241,6 @@ const Factures = () => {
                     </table>
                 </div>
 
-                {/* --- VUE CARTES (MOBILE) --- */}
                 <div className="block lg:hidden space-y-4 animate-in fade-in duration-700">
                     {currentInvoices.length === 0 ? (
                         <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200">
@@ -274,7 +265,7 @@ const Factures = () => {
                 <InvoiceDetailModal
                     invoice={selectedInvoice}
                     onClose={() => setSelectedInvoice(null)}
-                    onUpdate={() => fetchInvoices(true)}
+                    onUpdate={() => fetchInvoices()}
                     themeColor={themeColor}
                 />
             )}
@@ -283,7 +274,7 @@ const Factures = () => {
 };
 
 const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
-    const [loading, setLoading] = useState(false);
+    const [actionLoading, setActionLoading] = useState(false);
     const [stripeLink, setStripeLink] = useState(invoice.payment_link || '');
 
     useEffect(() => {
@@ -297,7 +288,7 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
         }
         if (stripeLink && !window.confirm("Un lien de paiement a déjà été généré. Le remplacer ?")) return;
 
-        setLoading(true);
+        setActionLoading(true);
         try {
             const { data: { session } } = await supabase.auth.getSession();
             const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/create-stripe-checkout`, {
@@ -312,12 +303,12 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
             onUpdate();
             alert("Lien Stripe prêt !");
         } catch (err) { alert(err.message); }
-        finally { setLoading(false); }
+        finally { setActionLoading(false); }
     };
 
     const handleUpdateStatus = async (s) => {
         if (!window.confirm("Passer cette facture en 'Payée' manuellement ?")) return;
-        setLoading(true);
+        setActionLoading(true);
         await supabase.from('invoices').update({ status: s }).eq('id', invoice.id);
         onUpdate();
         onClose();
@@ -325,7 +316,7 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
 
     const handleSendInvoice = async () => {
         if (!window.confirm('Confirmer l\'envoi de la facture par email ?')) return;
-        setLoading(true);
+        setActionLoading(true);
         try {
             const { data: { session } } = await supabase.auth.getSession();
             const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/send-invoice-by-email`, {
@@ -337,7 +328,7 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
             alert('Facture envoyée avec succès !');
             onUpdate();
         } catch (error) { alert(`Erreur: ${error.message}`); }
-        finally { setLoading(false); }
+        finally { setActionLoading(false); }
     };
 
     const isFullyPaid = invoice.status === 'paid';
@@ -401,18 +392,18 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
                 <div className="flex flex-wrap gap-4 justify-between border-t pt-8">
                     <button 
                         onClick={handleSendInvoice} 
-                        disabled={loading || !stripeLink || isFullyPaid} 
+                        disabled={actionLoading || !stripeLink || isFullyPaid} 
                         className={`px-8 py-4 rounded-2xl flex items-center gap-3 transition-all font-black shadow-lg active:scale-95 ${(!stripeLink || isFullyPaid) ? 'bg-gray-100 text-gray-300 cursor-not-allowed' : 'bg-cyan-600 text-white hover:bg-cyan-700'}`}
                     >
-                        <Send size={20} /> {loading ? '...' : 'Envoyer par mail'}
+                        <Send size={20} /> {actionLoading ? '...' : 'Envoyer par mail'}
                     </button>
 
                     <div className="flex gap-3">
                         {!isFullyPaid && (
                             <>
-                                {invoice.status === 'pending' && <button onClick={() => handleGenerateStripe('deposit')} disabled={loading} className="bg-indigo-600 text-white px-6 py-4 rounded-2xl flex items-center gap-2 hover:bg-indigo-700 transition-all font-bold shadow-md active:scale-95"><CreditCard size={20} /> {loading ? '...' : 'Lien Acompte'}</button>}
-                                {invoice.status === 'deposit_paid' && <button onClick={() => handleGenerateStripe('total')} disabled={loading} className="bg-indigo-600 text-white px-6 py-4 rounded-2xl flex items-center gap-2 hover:bg-indigo-700 transition-all font-bold shadow-md active:scale-95"><CreditCard size={20} /> {loading ? '...' : 'Lien Solde'}</button>}
-                                <button onClick={() => handleUpdateStatus('paid')} className="bg-green-600 text-white px-4 py-2 rounded-2xl flex items-center gap-2 hover:bg-green-700 transition-all font-black shadow-md active:scale-95"><CheckCircle size={20} /> Payée</button>
+                                {invoice.status === 'pending' && <button onClick={() => handleGenerateStripe('deposit')} disabled={actionLoading} className="bg-indigo-600 text-white px-6 py-4 rounded-2xl flex items-center gap-2 hover:bg-indigo-700 transition-all font-bold shadow-md active:scale-95"><CreditCard size={20} /> {actionLoading ? '...' : 'Lien Acompte'}</button>}
+                                {invoice.status === 'deposit_paid' && <button onClick={() => handleGenerateStripe('total')} disabled={actionLoading} className="bg-indigo-600 text-white px-6 py-4 rounded-2xl flex items-center gap-2 hover:bg-indigo-700 transition-all font-bold shadow-md active:scale-95"><CreditCard size={20} /> {actionLoading ? '...' : 'Lien Solde'}</button>}
+                                <button onClick={() => handleUpdateStatus('paid')} className="bg-green-600 text-white px-6 py-4 rounded-2xl flex items-center gap-2 hover:bg-green-700 transition-all font-black shadow-md active:scale-95"><CheckCircle size={20} /> Payée</button>
                             </>
                         )}
                         <button onClick={onClose} className="bg-gray-100 text-gray-600 px-8 py-4 rounded-2xl hover:bg-gray-200 transition-all font-bold">Fermer</button>
