@@ -16,6 +16,14 @@ const APreparerCard = ({ demande, onSelect, themeColor }) => {
     };
     const invoiceNumber = demande.invoices?.[0]?.document_number;
 
+    // Fix: Handle null names
+    const clientName = demande.clients 
+        ? `${demande.clients.last_name || ''} ${demande.clients.first_name || ''}`.trim() 
+        : (demande.entreprises?.nom_entreprise || 'Client Inconnu');
+
+    // Fix: Check both possible keys for location
+    const location = demande.details_json?.deliveryCity || demande.details_json?.ville || '—';
+
     return (
         <div className={`bg-white rounded-[2.5rem] shadow-sm border-t-4 p-8 mb-4 hover:shadow-lg transition-all relative group ${themeColor === 'blue' ? 'border-blue-500' : 'border-amber-500'}`}>
             <div className="flex justify-between items-start mb-6">
@@ -25,7 +33,7 @@ const APreparerCard = ({ demande, onSelect, themeColor }) => {
                     </div>
                     <div>
                         <h3 className="font-black text-gray-800 text-lg leading-tight">
-                            {demande.clients?.last_name || demande.entreprises?.nom_entreprise || 'Client Inconnu'}
+                            {clientName}
                         </h3>
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
                             {invoiceNumber ? `Facture: ${invoiceNumber}` : '—'}
@@ -40,11 +48,11 @@ const APreparerCard = ({ demande, onSelect, themeColor }) => {
             <div className="grid grid-cols-2 gap-4 mb-8">
                 <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 group-hover:bg-white transition-colors">
                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Échéance</p>
-                    <p className="text-xs font-black text-red-500 flex items-center gap-2"><Calendar size={12}/> {demande.request_date ? new Date(demande.request_date).toLocaleDateString('fr-FR') : '—'}</p>
+                    <p className="text-xs font-black text-red-500 flex items-center gap-2"><Calendar size={12}/> {demande.request_date ? new Date(demande.request_date).toLocaleDateString('fr-FR') : '—'}</p>   
                 </div>
                 <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 group-hover:bg-white transition-colors">
                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Ville</p>
-                    <p className="text-xs font-black text-gray-700 flex items-center gap-2 truncate"><MapPin size={12}/> {demande.details_json?.deliveryCity || '—'}</p>
+                    <p className="text-xs font-black text-gray-700 flex items-center gap-2 truncate"><MapPin size={12}/> {location}</p>
                 </div>
             </div>
 
@@ -72,7 +80,7 @@ const APreparer = () => {
         let query = supabase.from('demandes').select(`*, details_json, clients (*), entreprises (*), invoices (document_number)`).in('status', toPrepareStatuses).eq('business_unit', businessUnit);
 
         if (searchTerm) {
-            query = query.or(`clients.first_name.ilike.%${searchTerm}%,clients.last_name.ilike.%${searchTerm}%,entreprises.nom_entreprise.ilike.%${searchTerm}%,invoices.document_number.ilike.%${searchTerm}%`);
+            query = query.or(`clients.first_name.ilike.%${searchTerm}%,clients.last_name.ilike.%${searchTerm}%,entreprises.nom_entreprise.ilike.%${searchTerm}%,invoices.document_number.ilike.%${searchTerm}%`);   
         }
 
         const { data, error } = await query.order('request_date', { ascending: true });
@@ -91,7 +99,7 @@ const APreparer = () => {
     };
 
     const handleUpdateStatus = async (id, newStatus) => {
-        const { error } = await supabase.from('demandes').update({ status: newStatus }).eq('id', id);
+        const { error } = await supabase.from('demandes').update({ status: newStatus }).eq('id', id);     
         if (!error) {
             alert('Statut mis à jour !');
             fetchDemandes();
@@ -109,7 +117,7 @@ const APreparer = () => {
         <div className="p-6 bg-gray-50 min-h-screen">
             <div className="max-w-7xl mx-auto">
                 <div className="mb-10">
-                    <h1 className="text-3xl font-black text-gray-800 mb-2">Atelier de Préparation</h1>
+                    <h1 className="text-3xl font-black text-gray-800 mb-2">Atelier de Préparation</h1>   
                     <p className="text-gray-500 font-medium italic">Logistique et production des commandes en cours.</p>
                 </div>
 
@@ -118,9 +126,9 @@ const APreparer = () => {
                     <input 
                         type="text" 
                         placeholder="Rechercher client, facture, plat..." 
-                        value={searchTerm} 
-                        onChange={(e) => setSearchTerm(e.target.value)} 
-                        className="flex-1 py-2 outline-none text-gray-700 font-medium" 
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="flex-1 py-2 outline-none text-gray-700 font-medium"
                     />
                 </div>
 
@@ -157,11 +165,11 @@ const APreparer = () => {
             </div>
 
             {selectedDemande && (
-                <DemandeDetail
-                    demande={selectedDemande}
-                    onClose={() => setSelectedDemande(null)}
-                    onUpdateStatus={handleUpdateStatus}
-                    onRefresh={fetchDemandes}
+                <DemandeDetail 
+                    demande={selectedDemande} 
+                    onClose={() => setSelectedDemande(null)} 
+                    onUpdateStatus={handleUpdateStatus} 
+                    onRefresh={fetchDemandes} 
                 />
             )}
         </div>
