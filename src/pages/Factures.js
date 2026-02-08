@@ -240,7 +240,7 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
                 body: JSON.stringify({ 
                     invoiceId: invoice.id,
-                    stripeUrl: stripeLink // Transmission du lien Stripe pour l'email
+                    stripeUrl: stripeLink 
                 }),
             });
             if (!response.ok) throw new Error('Erreur lors de l\'envoi.');
@@ -277,7 +277,11 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
                 )}
 
                 <div className="flex flex-wrap gap-3 justify-end border-t pt-6">
-                    <button onClick={handleSendInvoice} disabled={loading || !stripeLink} className="bg-cyan-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-cyan-700 transition-colors mr-auto font-bold">
+                    <button 
+                        onClick={handleSendInvoice} 
+                        disabled={loading || !stripeLink} 
+                        className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all font-bold mr-auto ${!stripeLink ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-cyan-600 text-white hover:bg-cyan-700'}`}
+                    >
                         <Send size={18} /> {loading ? '...' : 'Envoyer par mail'}
                     </button>
                     {invoice.status === 'pending' && (
