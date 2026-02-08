@@ -24,7 +24,7 @@ import Events from './pages/Events';
 import Accueil from './pages/Accueil'; 
 import { useBusinessUnit } from './BusinessUnitContext';
 
-// --- Composants Login (inchangé) ---
+// --- Composants Login ---
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -47,12 +47,28 @@ const Login = () => {
         <h2 style={{ textAlign: 'center', color: '#333', marginBottom: '25px' }}>Connexion Administrateur</h2>
         <form onSubmit={handleLogin}>
           <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Email:</label>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Email:</label>   
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }} />
           </div>
           <div style={{ marginBottom: '20px', position: 'relative' }}>
             <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Mot de passe:</label>
             <input type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} required style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }} />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              style={{
+                position: 'absolute',
+                right: '10px',
+                top: '35px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '18px',
+                color: '#666',
+              }}
+            >
+              {showPassword ? '👁️' : '🔒'}
+            </button>
           </div>
           <button type="submit" disabled={loading} style={{ width: '100%', padding: '12px', backgroundColor: '#d4af37', color: 'white', border: 'none', borderRadius: '4px', fontSize: '16px', cursor: 'pointer' }}>
             {loading ? 'Chargement...' : 'Se connecter'}
@@ -64,7 +80,7 @@ const Login = () => {
   );
 };
 
-const mainContentStyle = { flex: 1, padding: '20px', overflowY: 'auto', backgroundColor: '#f4f7fa' };
+const mainContentStyle = { flex: 1, padding: '20px', overflowY: 'auto', backgroundColor: '#f4f7fa' };     
 
 const DashboardLayout = () => {
     const { businessUnit } = useBusinessUnit();
@@ -99,8 +115,15 @@ const DashboardLayout = () => {
         const { count: depositPaidInvoices } = await supabase.from('invoices').select('*', { count: 'exact', head: true }).eq('status', 'deposit_paid').eq('business_unit', businessUnit);
         setDepositPaidInvoicesCount(depositPaidInvoices || 0);
 
+        const { count: waitingForPrep } = await supabase.from('invoices').select('*, demandes!inner(status)', { count: 'exact', head: true }).eq('status', 'paid').not('demandes.status', 'in', '("En attente de préparation","Préparation en cours","completed")').eq('business_unit', businessUnit);
+        setWaitingForPrepCount(waitingForPrep || 0);
+
         const { count: activeSubsCount } = await supabase.from('abonnements').select('*', { count: 'exact', head: true }).eq('status', 'actif').eq('business_unit', businessUnit);
         setActiveSubscriptionsCount(activeSubsCount || 0);
+
+        const { data: needsAttentionSubs } = await supabase.from('abonnements').select('id, monthly_price').eq('status', 'actif').eq('business_unit', businessUnit);
+        const needsAttentionCount = needsAttentionSubs?.filter(sub => !sub.monthly_price || sub.monthly_price <= 0).length || 0;
+        setSubscriptionsNeedAttentionCount(needsAttentionCount);
     }, [businessUnit]);
 
     useEffect(() => {
@@ -154,7 +177,13 @@ const DashboardLayout = () => {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, handleDbChanges)
             .subscribe();
 
-        return () => { supabase.removeChannel(channel); };
+        const handleResize = () => setIsMobile(window.innerWidth <= 768);
+        window.addEventListener('resize', handleResize);
+
+        return () => { 
+            supabase.removeChannel(channel); 
+            window.removeEventListener('resize', handleResize);
+        };
     }, [fetchCounts, businessUnit]);
 
     return (
@@ -162,7 +191,8 @@ const DashboardLayout = () => {
             <Sidebar 
                 newCount={newCount} inProgressCount={inProgressCount} pendingQuotesCount={pendingQuotesCount} 
                 toPrepareCount={toPrepareCount} pendingInvoicesCount={pendingInvoicesCount}
-                depositPaidInvoicesCount={depositPaidInvoicesCount} activeSubscriptionsCount={activeSubscriptionsCount}
+                depositPaidInvoicesCount={depositPaidInvoicesCount} waitingForPrepCount={waitingForPrepCount}
+                activeSubscriptionsCount={activeSubscriptionsCount} subscriptionsNeedAttentionCount={subscriptionsNeedAttentionCount}
                 isMobile={isMobile} notifications={notifications} setNotifications={setNotifications} 
             />
             <main style={mainContentStyle}>
