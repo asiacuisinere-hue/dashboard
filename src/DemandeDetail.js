@@ -184,7 +184,10 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
     };
 
     const client = demande.clients || demande.entreprises;
-    const clientName = demande.clients ? `${client.last_name} ${client.first_name}` : client.nom_entreprise;
+    // Fix: Handle null names in modal
+    const clientName = demande.clients 
+        ? `${demande.clients.last_name || ''} ${demande.clients.first_name || ''}`.trim() 
+        : (demande.entreprises?.nom_entreprise || 'Client Inconnu');
 
     return (
         <div className="fixed inset-0 bg-black/70 z-[1000] flex items-center justify-center p-4 backdrop-blur-sm">

@@ -37,9 +37,12 @@ const DemandeEnCoursCard = ({ demande, onSelect, themeColor }) => {
         'SOUSCRIPTION_ABONNEMENT': <RefreshCw size={20}/>
     };
 
-    const clientName = demande.clients 
-        ? `${demande.clients.last_name || ''} ${demande.clients.first_name || ''}`.trim() 
+    const clientName = demande.clients
+        ? `${demande.clients.last_name || ''} ${demande.clients.first_name || ''}`.trim()
         : (demande.entreprises?.nom_entreprise || 'Client Inconnu');
+
+    // Fix: Check both possible keys for location
+    const location = demande.details_json?.deliveryCity || demande.details_json?.ville || '—';
 
     return (
         <div className={`bg-white rounded-[2.5rem] shadow-sm border-t-4 p-8 mb-4 hover:shadow-lg transition-all relative group ${themeColor === 'blue' ? 'border-blue-500' : 'border-amber-500'}`}>
@@ -49,7 +52,7 @@ const DemandeEnCoursCard = ({ demande, onSelect, themeColor }) => {
                         {typeIcons[demande.type] || <List />}
                     </div>
                     <div>
-                        <h3 className="font-black text-gray-800 text-lg leading-tight">{clientName}</h3>
+                        <h3 className="font-black text-gray-800 text-lg leading-tight">{clientName}</h3>  
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">ID: {demande.id.substring(0, 8)}</p>
                     </div>
                 </div>
@@ -59,11 +62,11 @@ const DemandeEnCoursCard = ({ demande, onSelect, themeColor }) => {
             <div className="grid grid-cols-2 gap-4 mb-8">
                 <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 group-hover:bg-white transition-colors">
                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Échéance</p>
-                    <p className="text-xs font-black text-gray-700 flex items-center gap-2"><Calendar size={12}/> {demande.request_date ? new Date(demande.request_date).toLocaleDateString('fr-FR') : '—'}</p>
+                    <p className="text-xs font-black text-gray-700 flex items-center gap-2"><Calendar size={12}/> {demande.request_date ? new Date(demande.request_date).toLocaleDateString('fr-FR') : '—'}</p>   
                 </div>
                 <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 group-hover:bg-white transition-colors">
                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Localisation</p>
-                    <p className="text-xs font-black text-gray-700 flex items-center gap-2 truncate"><MapPin size={12}/> {demande.details_json?.deliveryCity || '—'}</p>
+                    <p className="text-xs font-black text-gray-700 flex items-center gap-2 truncate"><MapPin size={12}/> {location}</p>
                 </div>
             </div>
 
@@ -99,7 +102,9 @@ const DemandesEnCours = () => {
 
         if (filter.date) query = query.eq('request_date', filter.date);
         if (filter.status) query = query.eq('status', filter.status);
-        if (filter.city) query = query.ilike('details_json->>deliveryCity', `%${filter.city}%`);
+        if (filter.city) {
+            query = query.or(`details_json->>deliveryCity.ilike.%${filter.city}%,details_json->>ville.ilike.%${filter.city}%`);
+        }
 
         const { data, error } = await query.order('created_at', { ascending: false });
         if (!error) setDemandes(data || []);
@@ -115,7 +120,9 @@ const DemandesEnCours = () => {
     };
 
     const filteredList = demandes.filter(d => {
-        const name = d.clients ? `${d.clients.last_name || ''} ${d.clients.first_name || ''}`.trim() : (d.entreprises?.nom_entreprise || '');
+        const name = d.clients 
+            ? `${d.clients.last_name || ''} ${d.clients.first_name || ''}`.trim() 
+            : (d.entreprises?.nom_entreprise || '');
         return name.toLowerCase().includes(filter.searchTerm.toLowerCase()) || d.id.includes(filter.searchTerm);
     });
 
@@ -124,7 +131,7 @@ const DemandesEnCours = () => {
         { value: 'confirmed', label: 'Confirmée' },
         { value: 'En attente de paiement', label: 'Attente Paiement' },
         { value: 'Payée', label: 'Payée' },
-        { value: 'En attente de préparation', label: 'Attente Prépa' }
+        { value: 'En attente de préparation', label: 'Attente Prép.' }
     ];
 
     return (
@@ -147,19 +154,19 @@ const DemandesEnCours = () => {
                         <Search size={18} className="absolute left-3 top-3 text-gray-400"/>
                         <input type="text" placeholder="Rechercher client..." value={filter.searchTerm} onChange={e => setFilter({...filter, searchTerm: e.target.value})} className="w-full pl-10 pr-4 py-2.5 border-0 bg-gray-50 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-medium" />
                     </div>
-                    
+
                     <select value={filter.status} onChange={e => setFilter({...filter, status: e.target.value})} className="p-2.5 bg-gray-50 border-0 rounded-xl font-bold text-xs">
                         <option value="">Tous les statuts</option>
                         {statusOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                     </select>
 
                     <input type="date" value={filter.date} onChange={e => setFilter({...filter, date: e.target.value})} className="p-2.5 bg-gray-50 border-0 rounded-xl font-bold text-xs" />
-                    
+
                     <select value={filter.city} onChange={e => setFilter({...filter, city: e.target.value})} className="p-2.5 bg-gray-50 border-0 rounded-xl font-bold text-xs">
                         <option value="">Toutes les villes</option>
                         {communesReunion.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
-                    
+
                     <button onClick={() => setFilter({date:'', status:'', city:'', searchTerm:''})} className="p-2.5 text-gray-400 hover:text-gray-600 transition-colors"><XCircle size={20}/></button>
                 </div>
 
