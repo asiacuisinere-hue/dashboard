@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
+import { 
+    FileText, Download, Eye, Send, 
+    CheckCircle2, XCircle, Clock,
+    RefreshCw, FileCheck
+} from 'lucide-react';
 
 const QuoteDetailModal = ({ quote, onClose, onUpdateStatus, fetchExistingQuotes }) => {
     const [isSending, setIsSending] = useState(false);
@@ -18,17 +23,14 @@ const QuoteDetailModal = ({ quote, onClose, onUpdateStatus, fetchExistingQuotes 
 
             const url = `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/view-document?path=${quote.storage_path}`;
             const response = await fetch(url, {
-                headers: {
-                    'Authorization': `Bearer ${session.access_token}`,
-                },
+                headers: { 'Authorization': `Bearer ${session.access_token}` },
             });
 
             if (!response.ok) throw new Error("Le fichier n'a pas pu être chargé.");
-            
+
             const blob = await response.blob();
             const fileURL = URL.createObjectURL(blob);
             window.open(fileURL, '_blank');
-
         } catch (error) {
             alert(`Erreur d'affichage: ${error.message}`);
         } finally {
@@ -46,12 +48,10 @@ const QuoteDetailModal = ({ quote, onClose, onUpdateStatus, fetchExistingQuotes 
         try {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) throw new Error("Utilisateur non authentifié.");
-            
+
             const url = `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/view-document?path=${quote.storage_path}`;
             const response = await fetch(url, {
-                headers: {
-                    'Authorization': `Bearer ${session.access_token}`,
-                },
+                headers: { 'Authorization': `Bearer ${session.access_token}` },
             });
 
             if (!response.ok) throw new Error("Le fichier n'a pas pu être téléchargé.");
@@ -60,14 +60,13 @@ const QuoteDetailModal = ({ quote, onClose, onUpdateStatus, fetchExistingQuotes 
             const downloadUrl = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = downloadUrl;
-            a.download = quote.document_number ? `devis-${quote.document_number}.pdf` : (quote.storage_path.split('/').pop() || 'devis.pdf');
+            a.download = quote.document_number ? `devis-${quote.document_number}.pdf` : 'devis.pdf';
             document.body.appendChild(a);
             a.click();
             a.remove();
             window.URL.revokeObjectURL(downloadUrl);
-
         } catch (error) {
-            alert(`Erreur de téléchargement: ${error.message}`);
+            alert(`Erreur: ${error.message}`);
         } finally {
             setIsLoadingAction(false);
         }
@@ -79,7 +78,7 @@ const QuoteDetailModal = ({ quote, onClose, onUpdateStatus, fetchExistingQuotes 
         try {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) throw new Error("Utilisateur non authentifié.");
-            
+
             const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/send-quote`, {
                 method: 'POST',
                 headers: {
@@ -91,7 +90,7 @@ const QuoteDetailModal = ({ quote, onClose, onUpdateStatus, fetchExistingQuotes 
             const result = await response.json();
             if (!response.ok) throw new Error(result.error);
             alert(result.message || 'Devis envoyé avec succès.');
-            fetchExistingQuotes(); // Refresh the list to show the new 'sent' status
+            fetchExistingQuotes();
             onClose();
         } catch (error) {
             alert(`Erreur: ${error.message}`);
@@ -99,69 +98,99 @@ const QuoteDetailModal = ({ quote, onClose, onUpdateStatus, fetchExistingQuotes 
             setIsSending(false);
         }
     };
-    
+
     return (
-        <div style={modalOverlayStyle}>
-            <div style={{...modalContentStyle, maxWidth: '600px'}}>
-                <button onClick={onClose} style={closeButtonStyle}>&times;</button>
-                <h2>Détails du Devis #{quote.document_number}</h2>
-                <p><strong>Statut :</strong> <span style={statusBadgeStyle(quote.status)}>{quote.status}</span></p>
-                <p><strong>Date :</strong> {new Date(quote.created_at).toLocaleDateString('fr-FR')}</p>
+        <div className="fixed inset-0 bg-black/70 z-[1000] flex items-center justify-center p-4 backdrop-blur-sm">
+            <div className="bg-white rounded-[2.5rem] w-full max-w-2xl max-h-[90vh] overflow-y-auto relative p-10 shadow-2xl animate-in zoom-in duration-300">
+                <button onClick={onClose} className="absolute top-8 right-8 text-gray-400 hover:text-gray-600 transition-colors text-3xl font-light">&times;</button>
                 
-                {/* --- Actions --- */}
-                <div style={modalActionsStyle}>
-                    {quote.storage_path && (
-                        <>
-                            <button onClick={handleView} disabled={isLoadingAction} style={{ ...actionButtonStyle, backgroundColor: '#6c757d' }}>
-                                {isLoadingAction ? 'Chargement...' : 'Voir'}
+                <div className="mb-10">
+                    <div className="flex items-center gap-3 mb-2">
+                        <span style={statusBadgeStyle(quote.status)} className="inline-block">{quote.status}</span>
+                        <span className="text-xs font-bold text-gray-400">Réf: {quote.id.substring(0, 8)}</span>
+                    </div>
+                    <h2 className="text-3xl font-black text-gray-800 flex items-center gap-3">
+                        <FileText className="text-amber-500" size={32} />
+                        Devis #{quote.document_number}
+                    </h2>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+                    <div className="space-y-4">
+                        <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 flex items-center gap-2">
+                            <Clock size={14}/> Historique
+                        </h3>
+                        <div className="p-5 bg-gray-50 rounded-3xl border border-gray-100 space-y-3">
+                            <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">Créé le :</span>
+                                <span className="font-bold text-gray-700">{new Date(quote.created_at).toLocaleDateString('fr-FR')}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">Total :</span>
+                                <span className="font-black text-gray-900 text-lg">{(quote.total_amount || 0).toFixed(2)} €</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="space-y-4">
+                        <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 flex items-center gap-2">
+                            <FileCheck size={14}/> Document PDF
+                        </h3>
+                        <div className="flex gap-3">
+                            <button onClick={handleView} disabled={isLoadingAction} className="flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl bg-gray-100 text-gray-700 font-bold hover:bg-gray-200 transition-all active:scale-95 disabled:opacity-50">
+                                {isLoadingAction ? <RefreshCw className="animate-spin" size={16}/> : <Eye size={18}/>} VOIR
                             </button>
-                            <button onClick={handleDownload} disabled={isLoadingAction} style={{ ...actionButtonStyle, backgroundColor: '#17a2b8' }}>
-                                {isLoadingAction ? 'Chargement...' : 'Télécharger'}
+                            <button onClick={handleDownload} disabled={isLoadingAction} className="flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl bg-gray-100 text-gray-700 font-bold hover:bg-gray-200 transition-all active:scale-95 disabled:opacity-50">
+                                <Download size={18}/> PDF
                             </button>
-                        </>
-                    )}
-                    {quote.status === 'draft' && (
-                        <button onClick={handleSend} disabled={isSending} style={{ ...actionButtonStyle, backgroundColor: '#007bff' }}>
-                            {isSending ? 'Envoi en cours...' : 'Envoyer par Email'}
-                        </button>
-                    )}
-                    {quote.status === 'sent' && (
-                         <button onClick={() => onUpdateStatus(quote.id, 'accepted')} style={{...actionButtonStyle, backgroundColor: '#28a745'}}>
-                            Marquer comme Accepté
-                        </button>
-                    )}
-                     <button onClick={() => onUpdateStatus(quote.id, 'rejected')} style={{...actionButtonStyle, backgroundColor: '#dc3545'}}>
-                        Marquer comme Refusé
-                    </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex flex-wrap gap-4 pt-8 border-t">
+                    <div className="flex-1 flex gap-3">
+                        {quote.status === 'draft' && (
+                            <button onClick={handleSend} disabled={isSending} className="flex-1 flex items-center justify-center gap-3 py-5 rounded-[2rem] bg-blue-600 text-white font-black text-lg shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all active:scale-95">
+                                {isSending ? <RefreshCw className="animate-spin" /> : <Send size={22} />}
+                                ENVOYER PAR EMAIL
+                            </button>
+                        )}
+                        {quote.status === 'sent' && (
+                            <button onClick={() => onUpdateStatus(quote.id, 'accepted')} className="flex-1 flex items-center justify-center gap-3 py-5 rounded-[2rem] bg-green-600 text-white font-black text-lg shadow-xl shadow-green-100 hover:bg-green-700 transition-all active:scale-95">
+                                <CheckCircle2 size={22} /> ACCEPTER
+                            </button>
+                        )}
+                    </div>
+                    
+                    <div className="flex gap-3">
+                        {quote.status !== 'accepted' && quote.status !== 'rejected' && (
+                            <button onClick={() => onUpdateStatus(quote.id, 'rejected')} className="px-6 py-5 rounded-2xl bg-red-50 text-red-600 font-black hover:bg-red-100 transition-all">
+                                <XCircle size={22} />
+                            </button>
+                        )}
+                        <button onClick={onClose} className="px-8 py-5 rounded-2xl bg-gray-50 text-gray-400 font-bold hover:bg-gray-100 transition-all">FERMER</button>
+                    </div>
                 </div>
             </div>
         </div>
     );
 };
 
-// --- Styles ---
-const modalOverlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 };
-const modalContentStyle = { background: 'white', padding: '30px', borderRadius: '8px', width: '90%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto', position: 'relative' };
-const closeButtonStyle = { position: 'absolute', top: '15px', right: '15px', background: 'transparent', border: 'none', fontSize: '24px', cursor: 'pointer' };
-const actionButtonStyle = { padding: '10px 15px', border: 'none', borderRadius: '5px', cursor: 'pointer', color: 'white', fontWeight: 'bold' };
-const modalActionsStyle = { marginTop: '30px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #eee', paddingTop: '20px' };
 const statusBadgeStyle = (status) => {
-    let backgroundColor;
-    switch (status) {
-        case 'draft': backgroundColor = '#6c757d'; break;
-        case 'sent': backgroundColor = '#17a2b8'; break;
-        case 'accepted': backgroundColor = '#28a745'; break;
-        case 'rejected': backgroundColor = '#dc3545'; break;
-        default: backgroundColor = '#6c757d';
-    }
-    return {
-        backgroundColor,
-        color: 'white',
-        padding: '4px 8px',
-        borderRadius: '12px',
-        fontSize: '12px',
-        fontWeight: 'bold',
-        textTransform: 'capitalize',
+    const colors = {
+        'draft': { bg: 'rgba(108, 117, 125, 0.1)', text: '#6c757d' },
+        'sent': { bg: 'rgba(23, 162, 184, 0.1)', text: '#17a2b8' },
+        'accepted': { bg: 'rgba(40, 167, 69, 0.1)', text: '#28a745' },
+        'rejected': { bg: 'rgba(220, 53, 69, 0.1)', text: '#dc3545' }
+    };
+    const style = colors[status] || { bg: '#f3f4f6', text: '#6b7280' };
+    return { 
+        backgroundColor: style.bg, 
+        color: style.text, 
+        padding: '4px 12px', 
+        borderRadius: '20px', 
+        fontSize: '10px', 
+        fontWeight: '900', 
+        textTransform: 'uppercase' 
     };
 };
 

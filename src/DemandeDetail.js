@@ -1,9 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
+import { useBusinessUnit } from './BusinessUnitContext';
+import { 
+    User, Building2, 
+    Euro, ClipboardList, CheckCircle2, 
+    RefreshCw, FilePlus, QrCode, Mail, 
+    Phone, Save, ShoppingCart, ChefHat, XCircle
+} from 'lucide-react';
 
 const communesReunion = [
-    "Bras-Panon", "Cilaos", "Entre-Deux", "L'Étange-Salé", "La Plaine-des-Palmistes",
+    "Bras-Panon", "Cilaos", "Entre-Deux", "L'Étang-Salé", "La Plaine-des-Palmistes",
     "La Possession", "Le Port", "Le Tampon", "Les Avirons", "Les Trois-Bassins",
     "Petite-Île", "Saint-André", "Saint-Benoît", "Saint-Denis", "Saint-Joseph",
     "Saint-Leu", "Saint-Louis", "Saint-Paul", "Saint-Philippe", "Saint-Pierre",
@@ -12,6 +19,7 @@ const communesReunion = [
 
 const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
     const navigate = useNavigate();
+    const { businessUnit } = useBusinessUnit();
     const initializedRef = useRef(null);
 
     const [details, setDetails] = useState(demande.details_json || {});
@@ -22,6 +30,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
     const [isGeneratingStripeLink, setIsGeneratingStripeLink] = useState(false);
     const [paymentLink, setPaymentLink] = useState('');
 
+    const themeColor = businessUnit === 'courtage' ? 'blue' : 'amber';
     const isMenuOrder = demande.type === 'COMMANDE_MENU' || demande.type === 'COMMANDE_SPECIALE';
 
     useEffect(() => {
@@ -41,7 +50,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                         .from('settings')
                         .select('key, value')
                         .in('key', ['menu_decouverte_price', 'menu_standard_price', 'menu_duo_price', 'menu_confort_price']);
-                    
+
                     if (settingsList) {
                         const prices = {};
                         settingsList.forEach(s => { prices[s.key] = parseFloat(s.value); });
@@ -49,9 +58,9 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                         let calculated = 0;
                         if (formula.includes('Découverte')) calculated = prices['menu_decouverte_price'];
                         else if (formula.includes('Standard')) calculated = prices['menu_standard_price'];
-                        else if (formula.includes('Confort')) calculated = prices['menu_confort_price'];
+                        else if (formula.includes('Confort')) calculated = prices['menu_confort_price'];  
                         else if (formula.includes('Duo')) calculated = prices['menu_duo_price'];
-                        
+
                         if (calculated > 0) {
                             initialAmount = calculated;
                             setTotalAmount(calculated);
@@ -63,9 +72,14 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
             setTotalAmount(initialAmount || '');
         };
         initializeModal();
-    }, [demande.id, demande.details_json, demande.request_date, demande.total_amount, demande.type, onRefresh]);
+    }, [demande.id, demande.details_json, demande.request_date, demande.total_amount, demande.type]);
 
     if (!demande) return null;
+
+    const handleDetailChange = (e) => {
+        const { name, value } = e.target;
+        setDetails(prev => ({ ...prev, [name]: value }));
+    };
 
     const handleGenerateStripeLink = async (amountType = 'total') => {
         setIsGeneratingStripeLink(true);
@@ -73,334 +87,172 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
             const { data: { session } } = await supabase.auth.getSession();
             const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/create-stripe-checkout`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session?.access_token}`
-                },
-                body: JSON.stringify({ 
-                    demand_id: demande.id,
-                    amount_type: amountType
-                })
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+                body: JSON.stringify({ demand_id: demande.id, amount_type: amountType })
             });
             const result = await response.json();
-            if (!response.ok) throw new Error(result.error || 'Erreur lors de la génération du lien.'); 
+            if (!response.ok) throw new Error(result.error); 
             setPaymentLink(result.url);
-            alert('Lien de paiement Stripe généré avec succès !');
-        } catch (error) {
-            alert(`Erreur Stripe: ${error.message}`);
-        } finally {
-            setIsGeneratingStripeLink(false);
-        }
+            alert('Lien Stripe généré !');
+        } catch (error) { alert(`Erreur: ${error.message}`); }
+        finally { setIsGeneratingStripeLink(false); }
     };
 
-    const handleDetailChange = (e) => {
-        const { name, value } = e.target;
-        setDetails(prev => ({ ...prev, [name]: value }));
-    };
+    const handleSave = async () => {
+        const { error } = await supabase.from('demandes').update({
+            details_json: details,
+            request_date: requestDate,
+            total_amount: totalAmount === '' ? null : parseFloat(totalAmount)
+        }).eq('id', demande.id);
 
-    const handleUpdateDetails = async () => {
-        const { error } = await supabase
-            .from('demandes')
-            .update({ 
-                details_json: details, 
-                request_date: requestDate,
-                total_amount: totalAmount === '' ? null : parseFloat(totalAmount)
-            })
-            .eq('id', demande.id);
-
-        if (error) {
-            alert(`Erreur: ${error.message}`);
-        } else {
-            alert('Détails et montant sauvegardés !');
+        if (!error) {
+            alert('Enregistré !');
             if (onRefresh) onRefresh();
             onClose();
         }
     };
 
     const handleAction = async () => {
-        const clientInfo = demande.clients || demande.entreprises;
-        const clientInfoWithTag = clientInfo ? {
-            ...clientInfo,
-            type: demande.clients ? 'client' : 'entreprise'
-        } : null;
-
+        const client = demande.clients || demande.entreprises;
         if (isMenuOrder && (demande.status === 'confirmed' || demande.status === 'En attente de traitement')) {
-            if (!window.confirm("Cette action va générer la facture, l'envoyer au client, et la télécharger. Continuer ?")) return;
+            if (!window.confirm("Générer et envoyer la facture par email ?")) return;
             setIsGenerating(true);
             try {
                 const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/send-invoice-by-email`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${process.env.REACT_APP_SUPABASE_ANON_KEY}`
-                    },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.REACT_APP_SUPABASE_ANON_KEY}` },
                     body: JSON.stringify({ demandeId: demande.id })
                 });
-                if (!response.ok) throw new Error('Erreur lors de l\'envoi.');
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'facture.pdf';
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                if (onRefresh) onRefresh();
-                onClose();
-            } catch (error) {
-                alert(`Erreur: ${error.message}`);
-            } finally {
-                setIsGenerating(false);
-            }
+                if (response.ok) {
+                    alert('Facture envoyée !');
+                    if (onRefresh) onRefresh();
+                    onClose();
+                }
+            } catch (error) { alert(error.message); }
+            finally { setIsGenerating(false); }
         } else if (!isMenuOrder && demande.status === 'confirmed') {
-            if (clientInfoWithTag) {
-                navigate('/devis', { state: { customer: clientInfoWithTag, demandeId: demande.id } });    
-                onClose();
-            } else {
-                alert('Infos client manquantes.');
-            }
+            const clientInfo = {...client, type: demande.clients ? 'client' : 'entreprise'};
+            navigate('/devis', { state: { customer: clientInfo, demandeId: demande.id } });    
+            onClose();
         }
     };
 
-    const handleSendQrCodeAndPay = async () => {
-        if (!window.confirm("Confirmer la réception du paiement et envoyer le QR Code ?")) return;       
+    const handleSendQr = async () => {
+        if (!window.confirm("Valider le paiement et envoyer le QR Code ?")) return;       
         setIsSendingQrCode(true);
         try {
-            const { data: companySettings } = await supabase.from('company_settings').select('*').limit(1).single();
+            const { data: company } = await supabase.from('company_settings').select('*').limit(1).single();
             const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/send-qrcode`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${process.env.REACT_APP_SUPABASE_ANON_KEY}`
-                },
-                body: JSON.stringify({ demandeId: demande.id, companySettings })
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.REACT_APP_SUPABASE_ANON_KEY}` },
+                body: JSON.stringify({ demandeId: demande.id, companySettings: company })
             });
-            if (!response.ok) throw new Error('Erreur QR Code.');     
-            alert('Paiement confirmé et QR Code envoyé !');
-            if (onRefresh) onRefresh();
-            onClose();
-        } catch (error) {
-            alert(`Erreur: ${error.message}`);
-        } finally {
-            setIsSendingQrCode(false);
-        }
+            if (response.ok) {
+                alert('QR Code envoyé !');
+                if (onRefresh) onRefresh();
+                onClose();
+            }
+        } catch (error) { alert(error.message); }
+        finally { setIsSendingQrCode(false); }
     };
 
-    const renderReservationServiceForm = () => (
-        <>
-            <div style={formGroupStyle}>
-                <label style={labelStyle}>Date de l'événement</label>
-                <input
-                    style={inputStyle}
-                    type="date"
-                    value={requestDate}
-                    onChange={(e) => setRequestDate(e.target.value)}
-                />
-            </div>
-            <div style={formGroupStyle}>
-                <label style={labelStyle}>Heure de l'événement</label>
-                <select
-                    style={inputStyle}
-                    name="heure"
-                    value={details.heure || ''}
-                    onChange={handleDetailChange}
-                >
-                    <option value="">Non spécifié</option>
-                    <option value="Midi">Midi (déjeuner)</option>
-                    <option value="Soir">Soir (dîner)</option>
-                </select>
-            </div>
-            <div style={formGroupStyle}>
-                <label style={labelStyle}>Nombre d'invités</label>
-                <input
-                    style={inputStyle}
-                    type="text"
-                    name="numberOfPeople"
-                    value={details.numberOfPeople || ''}
-                    onChange={handleDetailChange}
-                />
-            </div>
-            <div style={formGroupStyle}>
-                <label style={labelStyle}>Ville</label>
-                <select
-                    style={inputStyle}
-                    name="ville"
-                    value={details.ville || ''}
-                    onChange={handleDetailChange}
-                >
-                    <option value="">-- Sélectionnez une ville --</option>
-                    {communesReunion.map(commune => (
-                        <option key={commune} value={commune}>{commune}</option>
-                    ))}
-                </select>
-            </div>
-            <div style={formGroupStyle}>
-                <label style={labelStyle}>Budget par personne</label>
-                <select
-                    style={inputStyle}
-                    name="budget"
-                    value={details.budget || ''}
-                    onChange={handleDetailChange}
-                >
-                    <option value="">Non spécifié</option>
-                    <option value="<50">Moins de 50€</option>
-                    <option value="50-80">50€ - 80€</option>
-                    <option value=">80">Plus de 80€</option>
-                </select>
-            </div>
-            <div style={formGroupStyle}>
-                <label style={labelStyle}>Formules (séparées par ',')</label>
-                <input
-                    style={inputStyle}
-                    type="text"
-                    name="selectedFormulas"
-                    value={Array.isArray(details.selectedFormulas) ? details.selectedFormulas.join(', ') : (details.selectedFormulas || '')}
-                    onChange={(e) => setDetails(prev => ({...prev, selectedFormulas: e.target.value.split(',').map(s => s.trim())}))}
-                />
-            </div>
-            <div style={formGroupStyle}>
-                <label style={labelStyle}>Allergies</label>
-                <textarea
-                    style={textareaStyle}
-                    name="allergies"
-                    value={details.allergies || ''}
-                    onChange={handleDetailChange}
-                ></textarea>
-            </div>
-        </>
-    );
-
-    const renderReadOnlyDetails = () => {
-        const d = demande.details_json || {};
-        if (demande.type === 'COMMANDE_MENU') {
-            return (
-                <>
-                    <p><strong>Formule:</strong> {d.formulaName || 'N/A'}</p>
-                    <p><strong>Option:</strong> {d.formulaOption || 'N/A'}</p>
-                    <p><strong>Ville de livraison:</strong> {d.deliveryCity || 'N/A'}</p>
-                </>
-            );
-        }
-        if (demande.type === 'COMMANDE_SPECIALE') {
-            if (!d.items || !Array.isArray(d.items)) return <p>Détails de la commande non disponibles.</p>;
-            const total = d.total || d.items.reduce((acc, item) => acc + (item.quantity * item.price), 0);
-            return (
-                <div>
-                    <ul style={{ listStyleType: 'none', padding: 0, marginBottom: '10px' }}>      
-                        {d.items.map((item, index) => (
-                            <li key={index} style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
-                                <span>{item.quantity} x {item.name} ({item.portion})</span>
-                                <span>{(item.quantity * item.price).toFixed(2)} €</span>        
-                            </li>
-                        ))}
-                    </ul>
-                    <hr style={{ margin: '10px 0' }} />
-                    <p style={{ textAlign: 'right', fontWeight: 'bold', fontSize: '1.1rem' }}>    
-                        <strong>Total:</strong> {parseFloat(total).toFixed(2)} €
-                    </p>
-                    {d.deliveryCity && <p style={{marginTop: '10px'}}><strong>Ville de livraison:</strong> {d.deliveryCity}</p>}
-                </div>
-            );
-        }
-        if (demande.type === 'SOUSCRIPTION_ABONNEMENT') {
-            return (
-                <>
-                    <p><strong>Formule :</strong> {d.formula || 'N/A'}</p>
-                    <p><strong>Notes :</strong> {d.notes || 'Aucune'}</p>
-                </>
-            );
-        }
-        return (
-            <>
-                {Object.entries(d).map(([key, value]) => (
-                    <p key={key}><strong>{key}:</strong> {String(value)}</p>
-                ))}
-            </>
-        );
-    };
-
-    const renderCustomerInfo = () => {
-        if (demande.clients) return <p><strong>Nom:</strong> {demande.clients.last_name} {demande.clients.first_name}</p>;
-        if (demande.entreprises) return <p><strong>Entreprise:</strong> {demande.entreprises.nom_entreprise}</p>;
-        return null;
-    };
+    const client = demande.clients || demande.entreprises;
+    const clientName = demande.clients ? `${client.last_name} ${client.first_name}` : client.nom_entreprise;
 
     return (
-        <div style={modalOverlayStyle}>
-            <div style={modalContentStyle}>
-                <button onClick={onClose} style={closeButtonStyle}>&times;</button>
-                <h2>Détails demande #{demande.id.substring(0, 8)}</h2>
-
-                <div style={detailSectionStyle}>
-                    <h3 style={detailTitleStyle}>Client / Entreprise</h3>
-                    {renderCustomerInfo()}
-                </div>
-
-                <div style={detailSectionStyle}>
-                    <h3 style={detailTitleStyle}>Détails & Montant</h3>
-                    <div style={{...formGroupStyle, backgroundColor: '#fff9e6', padding: '15px', borderRadius: '8px', border: '1px solid #ffeeba', marginBottom: '20px'}}>
-                        <label style={{...labelStyle, color: '#856404'}}>MONTANT TOTAL DE LA PRESTATION (€)</label>
-                        <input
-                            style={{...inputStyle, fontSize: '1.2rem', fontWeight: 'bold', borderColor: '#ffeeba'}}
-                            type="number"
-                            step="0.01"
-                            placeholder="0.00"
-                            value={totalAmount}
-                            onChange={(e) => setTotalAmount(e.target.value)}
-                        />
-                    </div>
-                    <p><strong>Statut:</strong> <span style={statusBadgeStyle(demande.status)}>{demande.status}</span></p>
-                    {demande.type === 'RESERVATION_SERVICE' ? renderReservationServiceForm() : renderReadOnlyDetails()}
-                </div>
-
-                {paymentLink && (
-                    <div style={{ backgroundColor: '#f8f9ff', border: '1px solid #e0e4ff', borderRadius: '8px', padding: '15px', marginBottom: '20px' }}>
-                        <p style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: 'bold', color: '#635bff' }}>Lien de paiement Stripe généré :</p>
-                        <div style={{ display: 'flex', gap: '10px' }}>
-                            <input readOnly value={paymentLink} style={{ ...inputStyle, flex: 1 }} onClick={(e) => e.target.select()} />
-                            <button onClick={() => { navigator.clipboard.writeText(paymentLink); alert('Lien copié !'); }} style={{ ...actionButtonStyle, backgroundColor: '#635bff' }}>Copier</button>
+        <div className="fixed inset-0 bg-black/70 z-[1000] flex items-center justify-center p-4 backdrop-blur-sm">
+            <div className="bg-white rounded-[2.5rem] w-full max-w-4xl max-h-[90vh] overflow-y-auto relative p-10 shadow-2xl animate-in zoom-in duration-300">
+                <button onClick={onClose} className="absolute top-8 right-8 text-gray-400 hover:text-gray-600 transition-colors text-3xl font-light">&times;</button>
+                
+                <div className="mb-10 flex items-start justify-between">
+                    <div className="flex items-center gap-5">
+                        <div className={`p-5 rounded-[1.5rem] bg-${themeColor}-50 text-${themeColor}-600 shadow-sm border border-${themeColor}-100`}>
+                            {isMenuOrder ? <ShoppingCart size={32}/> : <ChefHat size={32}/>}
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-3 mb-2">
+                                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${themeColor === 'blue' ? 'bg-blue-500 text-white' : 'bg-amber-500 text-white'}`}>{demande.status}</span>
+                                <span className="text-xs font-bold text-gray-400">ID: {demande.id.substring(0,8)}</span>
+                            </div>
+                            <h2 className="text-3xl font-black text-gray-800">{clientName}</h2>
                         </div>
                     </div>
-                )}
+                    <div className="text-right hidden md:block">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Date Demande</p>
+                        <p className="text-lg font-black text-gray-800">{new Date(demande.created_at).toLocaleDateString('fr-FR')}</p>
+                    </div>
+                </div>
 
-                <div style={modalActionsStyle}>
-                    <>
-                        <button onClick={handleUpdateDetails} style={{ ...actionButtonStyle, backgroundColor: '#5a6268', marginRight: 'auto' }}>Sauvegarder</button>
-                        {demande.status === 'En attente de traitement' && <button onClick={() => onUpdateStatus(demande.id, 'confirmed')} style={{ ...actionButtonStyle, backgroundColor: '#28a745' }}>Confirmer</button>}
-                        
-                        {isMenuOrder && (demande.status === 'En attente de paiement' || demande.status === 'confirmed') && (
-                            <button onClick={() => handleGenerateStripeLink('total')} disabled={isGeneratingStripeLink} style={{ ...actionButtonStyle, backgroundColor: '#635bff' }}>
-                                {isGeneratingStripeLink ? 'Génération...' : 'Lien Stripe (Total)'}
-                            </button>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                    <div className="lg:col-span-7 space-y-8">
+                        <div className={`p-8 rounded-[2rem] border-2 border-dashed ${themeColor === 'blue' ? 'border-blue-100 bg-blue-50/30' : 'border-amber-100 bg-amber-50/30'}`}>
+                            <label className={`text-xs font-black uppercase tracking-widest block mb-4 ${themeColor === 'blue' ? 'text-blue-600' : 'text-amber-600'}`}>Montant de la Prestation (€)</label>
+                            <div className="relative">
+                                <input type="number" step="0.01" value={totalAmount} onChange={e => setTotalAmount(e.target.value)} className="w-full bg-white p-5 rounded-2xl font-black text-3xl outline-none shadow-sm focus:ring-2 focus:ring-amber-500" placeholder="0.00" />
+                                <Euro className="absolute right-5 top-6 text-gray-200" size={30} />
+                            </div>
+                        </div>
+
+                        <div className="bg-gray-50 p-8 rounded-[2rem] border border-gray-100">
+                            <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-6 flex items-center gap-2"><ClipboardList size={16}/> Détails du Projet</h3>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div><label className="text-[10px] font-black text-gray-400 uppercase ml-2 mb-1 block">Date Souhaitée</label><input type="date" value={requestDate} onChange={e => setRequestDate(e.target.value)} className="w-full p-3 bg-white border-0 rounded-xl font-bold shadow-sm" /></div>
+                                <div><label className="text-[10px] font-black text-gray-400 uppercase ml-2 mb-1 block">Ville</label><select name="ville" value={details.ville || details.deliveryCity || ''} onChange={handleDetailChange} className="w-full p-3 bg-white border-0 rounded-xl font-bold shadow-sm"><option value="">Choisir...</option>{communesReunion.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
+                                
+                                {!isMenuOrder && (
+                                    <>
+                                        <div><label className="text-[10px] font-black text-gray-400 uppercase ml-2 mb-1 block">Heure</label><select name="heure" value={details.heure || ''} onChange={handleDetailChange} className="w-full p-3 bg-white border-0 rounded-xl font-bold shadow-sm"><option value="">Non défini</option><option value="Midi">Midi</option><option value="Soir">Soir</option></select></div>
+                                        <div><label className="text-[10px] font-black text-gray-400 uppercase ml-2 mb-1 block">Nombre d'invités</label><input type="text" name="numberOfPeople" value={details.numberOfPeople || ''} onChange={handleDetailChange} className="w-full p-3 bg-white border-0 rounded-xl font-bold shadow-sm" /></div>
+                                    </>
+                                )}
+                            </div>
+
+                            <div className="mt-6"><label className="text-[10px] font-black text-gray-400 uppercase ml-2 mb-1 block">Note / Message Client</label><textarea name="customerMessage" value={details.customerMessage || details.notes || ''} onChange={handleDetailChange} className="w-full p-4 bg-white border-0 rounded-xl font-medium shadow-sm h-24" /></div>
+                        </div>
+                    </div>
+
+                    <div className="lg:col-span-5 space-y-8">
+                        <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm">
+                            <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-6 flex items-center gap-2"><User size={16}/> Fiche Contact</h3>
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl"><Mail size={16} className="text-gray-400"/><span className="text-sm font-bold text-gray-700 truncate">{client.email || client.contact_email}</span></div>
+                                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl"><Phone size={16} className="text-gray-400"/><span className="text-sm font-bold text-gray-700">{client.phone || client.contact_phone || '—'}</span></div>
+                                {client.nom_entreprise && <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl"><Building2 size={16} className="text-gray-400"/><span className="text-sm font-bold text-gray-700 truncate">{client.nom_entreprise}</span></div>}
+                            </div>
+                        </div>
+
+                        {paymentLink && (
+                            <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-[2rem] animate-in slide-in-from-right-4">
+                                <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-3">Lien Stripe Actif</p>
+                                <div className="flex gap-2">
+                                    <input readOnly value={paymentLink} className="flex-1 p-2 bg-white rounded-lg text-[10px] font-mono border-0 outline-none" />
+                                    <button onClick={() => { navigator.clipboard.writeText(paymentLink); alert('Copié !'); }} className="bg-indigo-600 text-white px-3 py-2 rounded-lg font-black text-[10px]">COPIER</button>
+                                </div>
+                            </div>
                         )}
 
-                        {demande.status === 'En attente de paiement' && <button onClick={handleSendQrCodeAndPay} disabled={isSendingQrCode} style={{ ...actionButtonStyle, backgroundColor: '#28a745' }}>{isSendingQrCode ? 'Envoi...' : 'Paiement Reçu & Envoyer QR'}</button>}
-                        {demande.status === 'En attente de préparation' && <button onClick={() => onUpdateStatus(demande.id, 'Préparation en cours')} style={{ ...actionButtonStyle, backgroundColor: '#17a2b8' }}>Mettre en préparation</button>}
-                        {(demande.status === 'confirmed' && !isMenuOrder) && <button onClick={handleAction} style={{ ...actionButtonStyle, backgroundColor: '#007bff' }}>Créer Devis</button>}
-                        {isMenuOrder && (demande.status === 'confirmed' || demande.status === 'En attente de traitement') && <button onClick={handleAction} disabled={isGenerating} style={{ ...actionButtonStyle, backgroundColor: '#007bff' }}>{isGenerating ? 'Envoi...' : 'Générer & Envoyer Facture'}</button>}
-                        <button onClick={() => window.confirm('Annuler ?') && onUpdateStatus(demande.id, 'cancelled')} style={{ ...actionButtonStyle, backgroundColor: '#dc3545' }}>Annuler</button>
-                    </>
+                        <div className="space-y-3">
+                            <button onClick={handleSave} className="w-full py-4 bg-gray-800 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-black transition-all flex items-center justify-center gap-2 uppercase tracking-widest"><Save size={16}/> SAUVEGARDER DÉTAILS</button>
+                            {demande.status === 'En attente de traitement' && <button onClick={() => onUpdateStatus(demande.id, 'confirmed')} className="w-full py-4 bg-green-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-green-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest"><CheckCircle2 size={16}/> CONFIRMER LA DEMANDE</button>}
+                            
+                            {isMenuOrder && (demande.status === 'En attente de paiement' || demande.status === 'confirmed') && (
+                                <button onClick={() => handleGenerateStripeLink('total')} disabled={isGeneratingStripeLink} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest">
+                                    {isGeneratingStripeLink ? <RefreshCw className="animate-spin" size={16}/> : <RefreshCw size={16}/>} GÉNÉRER LIEN STRIPE (TOTAL)
+                                </button>
+                            )}
+
+                            {demande.status === 'En attente de paiement' && <button onClick={handleSendQr} disabled={isSendingQrCode} className="w-full py-4 bg-green-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-green-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest"><QrCode size={16}/> PAIEMENT REÇU & ENV. QR</button>}
+                            {(demande.status === 'confirmed' && !isMenuOrder) && <button onClick={handleAction} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest"><FilePlus size={16}/> CRÉER UN DEVIS</button>}
+                            {isMenuOrder && (demande.status === 'confirmed' || demande.status === 'En attente de traitement') && <button onClick={handleAction} disabled={isGenerating} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest">{isGenerating ? <RefreshCw className="animate-spin" size={16}/> : <Mail size={16}/>} GÉNÉRER & ENVOYER FACTURE</button>}
+                            
+                            <button onClick={() => window.confirm('Annuler ce dossier ?') && onUpdateStatus(demande.id, 'cancelled')} className="w-full py-4 bg-red-50 text-red-600 rounded-2xl font-black text-xs hover:bg-red-100 transition-all flex items-center justify-center gap-2 uppercase tracking-widest"><XCircle size={16}/> ANNULER LE DOSSIER</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     );
 };
-
-// Styles
-const modalOverlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' };
-const modalContentStyle = { background: 'white', padding: '30px', borderRadius: '8px', width: '90%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto', position: 'relative' };
-const closeButtonStyle = { position: 'absolute', top: '15px', right: '15px', background: 'transparent', border: 'none', fontSize: '24px', cursor: 'pointer' };
-const detailSectionStyle = { marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px solid #f0f0f0' };
-const detailTitleStyle = { fontSize: '18px', color: '#d4af37', marginBottom: '15px' };
-const actionButtonStyle = { padding: '10px 15px', border: 'none', borderRadius: '5px', cursor: 'pointer', color: 'white', fontWeight: 'bold' };
-const modalActionsStyle = { marginTop: '30px', display: 'flex', justifyContent: 'flex-end', gap: '10px' };
-const statusBadgeStyle = (status) => {
-    const colors = { 'pending': '#ffc107', 'confirmed': '#007bff', 'En attente de paiement': '#fd7e14', 'Payée': '#6f42c1' };
-    return { padding: '4px 8px', borderRadius: '12px', color: 'white', fontWeight: 'bold', fontSize: '12px', backgroundColor: colors[status] || '#6c757d' };
-};
-const formGroupStyle = { marginBottom: '15px' };
-const labelStyle = { display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#333' };
-const inputStyle = { width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' };
-const textareaStyle = { ...inputStyle, height: '80px', resize: 'vertical' };
 
 export default DemandeDetail;
