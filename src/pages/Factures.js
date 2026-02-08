@@ -107,13 +107,18 @@ const Factures = () => {
             console.error('Erreur:', error);
         } else {
             setInvoices(data || []);
+            // Update selected invoice if it's currently open to sync data
+            if (selectedInvoice) {
+                const updated = data.find(i => i.id === selectedInvoice.id);
+                if (updated) setSelectedInvoice(updated);
+            }
         }
         setLoading(false);
-    }, [searchTerm, statusFilter, businessUnit]);
+    }, [searchTerm, statusFilter, businessUnit, selectedInvoice]);
 
     useEffect(() => {
         fetchInvoices();
-    }, [fetchInvoices]);
+    }, [searchTerm, statusFilter, businessUnit]); // Remove fetchInvoices to avoid infinite loop
 
     const renderCustomerName = (invoice) => {
         if (invoice.clients) return `${invoice.clients.first_name || ''} ${invoice.clients.last_name || ''}`.trim();
@@ -126,7 +131,7 @@ const Factures = () => {
     const currentInvoices = invoices.slice(offset, offset + itemsPerPage);
     const pageCount = Math.ceil(invoices.length / itemsPerPage);
 
-    if (loading) return <div className="p-6 text-center text-gray-500">Chargement des factures...</div>;  
+    if (loading && invoices.length === 0) return <div className="p-6 text-center text-gray-500">Chargement des factures...</div>;  
 
     return (
         <div className="p-6 bg-gray-50 min-h-screen">
@@ -167,17 +172,17 @@ const Factures = () => {
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                             {currentInvoices.map(invoice => (
-                                <tr key={invoice.id} className="hover:bg-gray-50">
+                                <tr key={invoice.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedInvoice(invoice)}>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                                         {invoice.document_number || invoice.id.substring(0, 8)}
-                                        {invoice.last_email_sent_at && <div className="text-[9px] text-blue-500 flex items-center mt-1"><Clock size={10} className="mr-1"/> Relance : {new Date(invoice.last_email_sent_at).toLocaleDateString('fr-FR')}</div>}
+                                        {invoice.last_email_sent_at && <div className="text-[9px] text-blue-500 flex items-center mt-1"><Clock size={10} className="mr-1"/> Envoyée le {new Date(invoice.last_email_sent_at).toLocaleDateString('fr-FR')}</div>}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{renderCustomerName(invoice)}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(invoice.created_at).toLocaleDateString('fr-FR')}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-gray-900">{(invoice.total_amount || 0).toFixed(2)} €</td> 
                                     <td className="px-6 py-4 whitespace-nowrap text-center"><span style={statusBadgeStyle(invoice.status)}>{getFrenchStatus(invoice.status)}</span></td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <button onClick={() => setSelectedInvoice(invoice)} className={`font-bold ${themeColor === 'courtage' ? 'text-blue-600' : 'text-amber-600'}`}>Détails</button>
+                                        <button onClick={(e) => { e.stopPropagation(); setSelectedInvoice(invoice); }} className={`font-bold ${themeColor === 'courtage' ? 'text-blue-600' : 'text-amber-600'}`}>Détails</button>
                                     </td>
                                 </tr>
                             ))}
@@ -216,6 +221,13 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
     const [loading, setLoading] = useState(false);
     const [stripeLink, setStripeLink] = useState(invoice.payment_link || '');
 
+    // Sync local state when invoice prop changes (from parent re-fetch)
+    useEffect(() => {
+        if (invoice.payment_link) {
+            setStripeLink(invoice.payment_link);
+        }
+    }, [invoice.payment_link]);
+
     const handleGenerateStripe = async (type = 'deposit') => {
         if (invoice.status === 'paid') {
             alert("Cette facture est déjà entièrement payée.");
@@ -235,9 +247,14 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
             });
             const res = await response.json();
             if (!response.ok) throw new Error(res.error);
+            
+            // UPDATE LOCAL STATE IMMEDIATELY
             setStripeLink(res.url);
-            alert("Lien généré !");
+            
+            // Inform parent to refresh data in background
             onUpdate();
+            
+            alert("Lien généré avec succès ! Vous pouvez maintenant envoyer l'email.");
         } catch (err) { alert(err.message); }
         finally { setLoading(false); }
     };
@@ -250,7 +267,7 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
     };
 
     const handleSendInvoice = async () => {
-        if (!window.confirm('Confirmer l\'envoi ?')) return;
+        if (!window.confirm('Confirmer l\'envoi de la facture par email ?')) return;
         setLoading(true);
         try {
             const { data: { session } } = await supabase.auth.getSession();
@@ -259,10 +276,10 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
                 body: JSON.stringify({ invoiceId: invoice.id, stripeUrl: stripeLink }),
             });
-            if (!response.ok) throw new Error('Erreur.');
-            alert('Envoyée !');
+            if (!response.ok) throw new Error('Erreur lors de l\'envoi.');
+            alert('Facture envoyée avec succès !');
             onUpdate();
-        } catch (error) { alert(error.message); }
+        } catch (error) { alert(`Erreur: ${error.message}`); }
         finally { setLoading(false); }
     };
 
@@ -296,13 +313,13 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
                 </div>
 
                 {stripeLink ? (
-                    <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 mb-8">
+                    <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 mb-8 animate-in fade-in zoom-in duration-300">
                         <div className="flex items-center gap-2 mb-2 text-indigo-700 font-bold text-sm">
-                            <CheckCircle size={16} /> Lien prêt
+                            <CheckCircle size={16} /> Lien de paiement prêt
                         </div>
                         <div className="flex gap-2">
                             <input readOnly value={stripeLink} className="flex-1 p-2 bg-white border border-indigo-200 rounded text-xs focus:ring-0 outline-none" />
-                            <button onClick={() => { navigator.clipboard.writeText(stripeLink); alert('Copié !'); }} className="bg-indigo-600 text-white px-4 py-2 rounded font-bold text-sm hover:bg-indigo-700">Copier</button>
+                            <button onClick={() => { navigator.clipboard.writeText(stripeLink); alert('Copié !'); }} className="bg-indigo-600 text-white px-4 py-2 rounded font-bold text-sm hover:bg-indigo-700 transition-colors">Copier</button>
                         </div>
                     </div>
                 ) : !isFullyPaid && (
@@ -313,14 +330,18 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
                 )}
 
                 <div className="flex flex-wrap gap-3 justify-end border-t pt-6">
-                    <button onClick={handleSendInvoice} disabled={loading || !stripeLink || isFullyPaid} className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all font-bold mr-auto ${(!stripeLink || isFullyPaid) ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-cyan-600 text-white hover:bg-cyan-700 shadow-md'}`}>
-                        <Send size={18} /> {loading ? '...' : 'Envoyer par mail'}
+                    <button 
+                        onClick={handleSendInvoice} 
+                        disabled={loading || !stripeLink || isFullyPaid} 
+                        className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all font-bold mr-auto ${(!stripeLink || isFullyPaid) ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-cyan-600 text-white hover:bg-cyan-700 shadow-md active:scale-95'}`}
+                    >
+                        <Send size={18} /> {loading ? 'Envoi...' : 'Envoyer par mail'}
                     </button>
                     {!isFullyPaid && (
                         <>
-                            {invoice.status === 'pending' && <button onClick={() => handleGenerateStripe('deposit')} disabled={loading} className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700 transition-colors shadow-sm"><CreditCard size={18} /> {loading ? '...' : (stripeLink ? 'Régénérer Acompte' : 'Lien Acompte (30%)')}</button>}
-                            {invoice.status === 'deposit_paid' && <button onClick={() => handleGenerateStripe('total')} disabled={loading} className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700 transition-colors shadow-sm"><CreditCard size={18} /> {loading ? '...' : (stripeLink ? 'Régénérer Solde' : 'Lien Solde')}</button>}
-                            <button onClick={() => handleUpdateStatus('paid')} className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition-colors shadow-sm font-bold"><CheckCircle size={18} /> Marquer comme Payée</button>
+                            {invoice.status === 'pending' && <button onClick={() => handleGenerateStripe('deposit')} disabled={loading} className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700 transition-colors shadow-sm active:scale-95"><CreditCard size={18} /> {loading ? '...' : (stripeLink ? 'Régénérer Acompte' : 'Lien Acompte (30%)')}</button>}
+                            {invoice.status === 'deposit_paid' && <button onClick={() => handleGenerateStripe('total')} disabled={loading} className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700 transition-colors shadow-sm active:scale-95"><CreditCard size={18} /> {loading ? '...' : (stripeLink ? 'Régénérer Solde' : 'Lien Solde')}</button>}
+                            <button onClick={() => handleUpdateStatus('paid')} className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition-colors shadow-sm font-bold active:scale-95"><CheckCircle size={18} /> Marquer comme Payée</button>
                         </>
                     )}
                     <button onClick={onClose} className="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors font-bold">Fermer</button>
