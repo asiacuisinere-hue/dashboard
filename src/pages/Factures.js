@@ -79,8 +79,8 @@ const Factures = () => {
         setStatusFilter(urlStatus || 'all');
     }, [location.search]);
 
-    const fetchInvoices = useCallback(async () => {
-        setLoading(true);
+    const fetchInvoices = useCallback(async (isSilent = false) => {
+        if (!isSilent) setLoading(true);
         let query = supabase.from('invoices').select(`
             *,
             demand_id,
@@ -107,18 +107,23 @@ const Factures = () => {
             console.error('Erreur:', error);
         } else {
             setInvoices(data || []);
-            // Update selected invoice if it's currently open to sync data
-            if (selectedInvoice) {
-                const updated = data.find(i => i.id === selectedInvoice.id);
-                if (updated) setSelectedInvoice(updated);
-            }
         }
         setLoading(false);
-    }, [searchTerm, statusFilter, businessUnit, selectedInvoice]);
+    }, [searchTerm, statusFilter, businessUnit]);
 
     useEffect(() => {
         fetchInvoices();
-    }, [searchTerm, statusFilter, businessUnit]); // Remove fetchInvoices to avoid infinite loop
+    }, [fetchInvoices]);
+
+    // Separate effect to sync the modal with the updated list data
+    useEffect(() => {
+        if (selectedInvoice && invoices.length > 0) {
+            const updated = invoices.find(i => i.id === selectedInvoice.id);
+            if (updated && JSON.stringify(updated) !== JSON.stringify(selectedInvoice)) {
+                setSelectedInvoice(updated);
+            }
+        }
+    }, [invoices, selectedInvoice]);
 
     const renderCustomerName = (invoice) => {
         if (invoice.clients) return `${invoice.clients.first_name || ''} ${invoice.clients.last_name || ''}`.trim();
@@ -209,7 +214,7 @@ const Factures = () => {
                 <InvoiceDetailModal
                     invoice={selectedInvoice}
                     onClose={() => setSelectedInvoice(null)}
-                    onUpdate={fetchInvoices}
+                    onUpdate={() => fetchInvoices(true)}
                     themeColor={themeColor}
                 />
             )}
@@ -221,12 +226,9 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
     const [loading, setLoading] = useState(false);
     const [stripeLink, setStripeLink] = useState(invoice.payment_link || '');
 
-    // Sync local state when invoice prop changes (from parent re-fetch)
     useEffect(() => {
-        if (invoice.payment_link) {
-            setStripeLink(invoice.payment_link);
-        }
-    }, [invoice.payment_link]);
+        setStripeLink(invoice.payment_link || '');
+    }, [invoice.id, invoice.payment_link]);
 
     const handleGenerateStripe = async (type = 'deposit') => {
         if (invoice.status === 'paid') {
@@ -247,14 +249,9 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
             });
             const res = await response.json();
             if (!response.ok) throw new Error(res.error);
-            
-            // UPDATE LOCAL STATE IMMEDIATELY
             setStripeLink(res.url);
-            
-            // Inform parent to refresh data in background
             onUpdate();
-            
-            alert("Lien généré avec succès ! Vous pouvez maintenant envoyer l'email.");
+            alert("Lien généré !");
         } catch (err) { alert(err.message); }
         finally { setLoading(false); }
     };
@@ -267,7 +264,7 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
     };
 
     const handleSendInvoice = async () => {
-        if (!window.confirm('Confirmer l\'envoi de la facture par email ?')) return;
+        if (!window.confirm('Confirmer l\'envoi ?')) return;
         setLoading(true);
         try {
             const { data: { session } } = await supabase.auth.getSession();
@@ -276,10 +273,10 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
                 body: JSON.stringify({ invoiceId: invoice.id, stripeUrl: stripeLink }),
             });
-            if (!response.ok) throw new Error('Erreur lors de l\'envoi.');
-            alert('Facture envoyée avec succès !');
+            if (!response.ok) throw new Error('Erreur.');
+            alert('Envoyée !');
             onUpdate();
-        } catch (error) { alert(`Erreur: ${error.message}`); }
+        } catch (error) { alert(error.message); }
         finally { setLoading(false); }
     };
 
@@ -315,7 +312,7 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
                 {stripeLink ? (
                     <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 mb-8 animate-in fade-in zoom-in duration-300">
                         <div className="flex items-center gap-2 mb-2 text-indigo-700 font-bold text-sm">
-                            <CheckCircle size={16} /> Lien de paiement prêt
+                            <CheckCircle size={16} /> Lien prêt
                         </div>
                         <div className="flex gap-2">
                             <input readOnly value={stripeLink} className="flex-1 p-2 bg-white border border-indigo-200 rounded text-xs focus:ring-0 outline-none" />
@@ -330,12 +327,8 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
                 )}
 
                 <div className="flex flex-wrap gap-3 justify-end border-t pt-6">
-                    <button 
-                        onClick={handleSendInvoice} 
-                        disabled={loading || !stripeLink || isFullyPaid} 
-                        className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all font-bold mr-auto ${(!stripeLink || isFullyPaid) ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-cyan-600 text-white hover:bg-cyan-700 shadow-md active:scale-95'}`}
-                    >
-                        <Send size={18} /> {loading ? 'Envoi...' : 'Envoyer par mail'}
+                    <button onClick={handleSendInvoice} disabled={loading || !stripeLink || isFullyPaid} className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all font-bold mr-auto ${(!stripeLink || isFullyPaid) ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-cyan-600 text-white hover:bg-cyan-700 shadow-md active:scale-95'}`}>
+                        <Send size={18} /> {loading ? '...' : 'Envoyer par mail'}
                     </button>
                     {!isFullyPaid && (
                         <>
