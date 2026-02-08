@@ -1,83 +1,84 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
-import DemandeDetail from '../DemandeDetail'; 
+import { useBusinessUnit } from '../BusinessUnitContext';
+import DemandeDetail from '../DemandeDetail';
 import ReactPaginate from 'react-paginate';
+import { 
+    Search, RefreshCw, ChefHat, Truck, Star, 
+    Calendar, MapPin, ArrowRight, Soup, CookingPot
+} from 'lucide-react';
 
-const APreparerCard = ({ demande, onSelect, statusBadgeStyle }) => {
+const APreparerCard = ({ demande, onSelect, themeColor }) => {
     const typeIcons = {
-        'RESERVATION_SERVICE': '🏠',
-        'COMMANDE_MENU': '🚚',
-        'COMMANDE_SPECIALE': '⭐'
+        'RESERVATION_SERVICE': <ChefHat size={20}/>,
+        'COMMANDE_MENU': <Truck size={20}/>,
+        'COMMANDE_SPECIALE': <Star size={20}/>
     };
     const invoiceNumber = demande.invoices?.[0]?.document_number;
 
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-4 hover:shadow-md transition-shadow">
-            <div className="flex justify-between items-start mb-4">
-                <div className="flex items-center">
-                    <span className="text-2xl mr-3" title={demande.type}>
-                        {typeIcons[demande.type] || '❓'}
-                    </span>
+        <div className={`bg-white rounded-[2.5rem] shadow-sm border-t-4 p-8 mb-4 hover:shadow-lg transition-all relative group ${themeColor === 'blue' ? 'border-blue-500' : 'border-amber-500'}`}>
+            <div className="flex justify-between items-start mb-6">
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center border border-gray-100 group-hover:bg-white transition-colors">
+                        {typeIcons[demande.type] || <CookingPot />}
+                    </div>
                     <div>
-                        <h3 className="font-bold text-gray-800">
+                        <h3 className="font-black text-gray-800 text-lg leading-tight">
                             {demande.clients?.last_name || demande.entreprises?.nom_entreprise || 'Client Inconnu'}
                         </h3>
-                        <p className="text-xs text-gray-500 font-medium">
-                            {invoiceNumber ? `Facture: ${invoiceNumber}` : 'Pas de facture'}
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
+                            {invoiceNumber ? `Facture: ${invoiceNumber}` : '—'}
                         </p>
                     </div>
                 </div>
-                <span style={statusBadgeStyle(demande.status)} className="uppercase tracking-wider">
-                    {demande.status}
+                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${demande.status === 'Préparation en cours' ? 'bg-cyan-50 text-cyan-600' : 'bg-purple-50 text-purple-600'}`}>
+                    {demande.status === 'Préparation en cours' ? 'En Cuisine' : 'En Attente'}
                 </span>
             </div>
-            
-            <div className="grid grid-cols-2 gap-4 mb-5 text-sm">
-                <div>
-                    <p className="text-gray-500 text-xs uppercase font-bold mb-1">Ville</p>
-                    <p className="text-gray-800">{demande.details_json?.deliveryCity || '—'}</p>
+
+            <div className="grid grid-cols-2 gap-4 mb-8">
+                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 group-hover:bg-white transition-colors">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Échéance</p>
+                    <p className="text-xs font-black text-red-500 flex items-center gap-2"><Calendar size={12}/> {demande.request_date ? new Date(demande.request_date).toLocaleDateString('fr-FR') : '—'}</p>
                 </div>
-                <div>
-                    <p className="text-gray-500 text-xs uppercase font-bold mb-1">Échéance</p>
-                    <p className="text-red-600 font-bold">
-                        {demande.request_date ? new Date(demande.request_date).toLocaleDateString('fr-FR') : '—'}
-                    </p>
+                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 group-hover:bg-white transition-colors">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Ville</p>
+                    <p className="text-xs font-black text-gray-700 flex items-center gap-2 truncate"><MapPin size={12}/> {demande.details_json?.deliveryCity || '—'}</p>
                 </div>
             </div>
 
-            <button 
-                onClick={() => onSelect(demande)}
-                className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded-lg transition-colors text-sm shadow-sm"
-            >
-                Gérer la préparation
+            <button onClick={() => onSelect(demande)} className={`w-full py-4 rounded-2xl text-white font-black text-xs shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 uppercase tracking-widest ${themeColor === 'blue' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-amber-500 hover:bg-amber-600'}`}>
+                Gérer la préparation <ArrowRight size={16} />
             </button>
         </div>
     );
 };
 
 const APreparer = () => {
+    const { businessUnit } = useBusinessUnit();
     const [demandes, setDemandes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedDemande, setSelectedDemande] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(0);
-    const itemsPerPage = 10; // Fixed value
+    const itemsPerPage = 9;
+
+    const themeColor = businessUnit === 'courtage' ? 'blue' : 'amber';
 
     const fetchDemandes = useCallback(async () => {
         setLoading(true);
         const toPrepareStatuses = ['En attente de préparation', 'Préparation en cours'];
-        let query = supabase.from('demandes').select(`*, details_json, clients (*), entreprises (*), invoices (document_number)`).in('status', toPrepareStatuses);
+        let query = supabase.from('demandes').select(`*, details_json, clients (*), entreprises (*), invoices (document_number)`).in('status', toPrepareStatuses).eq('business_unit', businessUnit);
 
         if (searchTerm) {
-            query = query.or(`details_json->>formulaName.ilike.%${searchTerm}%,clients.first_name.ilike.%${searchTerm}%,clients.last_name.ilike.%${searchTerm}%,entreprises.nom_entreprise.ilike.%${searchTerm}%,invoices.document_number.ilike.%${searchTerm}%`);
+            query = query.or(`clients.first_name.ilike.%${searchTerm}%,clients.last_name.ilike.%${searchTerm}%,entreprises.nom_entreprise.ilike.%${searchTerm}%,invoices.document_number.ilike.%${searchTerm}%`);
         }
 
-        const { data, error } = await query.order('request_date', { ascending: true }); // Order by event/delivery date
-
-        if (error) console.error('Error fetching demandes to prepare:', error);
-        else setDemandes(data);
+        const { data, error } = await query.order('request_date', { ascending: true });
+        if (!error) setDemandes(data || []);
         setLoading(false);
-    }, [searchTerm]);
+    }, [searchTerm, businessUnit]);
 
     useEffect(() => {
         fetchDemandes();
@@ -91,159 +92,70 @@ const APreparer = () => {
 
     const handleUpdateStatus = async (id, newStatus) => {
         const { error } = await supabase.from('demandes').update({ status: newStatus }).eq('id', id);
-        if (error) {
-            console.error('Error updating status:', error);
-            alert(`Erreur: ${error.message}`);
-        } else {
+        if (!error) {
             alert('Statut mis à jour !');
             fetchDemandes();
-            setSelectedDemande(null); // Close the modal
-        }
+            setSelectedDemande(null);
+        } else alert(error.message);
     };
 
     const offset = currentPage * itemsPerPage;
     const currentDemandes = demandes.slice(offset, offset + itemsPerPage);
     const pageCount = Math.ceil(demandes.length / itemsPerPage);
 
-    if (loading) return <div style={containerStyle}><p className="text-center text-gray-500 py-10">Chargement...</p></div>;
+    if (loading && demandes.length === 0) return <div className="p-6 text-center py-32 flex flex-col items-center gap-4"><RefreshCw className="animate-spin text-amber-500" size={40}/><p className="text-gray-400 font-bold">Préparation de l'atelier...</p></div>;
 
     return (
-        <div style={containerStyle}>
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold text-gray-800 mb-2">Commandes à Préparer</h1>
-                <p className="text-gray-600">Liste des commandes à préparer ou en cours de préparation.</p>
-            </div>
-
-            <div style={filterContainerStyle}>
-                <input 
-                    type="text"
-                    placeholder="Rechercher par nom, formule, N° facture..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    style={inputStyle}
-                />
-            </div>
-
-            {/* Vue Tableau (Desktop) */}
-            <div className="hidden lg:block">
-                <div style={tableContainerStyle}>
-                    <table style={tableStyle}>
-                        <thead>
-                            <tr>
-                                <th style={thStyle}>Date Évén./Liv.</th>
-                                <th style={thStyle}>Client</th>
-                                <th style={thStyle}>Ville</th>
-                                <th style={{...thStyle, textAlign: 'center'}}>Type</th>
-                                <th style={thStyle}>Facture</th>
-                                <th style={thStyle}>Statut</th>
-                                <th style={thStyle}>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {currentDemandes.map(demande => {
-                                const invoiceNumber = demande.invoices?.[0]?.document_number;
-                                return (
-                                    <tr key={demande.id}>
-                                        <td style={tdStyle}>{demande.request_date ? new Date(demande.request_date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '—'}</td>
-                                        <td style={tdStyle}>{demande.clients?.last_name || demande.entreprises?.nom_entreprise || '—'}</td>
-                                        <td style={tdStyle}>{demande.details_json?.deliveryCity || '—'}</td>
-                                        <td style={{...tdStyle, textAlign: 'center', fontSize: '18px'}}>
-                                            {demande.type === 'RESERVATION_SERVICE' && <span title="RESERVATION_SERVICE">🏠</span>}
-                                            {demande.type === 'COMMANDE_MENU' && <span title="COMMANDE_MENU">🚚</span>}
-                                            {demande.type === 'COMMANDE_SPECIALE' && <span title="COMMANDE_SPECIALE">⭐</span>}
-                                        </td>
-                                        <td style={{...tdStyle, textAlign: 'center'}}>
-                                            {invoiceNumber ? <span title={invoiceNumber}>🧾</span> : '—'}
-                                        </td>
-                                        <td style={tdStyle}><span style={statusBadgeStyle(demande.status)}>{demande.status}</span></td>
-                                        <td style={tdStyle}>
-                                            <button onClick={() => setSelectedDemande(demande)} style={detailsButtonStyle}>
-                                                Gérer
-                                            </button>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
+        <div className="p-6 bg-gray-50 min-h-screen">
+            <div className="max-w-7xl mx-auto">
+                <div className="mb-10">
+                    <h1 className="text-3xl font-black text-gray-800 mb-2">Atelier de Préparation</h1>
+                    <p className="text-gray-500 font-medium italic">Logistique et production des commandes en cours.</p>
                 </div>
-            </div>
 
-            {/* Vue Cartes (Mobile/Tablette) */}
-            <div className="block lg:hidden">
-                {currentDemandes.length === 0 ? (
-                    <p className="text-center text-gray-500 py-10 bg-white rounded-xl">Aucune commande à préparer.</p>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {currentDemandes.map(demande => (
-                            <APreparerCard 
-                                key={demande.id} 
-                                demande={demande} 
-                                onSelect={setSelectedDemande}
-                                statusBadgeStyle={statusBadgeStyle}
-                            />
-                        ))}
+                <div className="bg-white p-4 rounded-[2rem] shadow-sm border border-gray-100 mb-8 flex items-center">
+                    <Search size={20} className="text-gray-300 mr-3 ml-2" />
+                    <input 
+                        type="text" 
+                        placeholder="Rechercher client, facture, plat..." 
+                        value={searchTerm} 
+                        onChange={(e) => setSearchTerm(e.target.value)} 
+                        className="flex-1 py-2 outline-none text-gray-700 font-medium" 
+                    />
+                </div>
+
+                {demandes.length === 0 ? (
+                    <div className="text-center py-32 bg-white rounded-[3rem] border-2 border-dashed border-gray-200">
+                        <Soup size={60} className="mx-auto text-gray-100 mb-4"/>
+                        <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">Rien à préparer pour le moment.</p>
                     </div>
+                ) : (
+                    <>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-in fade-in duration-700">
+                            {currentDemandes.map(demande => (
+                                <APreparerCard key={demande.id} demande={demande} onSelect={setSelectedDemande} themeColor={themeColor} />
+                            ))}
+                        </div>
+
+                        <div className="mt-12 flex flex-col md:flex-row items-center justify-center gap-6">
+                            {pageCount > 1 && (
+                                <div className="flex items-center gap-4 bg-white px-6 py-2 rounded-2xl shadow-sm border border-gray-100">
+                                    <span className="text-xs font-black text-gray-400 uppercase">Page {currentPage + 1} / {pageCount}</span>
+                                    <ReactPaginate
+                                        previousLabel={'<'} nextLabel={'>'} pageCount={pageCount} onPageChange={handlePageClick}
+                                        containerClassName={'flex gap-2'}
+                                        pageLinkClassName={'hidden'}
+                                        activeClassName={'hidden'}
+                                        previousLinkClassName={'p-2 bg-gray-50 rounded-lg hover:bg-gray-100 block font-black'}
+                                        nextLinkClassName={'p-2 bg-gray-50 rounded-lg hover:bg-gray-100 block font-black'}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    </>
                 )}
             </div>
 
-            <div style={{ borderTop: '1px solid #eee', marginTop: '2rem', paddingTop: '1rem' }}>
-                <style>{`
-                    .pagination {
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        list-style: none;
-                        padding: 0;
-                        font-family: Arial, sans-serif;
-                    }
-                    .pagination li {
-                        margin: 0 4px;
-                    }
-                    .pagination li a {
-                        padding: 8px 14px;
-                        border-radius: 5px;
-                        cursor: pointer;
-                        color: #333;
-                        text-decoration: none;
-                        transition: background-color 0.2s, color 0.2s;
-                        border: 1px solid #ddd;
-                        font-weight: bold;
-                    }
-                    .pagination li.active a {
-                        background-color: #d4af37;
-                        color: white;
-                        border-color: #d4af37;
-                    }
-                    .pagination li.disabled a {
-                        color: #ccc;
-                        cursor: not-allowed;
-                    }
-                    .pagination li a:hover:not(.disabled) {
-                        background-color: #f5f5f5;
-                    }
-                `}</style>
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                    {pageCount > 1 && (
-                         <span style={{ marginRight: '1.5rem', color: '#555', fontSize: '14px', fontWeight: 'bold' }}>
-                            Page {currentPage + 1} sur {pageCount}
-                        </span>
-                    )}
-                    <ReactPaginate
-                        previousLabel={'<'}
-                        nextLabel={'>'}
-                        breakLabel={'...'}
-                        pageCount={pageCount}
-                        marginPagesDisplayed={1}
-                        pageRangeDisplayed={3}
-                        onPageChange={handlePageClick}
-                        containerClassName={'pagination'}
-                        activeClassName={'active'}
-                        disabledClassName={'disabled'}
-                    />
-                </div>
-            </div>
-            
             {selectedDemande && (
                 <DemandeDetail
                     demande={selectedDemande}
@@ -256,37 +168,4 @@ const APreparer = () => {
     );
 };
 
-// --- Styles (inspirés de Factures.js) ---
-const containerStyle = { padding: '20px', maxWidth: '1200px', margin: '0 auto', fontFamily: 'Arial, sans-serif' };
-const filterContainerStyle = {
-    display: 'flex',
-    gap: '1rem',
-    marginBottom: '2rem',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-};
-const inputStyle = { padding: '8px', borderRadius: '5px', border: '1px solid #ccc', flex: '1 1 auto', minWidth: '200px' };
-const tableContainerStyle = { marginTop: '1rem', boxShadow: '0 4px 8px rgba(0,0,0,0.05)', borderRadius: '8px', overflowX: 'auto', background: 'white' };
-const tableStyle = { width: '100%', borderCollapse: 'collapse' };
-const thStyle = { background: '#f8f9fa', padding: '12px 15px', textAlign: 'left', fontWeight: 'bold', color: '#333', borderBottom: '2px solid #eee' };
-const tdStyle = { padding: '12px 15px', borderBottom: '1px solid #eee' };
-const detailsButtonStyle = { padding: '8px 12px', background: '#d4af37', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' };
-
-const statusBadgeStyle = (status) => {
-    const colors = {
-        'En attente de préparation': '#6f42c1', 
-        'Préparation en cours': '#17a2b8'
-    };
-    return {
-        padding: '4px 8px',
-        borderRadius: '12px',
-        color: 'white',
-        fontWeight: 'bold',
-        fontSize: '12px',
-        backgroundColor: colors[status] || '#6c757d'
-    };
-};
-
 export default APreparer;
-
-    

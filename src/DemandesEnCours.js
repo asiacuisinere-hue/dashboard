@@ -1,6 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from './supabaseClient';
+import { useBusinessUnit } from './BusinessUnitContext';
 import DemandeDetail from './DemandeDetail';
+import { 
+    Search, ChefHat, Truck, Star, RefreshCw, 
+    Calendar, MapPin, List, Layout, ArrowRight, 
+    XCircle
+} from 'lucide-react';
 
 const communesReunion = [
     "Bras-Panon", "Cilaos", "Entre-Deux", "L'Étang-Salé", "La Plaine-des-Palmistes",
@@ -10,401 +16,153 @@ const communesReunion = [
     "Sainte-Marie", "Sainte-Rose", "Sainte-Suzanne", "Salazie"
 ];
 
-const DemandeEnCoursCard = ({ demande, onSelect, statusBadgeStyle }) => {
+const getStatusColor = (status) => {
+    const colors = {
+        'En attente de traitement': { bg: 'rgba(245, 158, 11, 0.1)', text: '#f59e0b' },
+        'confirmed': { bg: 'rgba(16, 185, 129, 0.1)', text: '#10b981' },
+        'En attente de paiement': { bg: 'rgba(59, 130, 246, 0.1)', text: '#3b82f6' },
+        'Payée': { bg: 'rgba(139, 92, 246, 0.1)', text: '#8b5cf6' },
+        'En attente de préparation': { bg: 'rgba(109, 40, 217, 0.1)', text: '#6d28d9' }
+    };
+    const c = colors[status] || { bg: '#f3f4f6', text: '#6b7280' };
+    return { backgroundColor: c.bg, color: c.text, padding: '4px 12px', borderRadius: '20px', fontSize: '10px', fontWeight: '900', textTransform: 'uppercase' };
+};
+
+const DemandeEnCoursCard = ({ demande, onSelect, themeColor }) => {
     const typeIcons = {
-        'RESERVATION_SERVICE': '🏠',
-        'COMMANDE_MENU': '🚚',
-        'COMMANDE_SPECIALE': '⭐',
-        'SOUSCRIPTION_ABONNEMENT': '🔄'
+        'RESERVATION_SERVICE': <ChefHat size={20}/>,
+        'COMMANDE_MENU': <Truck size={20}/>,
+        'COMMANDE_SPECIALE': <Star size={20}/>,
+        'SOUSCRIPTION_ABONNEMENT': <RefreshCw size={20}/>
     };
 
+    const clientName = demande.clients ? `${demande.clients.first_name} ${demande.clients.last_name}` : (demande.entreprises?.nom_entreprise || 'Client Inconnu');
+
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-4 hover:shadow-md transition-shadow">
-            <div className="flex justify-between items-start mb-4">
-                <div className="flex items-center">
-                    <span className="text-2xl mr-3" title={demande.type}>
-                        {typeIcons[demande.type] || '📩'}
-                    </span>
+        <div className={`bg-white rounded-[2.5rem] shadow-sm border-t-4 p-8 mb-4 hover:shadow-lg transition-all relative group ${themeColor === 'blue' ? 'border-blue-500' : 'border-amber-500'}`}>
+            <div className="flex justify-between items-start mb-6">
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center border border-gray-100 group-hover:bg-white transition-colors">
+                        {typeIcons[demande.type] || <List />}
+                    </div>
                     <div>
-                        <h3 className="font-bold text-gray-800">
-                            {demande.clients?.last_name || demande.entreprises?.nom_entreprise || 'Client Inconnu'}
-                        </h3>
-                        <p className="text-xs text-gray-500">
-                            ID: {demande.id.substring(0, 8)}
-                        </p>
+                        <h3 className="font-black text-gray-800 text-lg leading-tight">{clientName}</h3>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">ID: {demande.id.substring(0, 8)}</p>
                     </div>
                 </div>
-                <span style={statusBadgeStyle(demande.status)} className="uppercase tracking-wider">      
-                    {demande.status}
-                </span>
+                <span style={getStatusColor(demande.status)}>{demande.status}</span>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 mb-5 text-sm">
-                <div>
-                    <p className="text-gray-500 text-xs uppercase font-bold mb-1">Ville</p>
-                    <p className="text-gray-800">{demande.details_json?.deliveryCity || '—'}</p>        
+            <div className="grid grid-cols-2 gap-4 mb-8">
+                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 group-hover:bg-white transition-colors">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Échéance</p>
+                    <p className="text-xs font-black text-gray-700 flex items-center gap-2"><Calendar size={12}/> {demande.request_date ? new Date(demande.request_date).toLocaleDateString('fr-FR') : '—'}</p>
                 </div>
-                <div>
-                    <p className="text-gray-500 text-xs uppercase font-bold mb-1">Date Év./Liv.</p>      
-                    <p className="text-gray-800">
-                        {demande.request_date ? new Date(demande.request_date).toLocaleDateString('fr-FR') : '—'}
-                    </p>
+                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 group-hover:bg-white transition-colors">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Localisation</p>
+                    <p className="text-xs font-black text-gray-700 flex items-center gap-2 truncate"><MapPin size={12}/> {demande.details_json?.deliveryCity || '—'}</p>
                 </div>
             </div>
 
-            <button
-                onClick={() => onSelect(demande)}
-                className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded-lg transition-colors text-sm"
-            >
-                Gérer la demande
+            <button onClick={() => onSelect(demande)} className={`w-full py-4 rounded-2xl text-white font-black text-xs shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 uppercase tracking-widest ${themeColor === 'blue' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-amber-500 hover:bg-amber-600'}`}>
+                Gérer le dossier <ArrowRight size={16} />
             </button>
         </div>
     );
 };
 
 const DemandesEnCours = () => {
+    const { businessUnit } = useBusinessUnit();
     const [demandes, setDemandes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedDemande, setSelectedDemande] = useState(null);
-    const [filter, setFilter] = useState({ date: '', status: '', city: '', type: '' });
+    const [activeTab, setActiveTab] = useState('ALL'); 
+    const [filter, setFilter] = useState({ date: '', status: '', city: '', searchTerm: '' });
+
+    const themeColor = businessUnit === 'courtage' ? 'blue' : 'amber';
 
     const fetchDemandes = useCallback(async () => {
         setLoading(true);
-        let query = supabase.from('demandes').select(`*, clients (*), entreprises (*), details_json`);    
+        let query = supabase.from('demandes').select(`*, clients (*), entreprises (*)`).eq('business_unit', businessUnit);
 
-        // --- Type and Status Filtering ---
-        if (filter.type === 'COMMANDE_MENU') {
-            query = query
-                .eq('type', 'COMMANDE_MENU')
-                .not('status', 'in', '(completed,cancelled,paid,Nouvelle)');
-        } else if (filter.type === 'COMMANDE_SPECIALE') {
-            query = query
-                .eq('type', 'COMMANDE_SPECIALE')
-                .not('status', 'in', '(completed,cancelled,paid,Nouvelle)');
-        } else if (filter.type === 'RESERVATION_SERVICE') {
-            query = query
-                .eq('type', 'RESERVATION_SERVICE')
-                .in('status', ['En attente de traitement', 'confirmed']);
-        } else if (filter.type === 'SOUSCRIPTION_ABONNEMENT') {
-            query = query
-                .eq('type', 'SOUSCRIPTION_ABONNEMENT')
-                .in('status', ['En attente de traitement', 'confirmed']);
-        } else {
-            // Default view: show all in-progress demands
-                            const commandeMenuFilter = `and(type.in.("COMMANDE_MENU","COMMANDE_SPECIALE"),status.not.in.(completed,cancelled,paid,Nouvelle,"En attente de préparation","Préparation en cours"))`; 
-                            const reservationServiceFilter = `and(type.in.("RESERVATION_SERVICE","SOUSCRIPTION_ABONNEMENT"),status.in.("En attente de traitement",confirmed))`;            query = query.or(`${commandeMenuFilter},${reservationServiceFilter}`);
+        if (activeTab === 'SERVICE') query = query.eq('type', 'RESERVATION_SERVICE').in('status', ['En attente de traitement', 'confirmed', 'En attente de validation de devis']);
+        else if (activeTab === 'MENU') query = query.in('type', ['COMMANDE_MENU', 'COMMANDE_SPECIALE']).not('status', 'in', '(completed,cancelled,paid,Nouvelle)');
+        else if (activeTab === 'SUBS') query = query.eq('type', 'SOUSCRIPTION_ABONNEMENT');
+        else {
+            const commandeMenuFilter = `and(type.in.("COMMANDE_MENU","COMMANDE_SPECIALE"),status.not.in.(completed,cancelled,paid,Nouvelle,"En attente de préparation","Préparation en cours"))`; 
+            const reservationServiceFilter = `and(type.in.("RESERVATION_SERVICE","SOUSCRIPTION_ABONNEMENT"),status.in.("En attente de traitement",confirmed,"En attente de validation de devis"))`;
+            query = query.or(`${commandeMenuFilter},${reservationServiceFilter}`);
         }
 
-        // --- Additional Filters ---
-        if (filter.date) {
-            query = query.eq('request_date', filter.date);
-        }
-        if (filter.status) {
-            query = query.eq('status', filter.status);
-        }
-        if (filter.city) {
-            query = query.ilike('details_json->>ville', `%${filter.city}%`);
-        }
+        if (filter.date) query = query.eq('request_date', filter.date);
+        if (filter.status) query = query.eq('status', filter.status);
+        if (filter.city) query = query.ilike('details_json->>deliveryCity', `%${filter.city}%`);
 
         const { data, error } = await query.order('created_at', { ascending: false });
-
-        if (error) {
-            console.error('Erreur de chargement des demandes en cours:', error);
-            alert(`Une erreur est survenue lors du chargement des données : ${error.message}`);
-        } else {
-            console.log('--- [DEBUG] Demandes en cours reçues:', data);
-            setDemandes(data);
-        }
+        if (!error) setDemandes(data || []);
         setLoading(false);
-    }, [filter]);
+    }, [businessUnit, activeTab, filter]);
 
-    useEffect(() => {
+    useEffect(() => { fetchDemandes(); }, [fetchDemandes]);
+
+    const handleUpdateStatus = async (id, s) => {
+        await supabase.from('demandes').update({ status: s }).eq('id', id);
         fetchDemandes();
-    }, [fetchDemandes]);
-
-    const handleFilterChange = (e) => {
-        const { name, value } = e.target;
-        setFilter(prev => ({ ...prev, [name]: value }));
+        setSelectedDemande(null);
     };
 
-    const handleTypeFilter = (type) => {
-        setFilter(prev => ({
-            ...prev,
-            type: prev.type === type ? '' : type // Toggle filter
-        }));
-    };
-
-    const handleUpdateStatus = async (demandeId, newStatus) => {
-             const { error } = await supabase
-                 .from('demandes')
-                 .update({ status: newStatus })
-                 .eq('id', demandeId);
-
-             if (error) {
-                 alert(`Erreur lors de la mise à jour du statut : ${error.message}`);
-             } else {
-                alert('Statut de la demande mis à jour.');
-                fetchDemandes(); // Refresh list
-                setSelectedDemande(null);
-            }
-        };
-
-    const resetFilters = () => {
-        setFilter({ date: '', status: '', city: '', type: '' });
-    };
-
-    if (loading) {
-        return <div className="p-6 text-center text-gray-500">Chargement des demandes en cours...</div>;  
-    }
+    const filteredList = demandes.filter(d => {
+        const name = d.clients ? `${d.clients.last_name} ${d.clients.first_name}` : (d.entreprises?.nom_entreprise || '');
+        return name.toLowerCase().includes(filter.searchTerm.toLowerCase()) || d.id.includes(filter.searchTerm);
+    });
 
     return (
-        <div style={containerStyle}>
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold text-gray-800 mb-2">Demandes en cours</h1>
-                <p className="text-gray-600">Suivi de toutes les demandes actives.</p>
-            </div>
-
-            <div style={filterContainerStyle}>
-                {/* Type Filter Icons */}
-                <button
-                    onClick={() => handleTypeFilter('RESERVATION_SERVICE')}
-                    style={filter.type === 'RESERVATION_SERVICE' ? activeIconButtonStyle : iconButtonStyle}
-                    title="Filtrer par Réservation Service">
-                    🏠
-                </button>
-                                <button
-                                    onClick={() => handleTypeFilter('COMMANDE_MENU')}
-                                    style={filter.type === 'COMMANDE_MENU' ? activeIconButtonStyle : iconButtonStyle}
-                                    title="Filtrer par Commande Menu">
-                                    🚚
-                                </button>
-                                <button
-                                    onClick={() => handleTypeFilter('COMMANDE_SPECIALE')}
-                                    style={filter.type === 'COMMANDE_SPECIALE' ? activeIconButtonStyle : iconButtonStyle}
-                                    title="Filtrer par Commande Spéciale">
-                                    ⭐
-                                </button>
-                                <button
-                                    onClick={() => handleTypeFilter('SOUSCRIPTION_ABONNEMENT')}
-                                    style={filter.type === 'SOUSCRIPTION_ABONNEMENT' ? activeIconButtonStyle : iconButtonStyle}
-                                    title="Filtrer par Abonnement">
-                                    🔄
-                                </button>
-                <input
-                    type="date"
-                    name="date"
-                    value={filter.date}
-                    onChange={handleFilterChange}
-                    style={filterInputStyle}
-                />
-                <select
-                    name="status"
-                    value={filter.status}
-                    onChange={handleFilterChange}
-                    style={filterInputStyle}
-                >
-                    <option value="">Tous les statuts</option>
-                    <option value="En attente de traitement">En attente de traitement</option>
-                    <option value="En attente de validation de devis">En attente de validation de devis</option>
-                    <option value="En attente de paiement">En attente de paiement</option>
-                    <option value="Payée">Payée</option>
-                    <option value="En attente de préparation">En attente de préparation</option>        
-                    <option value="Préparation en cours">Préparation en cours</option>
-                </select>
-                <select
-                    name="city"
-                    value={filter.city}
-                    onChange={handleFilterChange}
-                    style={filterInputStyle}
-                >
-                    <option value="">Toutes les villes</option>
-                    {communesReunion.map(commune => (
-                        <option key={commune} value={commune}>{commune}</option>
-                    ))}
-                </select>
-                <button onClick={resetFilters} style={detailsButtonStyle}>Réinitialiser</button>
-            </div>
-
-            {/* Vue Tableau (Desktop) */}
-            <div className="hidden lg:block">
-                <div style={tableContainerStyle}>
-                    <table style={tableStyle}>
-                        <thead>
-                            <tr>
-                                <th style={thStyle}>Date Demande</th>
-                                <th style={thStyle}>Type</th>
-                                <th style={thStyle}>Client</th>
-                                <th style={thStyle}>Ville</th>
-                                <th style={thStyle}>D.Evé</th>
-                                <th style={thStyle}>D.Liv.Re</th>
-                                <th style={thStyle}>Statut</th>
-                                <th style={thStyle}>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {demandes.map(demande => (
-                                <tr key={demande.id}>
-                                    <td style={tdStyle}>{new Date(demande.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })}</td>
-                                    <td style={{...tdStyle, textAlign: 'center', fontSize: '18px'}}>      
-                                        {demande.type === 'RESERVATION_SERVICE' && <span title="RESERVATION_SERVICE">🏠</span>}
-                                        {demande.type === 'COMMANDE_MENU' && <span title="COMMANDE_MENU">🚚</span>}
-                                        {demande.type === 'COMMANDE_SPECIALE' && <span title="COMMANDE_SPECIALE">⭐</span>}
-                                        {demande.type === 'SOUSCRIPTION_ABONNEMENT' && <span title="SOUSCRIPTION_ABONNEMENT">🔄</span>}
-                                    </td>
-                                    <td style={tdStyle}>{demande.clients?.last_name || demande.entreprises?.nom_entreprise || '—'}</td>
-                                    <td style={tdStyle}>{demande.details_json?.deliveryCity || '—'}</td>
-                                    <td style={tdStyle}>
-                                        {demande.type === 'RESERVATION_SERVICE' && demande.request_date   
-                                            ? new Date(demande.request_date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })
-                                            : '—'}
-                                    </td>
-                                    <td style={tdStyle}>
-                                        {(demande.type === 'COMMANDE_MENU' || demande.type === 'COMMANDE_SPECIALE') && demande.request_date
-                                            ? new Date(demande.request_date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })
-                                            : '—'}
-                                    </td>
-                                    <td style={tdStyle}><span style={statusBadgeStyle(demande.status)}>{demande.status}</span></td>
-                                    <td style={tdStyle}>
-                                        <button onClick={() => setSelectedDemande(demande)} style={detailsButtonStyle}>
-                                            Gérer
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+        <div className="p-6 bg-gray-50 min-h-screen">
+            <div className="max-w-7xl mx-auto">
+                <div className="mb-10">
+                    <h1 className="text-3xl font-black text-gray-800 mb-2">Suivi des Dossiers</h1>
+                    <p className="text-gray-500 font-medium italic">Pilotage des demandes actives ({businessUnit}).</p>
                 </div>
-            </div>
 
-            {/* Vue Cartes (Mobile/Tablette) */}
-            <div className="block lg:hidden">
-                {demandes.length === 0 ? (
-                    <p className="text-center text-gray-500 py-10 bg-white rounded-xl">Aucune demande en cours.</p>
+                <div className="flex space-x-1 bg-gray-200 p-1.5 rounded-[2rem] mb-8 max-w-2xl overflow-x-auto scrollbar-hide">
+                    <button onClick={() => setActiveTab('ALL')} className={`flex-1 min-w-[100px] py-3 rounded-[1.5rem] text-xs font-black transition-all ${activeTab === 'ALL' ? 'bg-white text-gray-800 shadow-md' : 'text-gray-500 hover:text-gray-700'}`}>Tous</button>
+                    <button onClick={() => setActiveTab('SERVICE')} className={`flex-1 min-w-[100px] flex items-center justify-center py-3 rounded-[1.5rem] text-xs font-black transition-all ${activeTab === 'SERVICE' ? 'bg-white text-gray-800 shadow-md' : 'text-gray-500 hover:text-gray-700'}`}><ChefHat size={14} className="mr-2"/> Prestations</button>
+                    <button onClick={() => setActiveTab('MENU')} className={`flex-1 min-w-[100px] flex items-center justify-center py-3 rounded-[1.5rem] text-xs font-black transition-all ${activeTab === 'MENU' ? 'bg-white text-gray-800 shadow-md' : 'text-gray-500 hover:text-gray-700'}`}><Truck size={14} className="mr-2"/> Menus</button>
+                    <button onClick={() => setActiveTab('SUBS')} className={`flex-1 min-w-[100px] flex items-center justify-center py-3 rounded-[1.5rem] text-xs font-black transition-all ${activeTab === 'SUBS' ? 'bg-white text-gray-800 shadow-md' : 'text-gray-500 hover:text-gray-700'}`}><RefreshCw size={14} className="mr-2"/> Abos</button>
+                </div>
+
+                <div className="bg-white p-4 rounded-[2rem] shadow-sm border border-gray-100 mb-8 flex flex-wrap gap-4 items-center">
+                    <div className="flex-1 min-w-[200px] relative">
+                        <Search size={18} className="absolute left-3 top-3 text-gray-300"/>
+                        <input type="text" placeholder="Rechercher client..." value={filter.searchTerm} onChange={e => setFilter({...filter, searchTerm: e.target.value})} className="w-full pl-10 pr-4 py-2.5 border-0 bg-gray-50 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-medium" />
+                    </div>
+                    <input type="date" value={filter.date} onChange={e => setFilter({...filter, date: e.target.value})} className="p-2.5 bg-gray-50 border-0 rounded-xl font-bold text-xs" />
+                    <select value={filter.city} onChange={e => setFilter({...filter, city: e.target.value})} className="p-2.5 bg-gray-50 border-0 rounded-xl font-bold text-xs">
+                        <option value="">Toutes les villes</option>
+                        {communesReunion.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                    <button onClick={() => setFilter({date:'', status:'', city:'', searchTerm:''})} className="p-2.5 text-gray-400 hover:text-gray-600 transition-colors"><XCircle size={20}/></button>
+                </div>
+
+                {loading ? (
+                    <div className="flex justify-center py-32"><RefreshCw className="animate-spin text-amber-500" size={48} /></div>
+                ) : filteredList.length === 0 ? (
+                    <div className="text-center py-32 bg-white rounded-[3rem] border-2 border-dashed border-gray-200">
+                        <Layout size={60} className="mx-auto text-gray-100 mb-4"/>
+                        <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">Aucun dossier trouvé.</p>
+                    </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {demandes.map(demande => (
-                            <DemandeEnCoursCard
-                                key={demande.id}
-                                demande={demande}
-                                onSelect={setSelectedDemande}
-                                statusBadgeStyle={statusBadgeStyle}
-                            />
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-in fade-in duration-700">
+                        {filteredList.map(demande => (
+                            <DemandeEnCoursCard key={demande.id} demande={demande} onSelect={setSelectedDemande} themeColor={themeColor} />
                         ))}
                     </div>
                 )}
             </div>
 
-            {selectedDemande && (
-                <DemandeDetail
-                    demande={selectedDemande}
-                    onClose={() => setSelectedDemande(null)}
-                    onUpdateStatus={handleUpdateStatus}
-                    onRefresh={fetchDemandes}
-                />
-            )}
+            {selectedDemande && <DemandeDetail demande={selectedDemande} onClose={() => setSelectedDemande(null)} onUpdateStatus={handleUpdateStatus} onRefresh={fetchDemandes} />}
         </div>
     );
-};
-
-
-// --- Styles ---
-const containerStyle = {
-    padding: '20px',
-    maxWidth: '1400px',
-    margin: '0 auto',
-};
-
-const filterContainerStyle = {
-    display: 'flex',
-    gap: '1rem',
-    marginBottom: '2rem',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-};
-
-const filterInputStyle = {
-    padding: '8px',
-    borderRadius: '5px',
-    border: '1px solid #ccc',
-    flex: '1 1 auto',
-    minWidth: '150px',
-};
-
-const tableContainerStyle = {
-    marginTop: '2rem',
-    boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-    borderRadius: '8px',
-    overflowX: 'auto',
-    background: 'white'
-};
-
-const tableStyle = {
-    width: '100%',
-    borderCollapse: 'collapse',
-};
-
-const thStyle = {
-    background: '#f4f7fa',
-    padding: '12px 15px',
-    textAlign: 'left',
-    fontWeight: 'bold',
-    color: '#333',
-    borderBottom: '2px solid #ddd',
-    whiteSpace: 'nowrap',
-};
-
-const tdStyle = {
-    padding: '12px 15px',
-    borderBottom: '1px solid #eee',
-    color: '#555',
-    whiteSpace: 'nowrap',
-};
-
-const detailsButtonStyle = {
-    padding: '8px 12px',
-    background: '#d4af37',
-    color: 'white',
-    border: 'none',
-    borderRadius: '5px',
-    cursor: 'pointer',
-};
-
-const iconButtonStyle = {
-    padding: '8px 10px',
-    fontSize: '18px',
-    background: '#f8f9fa',
-    border: '1px solid #ccc',
-    borderRadius: '5px',
-    cursor: 'pointer',
-};
-
-const activeIconButtonStyle = {
-    ...iconButtonStyle,
-    borderColor: '#d4af37',
-    background: '#fff8e1',
-};
-
-const statusBadgeStyle = (status) => {
-    const colors = {
-        'Nouvelle': '#007bff',
-        'En attente de traitement': '#ffc107',
-        'En attente de validation de devis': '#fd7e14',
-        'En attente de paiement': '#17a2b8',
-        'En attente de préparation': '#6f42c1',
-        'Préparation en cours': '#20c997',
-        'Confirmée': '#28a745',
-        'Refusée': '#6c757d',
-        'Annulée': '#dc3545',
-        'Payée': '#6f42c1'
-    };
-    return {
-        padding: '4px 8px',
-        borderRadius: '12px',
-        color: ['En attente de traitement', 'Préparation en cours'].includes(status) ? 'black' : 'white',
-        fontWeight: 'bold',
-        fontSize: '12px',
-        backgroundColor: colors[status] || '#6c757d'
-    };
 };
 
 export default DemandesEnCours;

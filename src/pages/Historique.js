@@ -1,315 +1,192 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
-import DemandeDetail from '../DemandeDetail'; // Réutilisation de la modale de détail
+import { useBusinessUnit } from '../BusinessUnitContext';
+import DemandeDetail from '../DemandeDetail'; 
+import { 
+    History, Search, Calendar, Archive, 
+    XCircle, RefreshCw, ChefHat, Truck, Star, ArrowRight,
+    FileClock
+} from 'lucide-react';
 
-const HistoriqueCard = ({ demande, onSelect, statusBadgeStyle }) => {
+const getStatusStyle = (status) => {
+    const colors = {
+        'Archivée': { bg: 'rgba(108, 117, 125, 0.1)', text: '#6c757d' },
+        'Refusée': { bg: 'rgba(220, 53, 69, 0.1)', text: '#dc3545' },
+        'Annulée': { bg: 'rgba(220, 53, 69, 0.1)', text: '#dc3545' },
+        'completed': { bg: 'rgba(40, 167, 69, 0.1)', text: '#28a745' },
+        'Payée': { bg: 'rgba(40, 167, 69, 0.1)', text: '#28a745' }
+    };
+    const c = colors[status] || { bg: '#f3f4f6', text: '#6b7280' };
+    return { backgroundColor: c.bg, color: c.text, padding: '4px 12px', borderRadius: '20px', fontSize: '10px', fontWeight: '900', textTransform: 'uppercase' };
+};
+
+const HistoriqueCard = ({ demande, onSelect, themeColor }) => {
     const typeIcons = {
-        'RESERVATION_SERVICE': '🏠',
-        'COMMANDE_MENU': '🚚',
-        'COMMANDE_SPECIALE': '⭐',
-        'SOUSCRIPTION_ABONNEMENT': '🔄'
+        'RESERVATION_SERVICE': <ChefHat size={20} />,
+        'COMMANDE_MENU': <Truck size={20} />,
+        'COMMANDE_SPECIALE': <Star size={20} />,
+        'SOUSCRIPTION_ABONNEMENT': <RefreshCw size={20} />
     };
 
+    const clientName = demande.clients ? `${demande.clients.first_name} ${demande.clients.last_name}` : (demande.entreprises?.nom_entreprise || 'Client Inconnu');
+
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-4 hover:shadow-md transition-shadow">
-            <div className="flex justify-between items-start mb-4">
-                <div className="flex items-center">
-                    <span className="text-2xl mr-3" title={demande.type}>
-                        {typeIcons[demande.type] || '❓'}
-                    </span>
+        <div className={`bg-white rounded-[2.5rem] shadow-sm border-t-4 p-8 mb-4 hover:shadow-lg transition-all relative group ${themeColor === 'blue' ? 'border-blue-500' : 'border-amber-500'}`}>
+            <div className="flex justify-between items-start mb-6">
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center border border-gray-100 group-hover:bg-white transition-colors">
+                        {typeIcons[demande.type] || <History />}
+                    </div>
                     <div>
-                        <h3 className="font-bold text-gray-800">
-                            {demande.clients?.last_name || demande.entreprises?.nom_entreprise || 'Client Inconnu'}
-                        </h3>
-                        <p className="text-xs text-gray-500">
-                            ID: {demande.id.substring(0, 8)}
-                        </p>
+                        <h3 className="font-black text-gray-800 text-lg leading-tight">{clientName}</h3>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">ID: {demande.id.substring(0, 8)}</p>
                     </div>
                 </div>
-                <span style={statusBadgeStyle(demande.status)} className="uppercase tracking-wider">
-                    {demande.status}
-                </span>
+                <span style={getStatusStyle(demande.status)}>{demande.status === 'completed' ? 'Terminée' : demande.status}</span>
             </div>
-            
-            <div className="space-y-2 mb-5 text-sm">
-                <div className="flex items-center text-gray-600">
-                    <span className="font-medium w-32">Date Demande:</span>
-                    <span>{new Date(demande.created_at).toLocaleDateString('fr-FR')}</span>
+
+            <div className="grid grid-cols-2 gap-4 mb-8">
+                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 group-hover:bg-white transition-colors">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Date Demande</p>
+                    <p className="text-xs font-black text-gray-700 flex items-center gap-2"><Calendar size={12}/> {new Date(demande.created_at).toLocaleDateString('fr-FR')}</p>
                 </div>
-                <div className="flex items-center text-gray-600">
-                    <span className="font-medium w-32">Type:</span>
-                    <span>{demande.type.replace('_', ' ')}</span>
+                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 group-hover:bg-white transition-colors">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Type de Flux</p>
+                    <p className="text-xs font-black text-gray-700 truncate">{demande.type.replace('_', ' ')}</p>
                 </div>
             </div>
 
-            <button 
-                onClick={() => onSelect(demande)}
-                className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 rounded-lg transition-colors text-sm"
-            >
-                Consulter l'historique
+            <button onClick={() => onSelect(demande)} className="w-full py-4 rounded-2xl bg-gray-50 text-gray-500 font-black text-xs hover:bg-gray-100 transition-all active:scale-95 flex items-center justify-center gap-2 uppercase tracking-widest">
+                Consulter les détails <ArrowRight size={16} />
             </button>
         </div>
     );
 };
 
 const Historique = () => {
+    const { businessUnit } = useBusinessUnit();
     const [demandes, setDemandes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedDemande, setSelectedDemande] = useState(null);
-    const [filter, setFilter] = useState({ date: '', status: '' });
+    const [activeTab, setActiveTab] = useState('DONE'); 
+    const [filters, setFilters] = useState({ date: '', search: '' });
+
+    const themeColor = businessUnit === 'courtage' ? 'blue' : 'amber';
 
     const fetchDemandes = useCallback(async () => {
         setLoading(true);
-        let query = supabase
-            .from('demandes')
-            .select(`
-                *,
-                clients (*),
-                entreprises (*)
-            `)
-            .in('status', ['Archivée', 'Refusée', 'Annulée', 'completed']) // Add 'completed' status
-            .order('created_at', { ascending: false });
+        let query = supabase.from('demandes').select('*, clients (*), entreprises (*)').eq('business_unit', businessUnit);
 
-        if (filter.date) {
-            query = query.eq('request_date', filter.date);
-        }
-        if (filter.status) {
-            query = query.eq('status', filter.status);
-        }
+        if (activeTab === 'DONE') query = query.in('status', ['completed', 'Payée', 'Confirmée']);
+        else if (activeTab === 'CANCELLED') query = query.in('status', ['Refusée', 'Annulée']);
+        else query = query.eq('status', 'Archivée');
 
-        const { data, error } = await query;
+        if (filters.date) query = query.eq('request_date', filters.date);
 
-        if (error) {
-            console.error('Erreur de chargement de l\'historique:', error);
-            alert(`Une erreur est survenue lors du chargement des données : ${error.message}`);
-        } else {
-            setDemandes(data);
-        }
+        const { data, error } = await query.order('created_at', { ascending: false });
+        if (!error) setDemandes(data || []);
         setLoading(false);
-    }, [filter]);
+    }, [businessUnit, activeTab, filters.date]);
 
-    useEffect(() => {
-        fetchDemandes();
-    }, [fetchDemandes]);
-
-    const handleFilterChange = (e) => {
-        const { name, value } = e.target;
-        setFilter(prev => ({ ...prev, [name]: value }));
-    };
-    
-    const resetFilters = () => {
-        setFilter({ date: '', status: '' });
-    };
+    useEffect(() => { fetchDemandes(); }, [fetchDemandes]);
 
     const handleBulkArchive = async () => {
-        if (!window.confirm('Êtes-vous sûr de vouloir archiver TOUTES les demandes affichées dans l\'historique ? Cette action est irréversible.')) {
-            return;
-        }
-
-        const demandeIdsToArchive = demandes.map(d => d.id);
-        if (demandeIdsToArchive.length === 0) {
-            alert('Aucune demande à archiver.');
-            return;
-        }
-
-        const { error } = await supabase
-            .from('demandes')
-            .update({ status: 'Archivée' })
-            .in('id', demandeIdsToArchive);
-
-        if (error) {
-            alert(`Erreur lors de l'archivage en masse : ${error.message}`);
-        } else {
-            alert(`${demandeIdsToArchive.length} demandes ont été archivées.`);
-            fetchDemandes(); // Rafraîchir la liste
-        }
+        if (!window.confirm('Archiver TOUTES les demandes affichées dans cet onglet ?')) return;
+        const ids = demandes.map(d => d.id);
+        if (ids.length === 0) return;
+        const { error } = await supabase.from('demandes').update({ status: 'Archivée' }).in('id', ids);
+        if (!error) fetchDemandes();
     };
 
-    if (loading) {
-        return <div className="p-6 text-center text-gray-500">Chargement de l'historique...</div>;
-    }
+    const filteredList = demandes.filter(d => {
+        const name = d.clients ? `${d.clients.last_name} ${d.clients.first_name}` : (d.entreprises?.nom_entreprise || '');
+        return name.toLowerCase().includes(filters.search.toLowerCase()) || d.id.includes(filters.search);
+    });
 
     return (
-        <div style={containerStyle}>
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold text-gray-800 mb-2">Historique des Demandes</h1>
-                <p className="text-gray-600">Consultez et gérez les demandes archivées, refusées ou annulées.</p>
-            </div>
-
-            <div style={filterContainerStyle}>
-                <input 
-                    type="date" 
-                    name="date" 
-                    value={filter.date} 
-                    onChange={handleFilterChange}
-                    style={filterInputStyle}
-                />
-                <select 
-                    name="status" 
-                    value={filter.status} 
-                    onChange={handleFilterChange}
-                    style={filterInputStyle}
-                >
-                    <option value="">Tous les statuts</option>
-                    <option value="Archivée">Archivée</option>
-                    <option value="Refusée">Refusée</option>
-                    <option value="Annulée">Annulée</option>
-                </select>
-                <button onClick={resetFilters} style={detailsButtonStyle}>Réinitialiser</button>
-                <button onClick={handleBulkArchive} style={{...detailsButtonStyle, backgroundColor: '#6c757d', marginLeft: '10px'}}>Archiver tout l\'historique</button>
-            </div>
-
-            {/* Vue Tableau (Desktop) */}
-            <div className="hidden lg:block">
-                <div style={tableContainerStyle}>
-                    <table style={tableStyle}>
-                        <thead>
-                            <tr>
-                                <th style={thStyle}>Date Demande</th>
-                                <th style={thStyle}>Client / Entreprise</th>
-                                <th style={{...thStyle, textAlign: 'center'}}>Type</th>
-                                <th style={thStyle}>Statut</th>
-                                <th style={thStyle}>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {demandes.map(demande => (
-                                <tr key={demande.id}>
-                                    <td style={tdStyle}>{new Date(demande.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })}</td>
-                                    <td style={tdStyle}>{demande.clients?.last_name || demande.entreprises?.nom_entreprise || '—'}</td>
-                                    <td style={{...tdStyle, textAlign: 'center', fontSize: '18px'}}>
-                                        {demande.type === 'RESERVATION_SERVICE' && <span title="RESERVATION_SERVICE">🏠</span>}
-                                        {demande.type === 'COMMANDE_MENU' && <span title="COMMANDE_MENU">🚚</span>}
-                                    </td>
-                                    <td style={tdStyle}><span style={statusBadgeStyle(demande.status)}>{demande.status}</span></td>
-                                    <td style={tdStyle}>
-                                        <button onClick={() => setSelectedDemande(demande)} style={detailsButtonStyle}>
-                                            Voir Détails
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            {/* Vue Cartes (Mobile/Tablette) */}
-            <div className="block lg:hidden mt-4">
-                {demandes.length === 0 ? (
-                    <p className="text-center text-gray-500 py-10 bg-white rounded-xl">Aucun historique disponible.</p>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {demandes.map(demande => (
-                            <HistoriqueCard 
-                                key={demande.id} 
-                                demande={demande} 
-                                onSelect={setSelectedDemande}
-                                statusBadgeStyle={statusBadgeStyle}
-                            />
-                        ))}
+        <div className="p-6 bg-gray-50 min-h-screen">
+            <div className="max-w-7xl mx-auto">
+                <div className="mb-8 flex flex-wrap justify-between items-end gap-4">
+                    <div>
+                        <h1 className="text-3xl font-black text-gray-800 mb-2">Mémoire de l'Activité</h1>
+                        <p className="text-gray-500 font-medium italic">Consultez vos dossiers clos, refusés ou archivés ({businessUnit}).</p>
                     </div>
+                    {activeTab !== 'ARCHIVE' && (
+                        <button onClick={handleBulkArchive} className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-gray-800 text-white font-black text-xs shadow-lg hover:bg-black transition-all active:scale-95 uppercase tracking-widest">
+                            <Archive size={16}/> Archiver l'onglet
+                        </button>
+                    )}
+                </div>
+
+                <div className="flex space-x-1 bg-gray-200 p-1.5 rounded-[2rem] mb-8 max-w-xl">
+                    <button onClick={() => setActiveTab('DONE')} className={`flex-1 py-3 rounded-[1.5rem] text-xs font-black transition-all ${activeTab === 'DONE' ? 'bg-white text-gray-800 shadow-md' : 'text-gray-500 hover:text-gray-700'}`}>Terminées</button>
+                    <button onClick={() => setActiveTab('CANCELLED')} className={`flex-1 py-3 rounded-[1.5rem] text-xs font-black transition-all ${activeTab === 'CANCELLED' ? 'bg-white text-red-600 shadow-md' : 'text-gray-500 hover:text-gray-700'}`}>Clos / Refus</button>
+                    <button onClick={() => setActiveTab('ARCHIVE')} className={`flex-1 py-3 rounded-[1.5rem] text-xs font-black transition-all ${activeTab === 'ARCHIVE' ? 'bg-white text-gray-800 shadow-md' : 'text-gray-500 hover:text-gray-700'}`}>Archives</button>
+                </div>
+
+                <div className="bg-white p-4 rounded-[2rem] shadow-sm border border-gray-100 mb-8 flex flex-wrap gap-4 items-center">
+                    <div className="flex-1 min-w-[250px] relative">
+                        <Search size={18} className="absolute left-3 top-3 text-gray-300"/>
+                        <input type="text" placeholder="Rechercher un dossier..." value={filters.search} onChange={e => setFilters({...filters, search: e.target.value})} className="w-full pl-10 pr-4 py-2.5 border-0 bg-gray-50 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-medium" />
+                    </div>
+                    <input type="date" value={filters.date} onChange={e => setFilters({...filters, date: e.target.value})} className="p-2.5 bg-gray-50 border-0 rounded-xl font-bold text-xs" />
+                    <button onClick={() => setFilters({date:'', search:''})} className="p-2.5 text-gray-400 hover:text-gray-600 transition-colors"><XCircle size={20}/></button>
+                </div>
+
+                {loading ? (
+                    <div className="flex justify-center py-32"><RefreshCw className="animate-spin text-amber-500" size={48} /></div>
+                ) : filteredList.length === 0 ? (
+                    <div className="text-center py-32 bg-white rounded-[3rem] border-2 border-dashed border-gray-200">
+                        <FileClock size={60} className="mx-auto text-gray-100 mb-4"/>
+                        <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">Aucun historique trouvé.</p>
+                    </div>
+                ) : (
+                    <>
+                        <div className="hidden lg:block bg-white rounded-[2.5rem] shadow-sm overflow-hidden border border-gray-100">
+                            <table className="min-w-full divide-y divide-gray-100">
+                                <thead className="bg-gray-50/50">
+                                    <tr>
+                                        <th className="px-8 py-4 text-[10px] font-black uppercase text-gray-400 tracking-widest text-left">Date</th>
+                                        <th className="px-8 py-4 text-[10px] font-black uppercase text-gray-400 tracking-widest text-left">Client</th>
+                                        <th className="px-8 py-4 text-[10px] font-black uppercase text-gray-400 tracking-widest text-center">Type</th>
+                                        <th className="px-8 py-4 text-[10px] font-black uppercase text-gray-400 tracking-widest text-center">Statut</th>
+                                        <th className="px-8 py-4 text-right"></th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-50 font-medium">
+                                    {filteredList.map(d => (
+                                        <tr key={d.id} className="hover:bg-gray-50/50 transition-colors cursor-pointer" onClick={() => setSelectedDemande(d)}>
+                                            <td className="px-8 py-5 text-sm font-bold text-gray-500">{new Date(d.created_at).toLocaleDateString('fr-FR')}</td>
+                                            <td className="px-8 py-5 font-black text-gray-800">{d.clients ? `${d.clients.last_name} ${d.clients.first_name}` : (d.entreprises?.nom_entreprise || '—')}</td>
+                                            <td className="px-8 py-5 text-center text-gray-400">
+                                                {d.type === 'RESERVATION_SERVICE' && <ChefHat size={18} className="mx-auto" />}
+                                                {d.type === 'COMMANDE_MENU' && <Truck size={18} className="mx-auto" />}
+                                                {d.type === 'COMMANDE_SPECIALE' && <Star size={18} className="mx-auto" />}
+                                            </td>
+                                            <td className="px-8 py-5 text-center"><span style={getStatusStyle(d.status)}>{d.status === 'completed' ? 'Terminée' : d.status}</span></td>
+                                            <td className="px-8 py-5 text-right"><button className={`font-black text-[10px] uppercase tracking-widest ${themeColor === 'blue' ? 'text-blue-600' : 'text-amber-600'}`}>Détails</button></td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div className="lg:hidden grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {filteredList.map(d => <HistoriqueCard key={d.id} demande={d} onSelect={setSelectedDemande} themeColor={themeColor} />)}
+                        </div>
+                    </>
                 )}
             </div>
 
             {selectedDemande && (
-                <DemandeDetail 
-                    demande={selectedDemande} 
+                <DemandeDetail
+                    demande={selectedDemande}
                     onClose={() => setSelectedDemande(null)}
-                    onUpdate={fetchDemandes} 
+                    onUpdateStatus={async (id, s) => { await supabase.from('demandes').update({status: s}).eq('id', id); fetchDemandes(); setSelectedDemande(null); }}
+                    onRefresh={fetchDemandes}
                 />
             )}
         </div>
     );
-};
-
-
-// --- Styles ---
-const containerStyle = {
-    padding: '20px',
-    maxWidth: '1200px',
-    margin: '0 auto',
-};
-
-const filterContainerStyle = {
-    display: 'flex',
-    gap: '1rem',
-    marginBottom: '2rem',
-    alignItems: 'center',
-    flexWrap: 'wrap', // Permet aux filtres de passer à la ligne
-};
-
-const filterInputStyle = {
-    padding: '8px',
-    borderRadius: '5px',
-    border: '1px solid #ccc',
-    flex: '1 1 auto', // Permet aux inputs de s'étirer mais aussi de se réduire
-    minWidth: '150px', // Largeur minimale pour les inputs
-};
-
-const tableContainerStyle = {
-    marginTop: '2rem',
-    boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-    borderRadius: '8px',
-    overflowX: 'auto', // Permet le défilement horizontal sur les petits écrans
-    background: 'white'
-};
-
-const tableStyle = {
-    width: '100%',
-    borderCollapse: 'collapse',
-};
-
-const thStyle = {
-    background: '#f4f7fa',
-    padding: '12px 15px',
-    textAlign: 'left',
-    fontWeight: 'bold',
-    color: '#333',
-    borderBottom: '2px solid #ddd',
-    whiteSpace: 'nowrap', // Empêche le retour à la ligne pour les en-têtes
-};
-
-const tdStyle = {
-    padding: '12px 15px',
-    borderBottom: '1px solid #eee',
-    color: '#555',
-    whiteSpace: 'nowrap', // Empêche le retour à la ligne pour les cellules
-};
-
-const detailsButtonStyle = {
-    padding: '8px 12px',
-    background: '#d4af37',
-    color: 'white',
-    border: 'none',
-    borderRadius: '5px',
-    cursor: 'pointer',
-    transition: 'background-color 0.2s ease'
-};
-
-const statusBadgeStyle = (status) => {
-    const colors = {
-        'Nouvelle': '#007bff',
-        'En attente de traitement': '#ffc107',
-        'En attente de validation de devis': '#fd7e14',
-        'En attente de paiement': '#17a2b8',
-        'En attente de préparation': '#6f42c1',
-        'Préparation en cours': '#20c997',
-        'Confirmée': '#28a745',
-        'Refusée': '#6c757d',
-        'Annulée': '#dc3545',
-        'Archivée': '#343a40', // Nouveau statut pour l'historique
-        'completed': '#28a745', // Added for consistency
-        'Payée': '#6f42c1' 
-    };
-    return {
-        padding: '4px 8px',
-        borderRadius: '12px',
-        color: ['En attente de traitement', 'Préparation en cours'].includes(status) ? 'black' : 'white',
-        fontWeight: 'bold',
-        fontSize: '12px',
-        backgroundColor: colors[status] || '#6c757d'
-    };
 };
 
 export default Historique;
