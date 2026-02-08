@@ -6,7 +6,7 @@ import { useBusinessUnit } from '../BusinessUnitContext';
 import { 
     CreditCard, CheckCircle, Send, Clock, AlertTriangle, 
     Search, List, BellRing, User, Calendar, FileText, ArrowRight, Mail
-} from 'lucide-react'; 
+} from 'lucide-react';
 
 const getFrenchStatus = (status) => {
     switch (status) {
@@ -19,11 +19,11 @@ const getFrenchStatus = (status) => {
 };
 
 const statusBadgeStyle = (status) => {
-    const colors = { 
-        'pending': { bg: 'rgba(212, 175, 55, 0.1)', text: '#d4af37' }, 
-        'deposit_paid': { bg: 'rgba(59, 130, 246, 0.1)', text: '#3b82f6' }, 
-        'paid': { bg: 'rgba(40, 167, 69, 0.1)', text: '#28a745' }, 
-        'cancelled': { bg: 'rgba(220, 53, 69, 0.1)', text: '#dc3545' } 
+    const colors = {
+        'pending': { bg: 'rgba(212, 175, 55, 0.1)', text: '#d4af37' },
+        'deposit_paid': { bg: 'rgba(59, 130, 246, 0.1)', text: '#3b82f6' },
+        'paid': { bg: 'rgba(40, 167, 69, 0.1)', text: '#28a745' },
+        'cancelled': { bg: 'rgba(220, 53, 69, 0.1)', text: '#dc3545' }
     };
     const style = colors[status] || { bg: '#f3f4f6', text: '#6b7280' };
     return { 
@@ -37,7 +37,7 @@ const statusBadgeStyle = (status) => {
     };
 };
 
-const InvoiceCard = ({ invoice, onSelect, renderCustomerName, themeColor }) => (   
+const InvoiceCard = ({ invoice, onSelect, renderCustomerName, themeColor }) => (
     <div className={`bg-white rounded-2xl shadow-sm border-t-4 p-6 mb-4 hover:shadow-md transition-all ${themeColor === 'blue' ? 'border-blue-500' : 'border-amber-500'}`}>
         <div className="flex justify-between items-start mb-4">
             <div className="flex items-center">
@@ -59,7 +59,7 @@ const InvoiceCard = ({ invoice, onSelect, renderCustomerName, themeColor }) => (
         <div className="grid grid-cols-2 gap-4 mb-6">
             <div className="bg-gray-50 p-3 rounded-xl">
                 <p className="text-gray-400 text-[10px] uppercase font-bold mb-1">Montant Total</p>
-                <p className="text-gray-800 font-black text-lg">{(invoice.total_amount || 0).toFixed(2)} €</p>   
+                <p className="text-gray-800 font-black text-lg">{(invoice.total_amount || 0).toFixed(2)} €</p>
             </div>
             <div className="bg-gray-50 p-3 rounded-xl">
                 <p className="text-gray-400 text-[10px] uppercase font-bold mb-1">Date Émission</p>
@@ -75,7 +75,7 @@ const InvoiceCard = ({ invoice, onSelect, renderCustomerName, themeColor }) => (
             </div>
         )}
 
-        <button
+        <button 
             onClick={() => onSelect(invoice)}
             className={`w-full text-white font-bold py-3 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 ${themeColor === 'blue' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-amber-500 hover:bg-amber-600'}`}
         >
@@ -92,7 +92,7 @@ const Factures = () => {
     const [statusFilter, setStatusFilter] = useState('all');
     const [selectedInvoice, setSelectedInvoice] = useState(null);
     const [currentPage, setCurrentPage] = useState(0);
-    const [activeTab, setActiveTab] = useState('all'); 
+    const [activeTab, setActiveTab] = useState('all');
     const itemsPerPage = 10;
 
     const themeColor = businessUnit === 'courtage' ? 'blue' : 'amber';
@@ -146,7 +146,7 @@ const Factures = () => {
     }, [invoices, selectedInvoice]);
 
     const renderCustomerName = (invoice) => {
-        if (invoice.clients) return `${invoice.clients.first_name || ''} ${invoice.clients.last_name || ''}`.trim();
+        if (invoice.clients) return `${invoice.clients.first_name || ''} ${invoice.clients.last_name || ''}`.trim() || 'Client Inconnu';
         if (invoice.entreprises) return invoice.entreprises.nom_entreprise;
         return 'N/A';
     };
@@ -171,7 +171,7 @@ const Factures = () => {
                     >
                         <List size={16} className="mr-2" /> Toutes
                     </button>
-                    <button
+                    <button 
                         onClick={() => setActiveTab('overdue')}
                         className={`flex-1 flex items-center justify-center py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'overdue' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                     >
@@ -182,9 +182,9 @@ const Factures = () => {
                 <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6 flex flex-wrap gap-4 items-center animate-in fade-in duration-500">
                     <div className="flex-1 min-w-[250px] relative">
                         <Search size={18} className="absolute left-3 top-3 text-gray-400"/>
-                        <input
-                            type="text"
-                            placeholder="Rechercher par N° ou client..."
+                        <input 
+                            type="text" 
+                            placeholder="Rechercher par N° ou client..." 
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                             className="w-full pl-10 pr-4 py-2.5 border rounded-xl outline-none focus:ring-2 focus:ring-amber-500 border-gray-200"
@@ -193,7 +193,7 @@ const Factures = () => {
                     {activeTab === 'all' && (
                         <select 
                             value={statusFilter} 
-                            onChange={e => setStatusFilter(e.target.value)} 
+                            onChange={e => setStatusFilter(e.target.value)}
                             className="p-2.5 border border-gray-200 rounded-xl outline-none bg-white font-bold text-gray-700 min-w-[180px]"
                         >
                             <option value="all">Tous les statuts</option>
@@ -212,7 +212,7 @@ const Factures = () => {
                                 <th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-widest">Facture</th>
                                 <th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-widest">Client</th>
                                 <th className="px-6 py-4 text-center text-xs font-black text-gray-400 uppercase tracking-widest">Date</th>
-                                <th className="px-6 py-4 text-right text-xs font-black text-gray-400 uppercase tracking-widest">Montant</th>
+                                <th className="px-8 py-4 text-right text-xs font-black text-gray-400 uppercase tracking-widest">Montant</th>
                                 <th className="px-6 py-4 text-center text-xs font-black text-gray-400 uppercase tracking-widest">Statut</th>
                                 <th className="px-6 py-4 text-right text-xs font-black text-gray-400 uppercase tracking-widest">Actions</th>
                             </tr>
@@ -230,7 +230,7 @@ const Factures = () => {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">{renderCustomerName(invoice)}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">{new Date(invoice.created_at).toLocaleDateString('fr-FR')}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-black text-gray-900">{(invoice.total_amount || 0).toFixed(2)} €</td> 
+                                    <td className="px-8 py-4 whitespace-nowrap text-sm text-right font-black text-gray-900">{(invoice.total_amount || 0).toFixed(2)} €</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-center"><span style={statusBadgeStyle(invoice.status)}>{getFrenchStatus(invoice.status)}</span></td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         <button onClick={(e) => { e.stopPropagation(); setSelectedInvoice(invoice); }} className={`font-bold ${themeColor === 'blue' ? 'text-blue-600' : 'text-amber-600'}`}>Détails</button>
@@ -262,9 +262,9 @@ const Factures = () => {
             </div>
 
             {selectedInvoice && (
-                <InvoiceDetailModal
-                    invoice={selectedInvoice}
-                    onClose={() => setSelectedInvoice(null)}
+                <InvoiceDetailModal 
+                    invoice={selectedInvoice} 
+                    onClose={() => setSelectedInvoice(null)} 
                     onUpdate={() => fetchInvoices()}
                     themeColor={themeColor}
                 />
@@ -298,7 +298,7 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
             });
             const res = await response.json();
             if (!response.ok) throw new Error(res.error);
-            
+
             setStripeLink(res.url);
             onUpdate();
             alert("Lien Stripe prêt !");
@@ -342,7 +342,7 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
                     <span style={statusBadgeStyle(invoice.status)} className="mb-2 inline-block">{getFrenchStatus(invoice.status)}</span>
                     <h2 className="text-3xl font-black text-gray-800">Facture #{invoice.document_number || invoice.id.substring(0, 8)}</h2>
                 </div>
-                
+
                 {invoice.last_email_sent_at && (
                     <div className="flex items-center text-xs text-blue-600 font-bold mb-8 bg-blue-50 px-4 py-3 rounded-2xl border border-blue-100">
                         <Clock size={16} className="mr-2" /> 
@@ -354,7 +354,7 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
                     <div className="space-y-4">
                         <h3 className={`text-xs font-black uppercase tracking-widest opacity-40 ${themeColor === 'blue' ? 'text-blue-600' : 'text-amber-600'}`}>Informations Client</h3>
                         <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                            <p className="font-bold text-gray-900 text-lg">{invoice.clients ? `${invoice.clients.first_name} ${invoice.clients.last_name}` : invoice.entreprises?.nom_entreprise}</p>
+                            <p className="font-bold text-gray-900 text-lg">{invoice.clients ? `${invoice.clients.first_name || ''} ${invoice.clients.last_name || ''}`.trim() || 'Client Inconnu' : invoice.entreprises?.nom_entreprise}</p>
                             <p className="text-gray-500 text-sm mt-1 flex items-center gap-2"><Mail size={14}/> {invoice.clients?.email || invoice.entreprises?.contact_email}</p>
                         </div>
                     </div>
@@ -391,8 +391,8 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
 
                 <div className="flex flex-wrap gap-4 justify-between border-t pt-8">
                     <button 
-                        onClick={handleSendInvoice} 
-                        disabled={actionLoading || !stripeLink || isFullyPaid} 
+                        onClick={handleSendInvoice}
+                        disabled={actionLoading || !stripeLink || isFullyPaid}
                         className={`px-8 py-4 rounded-2xl flex items-center gap-3 transition-all font-black shadow-lg active:scale-95 ${(!stripeLink || isFullyPaid) ? 'bg-gray-100 text-gray-300 cursor-not-allowed' : 'bg-cyan-600 text-white hover:bg-cyan-700'}`}
                     >
                         <Send size={20} /> {actionLoading ? '...' : 'Envoyer par mail'}

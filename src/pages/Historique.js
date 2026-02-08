@@ -28,7 +28,10 @@ const HistoriqueCard = ({ demande, onSelect, themeColor }) => {
         'SOUSCRIPTION_ABONNEMENT': <RefreshCw size={20} />
     };
 
-    const clientName = demande.clients ? `${demande.clients.first_name} ${demande.clients.last_name}` : (demande.entreprises?.nom_entreprise || 'Client Inconnu');
+    // Fix: Handle null names
+    const clientName = demande.clients 
+        ? `${demande.clients.last_name || ''} ${demande.clients.first_name || ''}`.trim() 
+        : (demande.entreprises?.nom_entreprise || 'Client Inconnu');
 
     return (
         <div className={`bg-white rounded-[2.5rem] shadow-sm border-t-4 p-8 mb-4 hover:shadow-lg transition-all relative group ${themeColor === 'blue' ? 'border-blue-500' : 'border-amber-500'}`}>
@@ -99,7 +102,9 @@ const Historique = () => {
     };
 
     const filteredList = demandes.filter(d => {
-        const name = d.clients ? `${d.clients.last_name} ${d.clients.first_name}` : (d.entreprises?.nom_entreprise || '');
+        const name = d.clients 
+            ? `${d.clients.last_name || ''} ${d.clients.first_name || ''}`.trim() 
+            : (d.entreprises?.nom_entreprise || '');
         return name.toLowerCase().includes(filters.search.toLowerCase()) || d.id.includes(filters.search);
     });
 
@@ -154,19 +159,24 @@ const Historique = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50 font-medium">
-                                    {filteredList.map(d => (
-                                        <tr key={d.id} className="hover:bg-gray-50/50 transition-colors cursor-pointer" onClick={() => setSelectedDemande(d)}>
-                                            <td className="px-8 py-5 text-sm font-bold text-gray-500">{new Date(d.created_at).toLocaleDateString('fr-FR')}</td>
-                                            <td className="px-8 py-5 font-black text-gray-800">{d.clients ? `${d.clients.last_name} ${d.clients.first_name}` : (d.entreprises?.nom_entreprise || '—')}</td>
-                                            <td className="px-8 py-5 text-center text-gray-400">
-                                                {d.type === 'RESERVATION_SERVICE' && <ChefHat size={18} className="mx-auto" />}
-                                                {d.type === 'COMMANDE_MENU' && <Truck size={18} className="mx-auto" />}
-                                                {d.type === 'COMMANDE_SPECIALE' && <Star size={18} className="mx-auto" />}
-                                            </td>
-                                            <td className="px-8 py-5 text-center"><span style={getStatusStyle(d.status)}>{d.status === 'completed' ? 'Terminée' : d.status}</span></td>
-                                            <td className="px-8 py-5 text-right"><button className={`font-black text-[10px] uppercase tracking-widest ${themeColor === 'blue' ? 'text-blue-600' : 'text-amber-600'}`}>Détails</button></td>
-                                        </tr>
-                                    ))}
+                                    {filteredList.map(d => {
+                                        const name = d.clients 
+                                            ? `${d.clients.last_name || ''} ${d.clients.first_name || ''}`.trim() 
+                                            : (d.entreprises?.nom_entreprise || '—');
+                                        return (
+                                            <tr key={d.id} className="hover:bg-gray-50/50 transition-colors cursor-pointer" onClick={() => setSelectedDemande(d)}>
+                                                <td className="px-8 py-5 text-sm font-bold text-gray-500">{new Date(d.created_at).toLocaleDateString('fr-FR')}</td>
+                                                <td className="px-8 py-5 font-black text-gray-800">{name}</td>
+                                                <td className="px-8 py-5 text-center text-gray-400">
+                                                    {d.type === 'RESERVATION_SERVICE' && <ChefHat size={18} className="mx-auto" />}
+                                                    {d.type === 'COMMANDE_MENU' && <Truck size={18} className="mx-auto" />}
+                                                    {d.type === 'COMMANDE_SPECIALE' && <Star size={18} className="mx-auto" />}
+                                                </td>
+                                                <td className="px-8 py-5 text-center"><span style={getStatusStyle(d.status)}>{d.status === 'completed' ? 'Terminée' : d.status}</span></td>
+                                                <td className="px-8 py-5 text-right"><button className={`font-black text-[10px] uppercase tracking-widest ${themeColor === 'blue' ? 'text-blue-600' : 'text-amber-600'}`}>Détails</button></td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>

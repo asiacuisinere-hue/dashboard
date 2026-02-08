@@ -3,7 +3,7 @@ import { Html5QrcodeScanner } from 'html5-qrcode';
 import { supabase } from './supabaseClient';
 import { 
     Camera, CheckCircle2, AlertCircle, RefreshCw, 
-    ChevronLeft, PackageCheck, User, Building2, Calendar
+    ChevronLeft, PackageCheck, User, Building2, Calendar 
 } from 'lucide-react';
 
 const qrcodeRegionId = 'html5qrcode-scanner-view';
@@ -64,7 +64,11 @@ const Scanner = () => {
 
             if (fetchError || !currentDemande) throw new Error(`Commande introuvable.`);
 
-            const clientName = currentDemande.clients ? `${currentDemande.clients.first_name} ${currentDemande.clients.last_name}` : currentDemande.entreprises?.nom_entreprise;
+            // Fix: Handle null names
+            const clientName = currentDemande.clients 
+                ? `${currentDemande.clients.first_name || ''} ${currentDemande.clients.last_name || ''}`.trim() 
+                : currentDemande.entreprises?.nom_entreprise;
+            
             setScanningData({ name: clientName, type: currentDemande.clients ? 'P' : 'E' });
 
             if (currentDemande.status === 'completed') {
@@ -93,8 +97,8 @@ const Scanner = () => {
         if (!scannerRef.current) {
             const scanner = new Html5QrcodeScanner(
                 qrcodeRegionId,
-                {
-                    fps: 10,
+                { 
+                    fps: 10, 
                     qrbox: isMobile ? { width: 280, height: 280 } : { width: 300, height: 300 },
                     supportedScanTypes: [],
                     rememberLastUsedCamera: true,

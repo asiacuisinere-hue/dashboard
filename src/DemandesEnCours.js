@@ -4,7 +4,7 @@ import { useBusinessUnit } from './BusinessUnitContext';
 import DemandeDetail from './DemandeDetail';
 import { 
     Search, ChefHat, Truck, Star, RefreshCw, 
-    Calendar, MapPin, List, Layout, ArrowRight, 
+    Calendar, MapPin, List, Layout, ArrowRight,
     XCircle
 } from 'lucide-react';
 
@@ -22,7 +22,8 @@ const getStatusColor = (status) => {
         'confirmed': { bg: 'rgba(16, 185, 129, 0.1)', text: '#10b981' },
         'En attente de paiement': { bg: 'rgba(59, 130, 246, 0.1)', text: '#3b82f6' },
         'Payée': { bg: 'rgba(139, 92, 246, 0.1)', text: '#8b5cf6' },
-        'En attente de préparation': { bg: 'rgba(109, 40, 217, 0.1)', text: '#6d28d9' }
+        'En attente de préparation': { bg: 'rgba(109, 40, 217, 0.1)', text: '#6d28d9' },
+        'Prét pour livraison': { bg: 'rgba(6, 182, 212, 0.1)', text: '#06b6d4' }
     };
     const c = colors[status] || { bg: '#f3f4f6', text: '#6b7280' };
     return { backgroundColor: c.bg, color: c.text, padding: '4px 12px', borderRadius: '20px', fontSize: '10px', fontWeight: '900', textTransform: 'uppercase' };
@@ -36,7 +37,9 @@ const DemandeEnCoursCard = ({ demande, onSelect, themeColor }) => {
         'SOUSCRIPTION_ABONNEMENT': <RefreshCw size={20}/>
     };
 
-    const clientName = demande.clients ? `${demande.clients.first_name} ${demande.clients.last_name}` : (demande.entreprises?.nom_entreprise || 'Client Inconnu');
+    const clientName = demande.clients 
+        ? `${demande.clients.last_name || ''} ${demande.clients.first_name || ''}`.trim() 
+        : (demande.entreprises?.nom_entreprise || 'Client Inconnu');
 
     return (
         <div className={`bg-white rounded-[2.5rem] shadow-sm border-t-4 p-8 mb-4 hover:shadow-lg transition-all relative group ${themeColor === 'blue' ? 'border-blue-500' : 'border-amber-500'}`}>
@@ -50,7 +53,7 @@ const DemandeEnCoursCard = ({ demande, onSelect, themeColor }) => {
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">ID: {demande.id.substring(0, 8)}</p>
                     </div>
                 </div>
-                <span style={getStatusColor(demande.status)}>{demande.status}</span>
+                <span style={getStatusColor(demande.status)}>{demande.status === 'confirmed' ? 'Confirmée' : demande.status}</span>
             </div>
 
             <div className="grid grid-cols-2 gap-4 mb-8">
@@ -76,7 +79,7 @@ const DemandesEnCours = () => {
     const [demandes, setDemandes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedDemande, setSelectedDemande] = useState(null);
-    const [activeTab, setActiveTab] = useState('ALL'); 
+    const [activeTab, setActiveTab] = useState('ALL');
     const [filter, setFilter] = useState({ date: '', status: '', city: '', searchTerm: '' });
 
     const themeColor = businessUnit === 'courtage' ? 'blue' : 'amber';
@@ -89,7 +92,7 @@ const DemandesEnCours = () => {
         else if (activeTab === 'MENU') query = query.in('type', ['COMMANDE_MENU', 'COMMANDE_SPECIALE']).not('status', 'in', '(completed,cancelled,paid,Nouvelle)');
         else if (activeTab === 'SUBS') query = query.eq('type', 'SOUSCRIPTION_ABONNEMENT');
         else {
-            const commandeMenuFilter = `and(type.in.("COMMANDE_MENU","COMMANDE_SPECIALE"),status.not.in.(completed,cancelled,paid,Nouvelle,"En attente de préparation","Préparation en cours"))`; 
+            const commandeMenuFilter = `and(type.in.("COMMANDE_MENU","COMMANDE_SPECIALE"),status.not.in.(completed,cancelled,paid,Nouvelle,"En attente de préparation","Préparation en cours"))`;
             const reservationServiceFilter = `and(type.in.("RESERVATION_SERVICE","SOUSCRIPTION_ABONNEMENT"),status.in.("En attente de traitement",confirmed,"En attente de validation de devis"))`;
             query = query.or(`${commandeMenuFilter},${reservationServiceFilter}`);
         }
@@ -112,9 +115,17 @@ const DemandesEnCours = () => {
     };
 
     const filteredList = demandes.filter(d => {
-        const name = d.clients ? `${d.clients.last_name} ${d.clients.first_name}` : (d.entreprises?.nom_entreprise || '');
+        const name = d.clients ? `${d.clients.last_name || ''} ${d.clients.first_name || ''}`.trim() : (d.entreprises?.nom_entreprise || '');
         return name.toLowerCase().includes(filter.searchTerm.toLowerCase()) || d.id.includes(filter.searchTerm);
     });
+
+    const statusOptions = [
+        { value: 'En attente de traitement', label: 'À Traiter' },
+        { value: 'confirmed', label: 'Confirmée' },
+        { value: 'En attente de paiement', label: 'Attente Paiement' },
+        { value: 'Payée', label: 'Payée' },
+        { value: 'En attente de préparation', label: 'Attente Prépa' }
+    ];
 
     return (
         <div className="p-6 bg-gray-50 min-h-screen">
@@ -133,14 +144,22 @@ const DemandesEnCours = () => {
 
                 <div className="bg-white p-4 rounded-[2rem] shadow-sm border border-gray-100 mb-8 flex flex-wrap gap-4 items-center">
                     <div className="flex-1 min-w-[200px] relative">
-                        <Search size={18} className="absolute left-3 top-3 text-gray-300"/>
+                        <Search size={18} className="absolute left-3 top-3 text-gray-400"/>
                         <input type="text" placeholder="Rechercher client..." value={filter.searchTerm} onChange={e => setFilter({...filter, searchTerm: e.target.value})} className="w-full pl-10 pr-4 py-2.5 border-0 bg-gray-50 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-medium" />
                     </div>
+                    
+                    <select value={filter.status} onChange={e => setFilter({...filter, status: e.target.value})} className="p-2.5 bg-gray-50 border-0 rounded-xl font-bold text-xs">
+                        <option value="">Tous les statuts</option>
+                        {statusOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                    </select>
+
                     <input type="date" value={filter.date} onChange={e => setFilter({...filter, date: e.target.value})} className="p-2.5 bg-gray-50 border-0 rounded-xl font-bold text-xs" />
+                    
                     <select value={filter.city} onChange={e => setFilter({...filter, city: e.target.value})} className="p-2.5 bg-gray-50 border-0 rounded-xl font-bold text-xs">
                         <option value="">Toutes les villes</option>
                         {communesReunion.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
+                    
                     <button onClick={() => setFilter({date:'', status:'', city:'', searchTerm:''})} className="p-2.5 text-gray-400 hover:text-gray-600 transition-colors"><XCircle size={20}/></button>
                 </div>
 

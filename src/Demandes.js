@@ -4,7 +4,7 @@ import { useBusinessUnit } from './BusinessUnitContext';
 import { 
     User, MapPin, Calendar, 
     ChefHat, Truck, Star, RefreshCw, 
-    CheckCircle2, Mail, Phone,
+    CheckCircle2, Mail, Phone, 
     ClipboardList, ArrowRight, Bell, MailX
 } from 'lucide-react';
 
@@ -79,7 +79,10 @@ const DemandeModal = ({ demande, onClose, onUpdate, themeColor }) => {
     };
 
     const client = demande.clients || demande.entreprises;
-    const clientName = demande.clients ? `${client.last_name} ${client.first_name}` : client.nom_entreprise;
+    // Fix: Handle null names
+    const clientName = demande.clients 
+        ? `${demande.clients.last_name || ''} ${demande.clients.first_name || ''}`.trim() 
+        : (demande.entreprises?.nom_entreprise || 'Inconnu');
 
     return (
         <div className="fixed inset-0 bg-black/70 z-[1000] flex items-center justify-center p-4 backdrop-blur-sm">
@@ -139,7 +142,10 @@ const DemandeCard = ({ demande, onSelect, themeColor }) => {
         'SOUSCRIPTION_ABONNEMENT': <RefreshCw className="text-green-500" />
     };
 
-    const clientName = demande.clients ? `${demande.clients.last_name} ${demande.clients.first_name}` : (demande.entreprises?.nom_entreprise || 'Inconnu');
+    // Fix: Handle null names
+    const clientName = demande.clients 
+        ? `${demande.clients.last_name || ''} ${demande.clients.first_name || ''}`.trim() 
+        : (demande.entreprises?.nom_entreprise || 'Inconnu');
 
     return (
         <div className={`bg-white rounded-[2.5rem] shadow-sm border-t-4 p-8 mb-4 hover:shadow-lg transition-all relative overflow-hidden group ${themeColor === 'blue' ? 'border-blue-500' : 'border-amber-500'}`}>

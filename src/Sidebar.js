@@ -3,22 +3,22 @@ import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 import { useBusinessUnit } from './BusinessUnitContext';
 import { 
-    QrCode, Bell, X, Info, CheckCircle, ChevronDown, ChevronRight,
+    QrCode, Bell, X, Info, CheckCircle, ChevronDown, ChevronRight, 
     LayoutDashboard, BarChart3, Wallet, FileText, Receipt, 
-    History, Building2, ClipboardList, Calendar, UserCog, Utensils, ScanLine, Settings,
+    History, ClipboardList, Calendar, UserCog, Utensils, ScanLine, Settings,
     Users, Package, Globe
 } from 'lucide-react';
 
 const Sidebar = ({ 
     newCount, inProgressCount, pendingQuotesCount, toPrepareCount, 
-    pendingInvoicesCount, depositPaidInvoicesCount, waitingForPrepCount, 
-    activeSubscriptionsCount, subscriptionsNeedAttentionCount, 
+    pendingInvoicesCount, depositPaidInvoicesCount, waitingForPrepCount,
+    activeSubscriptionsCount, subscriptionsNeedAttentionCount,
     isMobile, notifications, setNotifications 
 }) => {
   const { businessUnit, updateBusinessUnit } = useBusinessUnit();
   const [isOpen, setIsOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [openGroups, setOpenGroups] = useState(['GESTION']); // GESTION ouvert par défaut
+  const [openGroups, setOpenGroups] = useState(['GESTION']); 
   const notificationsRef = useRef(null);
   const navigate = useNavigate();
 
@@ -36,7 +36,6 @@ const Sidebar = ({
     await supabase.auth.signOut();
   };
 
-  // --- Composant Sélecteur d'Unité ---
   const BusinessUnitSelector = () => (
     <div style={{
         display: 'flex',
@@ -96,16 +95,15 @@ const Sidebar = ({
     setIsNotificationsOpen(false);
     navigate(notification.link);
   };
-  
+
   const markAsRead = (id) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
   };
-  
+
   const markAllAsRead = () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   };
 
-  // Click outside handler for notification panel
   useEffect(() => {
     function handleClickOutside(event) {
       if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
@@ -141,7 +139,7 @@ const Sidebar = ({
   const waitingForPrepStyle = { ...badgeStyle, backgroundColor: '#007bff' };
   const activeSubscriptionsBadgeStyle = { ...badgeStyle, backgroundColor: '#6610f2' };
   const needsAttentionBadgeStyle = { ...badgeStyle, backgroundColor: '#ffc107', color: '#333' };
-  
+
   const iconBaseStyle = {
     color: 'white',
     padding: '5px',
@@ -168,8 +166,6 @@ const Sidebar = ({
     justifyContent: 'center',
     border: '2px solid #343a40',
   };
-  
-    // --- Composants de l'UI ---
 
     const NotificationPanel = () => (
         <div ref={notificationsRef} style={{
@@ -208,10 +204,6 @@ const Sidebar = ({
         </div>
     );
 
-  // --- Reste de la Sidebar ---
-  // (Le code de NavLinks, logout, styles, etc. reste ici)
-
-  // Duplication de la logique pour éviter de modifier toute la structure
   const NavLinks = ({ mobile = false }) => {
     const handleClick = () => {
       if (mobile) setIsOpen(false);
@@ -227,7 +219,7 @@ const Sidebar = ({
                 { 
                     to: '/abonnements', 
                     label: 'Abonnements', 
-                    icon: ClipboardList,
+                    icon: ClipboardList, 
                     count: activeSubscriptionsCount, 
                     style: activeSubscriptionsBadgeStyle,
                     secondCount: subscriptionsNeedAttentionCount,
@@ -257,8 +249,7 @@ const Sidebar = ({
         {
             title: 'DONNÉES',
             links: [
-                { to: '/particuliers', label: 'Particuliers', icon: Users },
-                { to: '/entreprises', label: 'Entreprises', icon: Building2 },
+                { to: '/particuliers', label: 'Répertoire Clients', icon: Users },
                 { to: '/historique', label: 'Historique', icon: Package },
             ]
         },
@@ -275,7 +266,7 @@ const Sidebar = ({
         }
     ];
 
-    const groupTitleStyle = { 
+    const groupTitleStyle = {
         fontSize: '0.75rem', 
         color: '#868e96', 
         textTransform: 'uppercase', 
@@ -294,9 +285,9 @@ const Sidebar = ({
     const contentStyle = { display: 'flex', alignItems: 'center', width: '100%' };
     const desktopLinkStyle = { display: 'block', padding: '10px 20px', color: '#ccc', textDecoration: 'none', borderLeft: '4px solid transparent', transition: 'all 0.3s ease', borderRadius: '4px', marginBottom: '2px', fontSize: '0.9rem' };
     const desktopActiveLinkStyle = { ...desktopLinkStyle, backgroundColor: businessUnit === 'cuisine' ? 'rgba(212, 175, 55, 0.15)' : 'rgba(59, 130, 246, 0.15)', borderLeft: `4px solid ${businessUnit === 'cuisine' ? '#d4af37' : '#3b82f6'}`, fontWeight: 'bold', color: 'white' };
-    const mobileLinkStyle = { display: 'block', padding: '20px', color: 'white', fontSize: '18px', textAlign: 'center', textDecoration: 'none', width: '100%', borderBottom: '1px solid rgba(255,255,255,0.1)' };
+    const mobileLinkStyle = { display: 'block', padding: '20px', color: 'white', fontSize: '18px', textAlign: 'center', textDecoration: 'none', width: '100%', borderBottom: '1px solid rgba(255,255,255,0.1)' };   
     const mobileActiveLinkStyle = { ...mobileLinkStyle, color: businessUnit === 'cuisine' ? '#d4af37' : '#3b82f6', backgroundColor: businessUnit === 'cuisine' ? 'rgba(212, 175, 55, 0.1)' : 'rgba(59, 130, 246, 0.1)' };
-    
+
     return (
       <nav style={{ width: '100%' }}>
         {groups.map(group => {
@@ -329,7 +320,7 @@ const Sidebar = ({
                             {isGroupOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                         </div>
                     )}
-                    
+
                     <div style={{ 
                         maxHeight: isGroupOpen ? '1000px' : '0', 
                         overflow: 'hidden', 
@@ -365,8 +356,8 @@ const Sidebar = ({
     );
   };
     const logoutButtonStyle = { width: '100%', padding: '10px 15px', backgroundColor: 'rgba(220, 53, 69, 0.8)', color: 'white', border: '1px solid #dc3545', borderRadius: '5px', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background-color 0.2s ease' };
-    const mobileLogoutButtonStyle = { ...logoutButtonStyle, maxWidth: '200px', margin: '0 auto' };
-    const mobileHeaderStyle = { width: '100%', backgroundColor: '#343a40', padding: '15px 20px', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxSizing: 'border-box' };
+    const mobileLogoutButtonStyle = { ...logoutButtonStyle, maxWidth: '200px', margin: '0 auto' };        
+    const mobileHeaderStyle = { width: '100%', backgroundColor: '#343a40', padding: '15px 20px', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxSizing: 'border-box' }; 
     const overlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#343a40', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '10px' };
     const closeButtonStyle = { position: 'absolute', top: '15px', right: '20px', fontSize: '40px', color: 'white', cursor: 'pointer' };
     const titleStyle = { color: 'white', marginBottom: '40px', fontSize: '24px' };
@@ -388,25 +379,25 @@ const Sidebar = ({
             <div style={{ ...hamburgerStyle, position: 'relative' }} onClick={() => setIsOpen(true)}>
                 ☰
                 {newCount > 0 && (
-                    <span style={{
-                        position: 'absolute',
-                        top: '-2px',
-                        right: '-2px',
-                        width: '12px',
-                        height: '12px',
-                        backgroundColor: '#28a745', // Vert pour "Nouvelles"
+                    <span style={{ 
+                        position: 'absolute', 
+                        top: '-2px', 
+                        right: '-2px', 
+                        width: '12px', 
+                        height: '12px', 
+                        backgroundColor: '#28a745', 
                         borderRadius: '50%',
                         border: '2px solid #343a40'
                     }}></span>
                 )}
                 {toPrepareCount > 0 && (
-                    <span style={{
-                        position: 'absolute',
-                        bottom: '-2px',
-                        right: '-2px',
-                        width: '12px',
-                        height: '12px',
-                        backgroundColor: '#6f42c1', // Violet pour "À Préparer"
+                    <span style={{ 
+                        position: 'absolute', 
+                        bottom: '-2px', 
+                        right: '-2px', 
+                        width: '12px', 
+                        height: '12px', 
+                        backgroundColor: '#6f42c1', 
                         borderRadius: '50%',
                         border: '2px solid #343a40'
                     }}></span>
@@ -433,7 +424,7 @@ const Sidebar = ({
   }
 
   return (
-    <aside style={{ width: '250px', minWidth: '250px', backgroundColor: '#343a40', padding: '20px', color: 'white', display: 'flex', flexDirection: 'column', height: '100vh', overflowY: 'auto', flexShrink: 0 }}>
+    <aside style={{ width: '250px', minWidth: '250px', backgroundColor: '#343a40', padding: '20px', color: 'white', display: 'flex', flexDirection: 'column', height: '100vh', overflowY: 'auto', flexShrink: 0 }}> 
         <div style={{ flex: 1, overflowY: 'auto' }}>
             <BusinessUnitSelector />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
