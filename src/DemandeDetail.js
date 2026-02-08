@@ -119,7 +119,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
         if (!formattedPhone) return alert("Numéro de téléphone manquant.");
 
         const clientName = demande.clients ? client.first_name : (client.contact_name || client.nom_entreprise);
-        const message = `Bonjour ${clientName}, voici votre lien de paiement sécurisé Stripe pour votre commande Asiacuisine : ${paymentLink}`;
+        const message = `Bonjour ${clientName}, voici votre lien de paiement sécurisé Stripe pour votre commande Asiacuisine : ${paymentLink}\n\nUne fois le règlement effectué, vous recevrez automatiquement votre QR code par e-mail (à présenter le jour de la livraison).`;
         const encodedMessage = encodeURIComponent(message);
         
         window.open(`https://wa.me/${formattedPhone}?text=${encodedMessage}`, '_blank');
