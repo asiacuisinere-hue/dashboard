@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 import { useBusinessUnit } from '../BusinessUnitContext';
-import { Users, Building2, Search, PlusCircle, User, Edit3, Trash2, Mail, Phone, MapPin, Briefcase } from 'lucide-react';
+import { Users, Building2, Search, PlusCircle, User, Edit3, Trash2, Mail, Phone, Briefcase } from 'lucide-react';
 
 const statusBadgeStyle = (type) => {
     return {
@@ -161,7 +161,6 @@ const Clients = () => {
                     )}
                 </div>
 
-                {/* --- NAVIGATION PAR ONGLETS --- */}
                 {!isEditing && (
                     <div className="flex space-x-1 bg-gray-200 p-1 rounded-xl mb-8 max-w-md">
                         <button
@@ -180,7 +179,6 @@ const Clients = () => {
                 )}
 
                 {isEditing ? (
-                    /* --- FORMULAIRE ÉDITION/AJOUT --- */
                     <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
                             {editId ? <Edit3 className="mr-2 text-blue-500"/> : <PlusCircle className="mr-2 text-green-500"/>}
@@ -213,7 +211,6 @@ const Clients = () => {
                         </form>
                     </div>
                 ) : (
-                    /* --- LISTE DES CLIENTS --- */
                     <div className="animate-in fade-in duration-500">
                         <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6 flex items-center">
                             <Search size={18} className="text-gray-400 mr-3 ml-2" />
