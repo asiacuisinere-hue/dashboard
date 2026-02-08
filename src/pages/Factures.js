@@ -5,7 +5,7 @@ import { useLocation } from 'react-router-dom';
 import { useBusinessUnit } from '../BusinessUnitContext';
 import { 
     CreditCard, CheckCircle, Send, Clock, AlertTriangle, 
-    Search, List, BellRing, Euro, User, Calendar, FileText, ArrowRight
+    Search, List, BellRing, Euro, User, Calendar, FileText, ArrowRight, Mail
 } from 'lucide-react'; 
 
 const getFrenchStatus = (status) => {
@@ -412,7 +412,7 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
                             <>
                                 {invoice.status === 'pending' && <button onClick={() => handleGenerateStripe('deposit')} disabled={loading} className="bg-indigo-600 text-white px-6 py-4 rounded-2xl flex items-center gap-2 hover:bg-indigo-700 transition-all font-bold shadow-md active:scale-95"><CreditCard size={20} /> {loading ? '...' : 'Lien Acompte'}</button>}
                                 {invoice.status === 'deposit_paid' && <button onClick={() => handleGenerateStripe('total')} disabled={loading} className="bg-indigo-600 text-white px-6 py-4 rounded-2xl flex items-center gap-2 hover:bg-indigo-700 transition-all font-bold shadow-md active:scale-95"><CreditCard size={20} /> {loading ? '...' : 'Lien Solde'}</button>}
-                                <button onClick={() => handleUpdateStatus('paid')} className="bg-green-600 text-white px-6 py-4 rounded-2xl flex items-center gap-2 hover:bg-green-700 transition-all font-black shadow-md active:scale-95"><CheckCircle size={20} /> Payée</button>
+                                <button onClick={() => handleUpdateStatus('paid')} className="bg-green-600 text-white px-4 py-2 rounded-2xl flex items-center gap-2 hover:bg-green-700 transition-all font-black shadow-md active:scale-95"><CheckCircle size={20} /> Payée</button>
                             </>
                         )}
                         <button onClick={onClose} className="bg-gray-100 text-gray-600 px-8 py-4 rounded-2xl hover:bg-gray-200 transition-all font-bold">Fermer</button>
