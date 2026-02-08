@@ -15,7 +15,12 @@ const getFrenchStatus = (status) => {
     }
 };
 
-const InvoiceCard = ({ invoice, onSelect, statusBadgeStyle, renderCustomerName, themeColor }) => (   
+const statusBadgeStyle = (status) => {
+    const colors = { 'pending': '#ffc107', 'deposit_paid': '#007bff', 'paid': '#28a745', 'cancelled': '#dc3545' };
+    return { padding: '4px 10px', borderRadius: '20px', color: 'white', fontWeight: 'bold', fontSize: '11px', backgroundColor: colors[status] || '#6c757d' };
+};
+
+const InvoiceCard = ({ invoice, onSelect, renderCustomerName, themeColor }) => (   
     <div className={`bg-white rounded-xl shadow-sm border-t-4 p-5 mb-4 hover:shadow-md transition-shadow ${themeColor === 'courtage' ? 'border-blue-500' : 'border-amber-500'}`}>
         <div className="flex justify-between items-start mb-4">
             <div>
@@ -170,7 +175,7 @@ const Factures = () => {
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{renderCustomerName(invoice)}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(invoice.created_at).toLocaleDateString('fr-FR')}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-gray-900">{(invoice.total_amount || 0).toFixed(2)} €</td> 
-                                    <td className="px-6 py-4 whitespace-nowrap text-center"><span className={`px-2 py-1 rounded-full text-xs font-bold text-white ${invoice.status === 'paid' ? 'bg-green-500' : (invoice.status === 'deposit_paid' ? 'bg-blue-500' : 'bg-amber-500')}`}>{getFrenchStatus(invoice.status)}</span></td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-center"><span style={statusBadgeStyle(invoice.status)}>{getFrenchStatus(invoice.status)}</span></td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         <button onClick={() => setSelectedInvoice(invoice)} className={`font-bold ${themeColor === 'courtage' ? 'text-blue-600' : 'text-amber-600'}`}>Détails</button>
                                     </td>
@@ -182,7 +187,7 @@ const Factures = () => {
 
                 <div className="block lg:hidden space-y-4">
                     {currentInvoices.map(invoice => (
-                        <InvoiceCard key={invoice.id} invoice={invoice} onSelect={setSelectedInvoice} statusBadgeStyle={statusBadgeStyle} renderCustomerName={renderCustomerName} themeColor={businessUnit === 'courtage' ? 'courtage' : 'cuisine'} />
+                        <InvoiceCard key={invoice.id} invoice={invoice} onSelect={setSelectedInvoice} renderCustomerName={renderCustomerName} themeColor={businessUnit === 'courtage' ? 'courtage' : 'cuisine'} />
                     ))}
                 </div>
 
@@ -209,14 +214,15 @@ const Factures = () => {
 
 const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
     const [loading, setLoading] = useState(false);
-    const [stripeLink, setStripeLink] = useState('');
+    const [stripeLink, setStripeLink] = useState(invoice.payment_link || '');
 
     const handleGenerateStripe = async (type = 'deposit') => {
-        // --- SÉCURITÉ : Confirmation si un lien existe déjà ---
+        if (invoice.status === 'paid') {
+            alert("Cette facture est déjà entièrement payée.");
+            return;
+        }
         if (stripeLink) {
-            if (!window.confirm("Un lien de paiement est déjà prêt. Voulez-vous vraiment en générer un nouveau (l'ancien restera valide chez Stripe mais sera remplacé ici) ?")) {
-                return;
-            }
+            if (!window.confirm("Un lien de paiement a déjà été généré. Le remplacer ?")) return;
         }
 
         setLoading(true);
@@ -225,14 +231,13 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
             const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/create-stripe-checkout`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
-                body: JSON.stringify({ 
-                    invoice_id: invoice.id,
-                    amount_type: type
-                })
+                body: JSON.stringify({ invoice_id: invoice.id, amount_type: type })
             });
             const res = await response.json();
             if (!response.ok) throw new Error(res.error);
             setStripeLink(res.url);
+            alert("Lien généré !");
+            onUpdate();
         } catch (err) { alert(err.message); }
         finally { setLoading(false); }
     };
@@ -245,24 +250,23 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
     };
 
     const handleSendInvoice = async () => {
-        if (!window.confirm('Confirmer l\'envoi de la facture par email ?')) return;
+        if (!window.confirm('Confirmer l\'envoi ?')) return;
         setLoading(true);
         try {
             const { data: { session } } = await supabase.auth.getSession();
             const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/send-invoice-by-email`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
-                body: JSON.stringify({ 
-                    invoiceId: invoice.id,
-                    stripeUrl: stripeLink 
-                }),
+                body: JSON.stringify({ invoiceId: invoice.id, stripeUrl: stripeLink }),
             });
-            if (!response.ok) throw new Error('Erreur lors de l\'envoi.');
-            alert('Facture envoyée avec succès !');
-            onUpdate(); // Pour mettre à jour la date last_email_sent_at
-        } catch (error) { alert(`Erreur: ${error.message}`); }
+            if (!response.ok) throw new Error('Erreur.');
+            alert('Envoyée !');
+            onUpdate();
+        } catch (error) { alert(error.message); }
         finally { setLoading(false); }
     };
+
+    const isFullyPaid = invoice.status === 'paid';
 
     return (
         <div className="fixed inset-0 bg-black/70 z-[1000] flex items-center justify-center p-4">
@@ -273,7 +277,7 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
                 {invoice.last_email_sent_at && (
                     <div className="flex items-center text-xs text-blue-600 font-medium mb-6 bg-blue-50 px-3 py-2 rounded-lg">
                         <Clock size={14} className="mr-2" /> 
-                        Dernier envoi au client le {new Date(invoice.last_email_sent_at).toLocaleString('fr-FR')}
+                        Dernier envoi le {new Date(invoice.last_email_sent_at).toLocaleString('fr-FR')}
                     </div>
                 )}
 
@@ -294,51 +298,36 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
                 {stripeLink ? (
                     <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 mb-8">
                         <div className="flex items-center gap-2 mb-2 text-indigo-700 font-bold text-sm">
-                            <CheckCircle size={16} /> Lien prêt pour l'envoi
+                            <CheckCircle size={16} /> Lien prêt
                         </div>
                         <div className="flex gap-2">
-                            <input readOnly value={stripeLink} className="flex-1 p-2 bg-white border border-indigo-200 rounded text-xs" />
-                            <button onClick={() => { navigator.clipboard.writeText(stripeLink); alert('Copié !'); }} className="bg-indigo-600 text-white px-4 py-2 rounded font-bold text-sm">Copier</button>
+                            <input readOnly value={stripeLink} className="flex-1 p-2 bg-white border border-indigo-200 rounded text-xs focus:ring-0 outline-none" />
+                            <button onClick={() => { navigator.clipboard.writeText(stripeLink); alert('Copié !'); }} className="bg-indigo-600 text-white px-4 py-2 rounded font-bold text-sm hover:bg-indigo-700">Copier</button>
                         </div>
                     </div>
-                ) : (
-                    <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 mb-8 flex items-center gap-3 text-amber-800 text-sm">
+                ) : !isFullyPaid && (
+                    <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 mb-8 flex items-center gap-3 text-amber-800 text-sm font-medium">
                         <AlertTriangle size={18} className="text-amber-500" />
                         Générez un lien ci-dessous pour pouvoir envoyer la facture par mail.
                     </div>
                 )}
 
                 <div className="flex flex-wrap gap-3 justify-end border-t pt-6">
-                    <button 
-                        onClick={handleSendInvoice} 
-                        disabled={loading || !stripeLink} 
-                        className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all font-bold mr-auto ${!stripeLink ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-cyan-600 text-white hover:bg-cyan-700 shadow-md'}`}
-                    >
-                        <Send size={18} /> {loading ? 'Envoi...' : 'Envoyer par mail'}
+                    <button onClick={handleSendInvoice} disabled={loading || !stripeLink || isFullyPaid} className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all font-bold mr-auto ${(!stripeLink || isFullyPaid) ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-cyan-600 text-white hover:bg-cyan-700 shadow-md'}`}>
+                        <Send size={18} /> {loading ? '...' : 'Envoyer par mail'}
                     </button>
-                    {invoice.status === 'pending' && (
-                        <button onClick={() => handleGenerateStripe('deposit')} disabled={loading} className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700 transition-colors shadow-sm">
-                            <CreditCard size={18} /> {loading ? '...' : (stripeLink ? 'Régénérer Acompte' : 'Lien Acompte (30%)')}
-                        </button>
+                    {!isFullyPaid && (
+                        <>
+                            {invoice.status === 'pending' && <button onClick={() => handleGenerateStripe('deposit')} disabled={loading} className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700 transition-colors shadow-sm"><CreditCard size={18} /> {loading ? '...' : (stripeLink ? 'Régénérer Acompte' : 'Lien Acompte (30%)')}</button>}
+                            {invoice.status === 'deposit_paid' && <button onClick={() => handleGenerateStripe('total')} disabled={loading} className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700 transition-colors shadow-sm"><CreditCard size={18} /> {loading ? '...' : (stripeLink ? 'Régénérer Solde' : 'Lien Solde')}</button>}
+                            <button onClick={() => handleUpdateStatus('paid')} className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition-colors shadow-sm font-bold"><CheckCircle size={18} /> Marquer comme Payée</button>
+                        </>
                     )}
-                    {invoice.status === 'deposit_paid' && (
-                        <button onClick={() => handleGenerateStripe('total')} disabled={loading} className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700 transition-colors shadow-sm">
-                            <CreditCard size={18} /> {loading ? '...' : (stripeLink ? 'Régénérer Solde' : 'Lien Solde')}
-                        </button>
-                    )}
-                    <button onClick={() => handleUpdateStatus('paid')} className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition-colors shadow-sm">
-                        <CheckCircle size={18} /> Marquer comme Payée
-                    </button>
                     <button onClick={onClose} className="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors font-bold">Fermer</button>
                 </div>
             </div>
         </div>
     );
-};
-
-const statusBadgeStyle = (status) => {
-    const colors = { 'pending': '#ffc107', 'deposit_paid': '#007bff', 'paid': '#28a745', 'cancelled': '#dc3545' };
-    return { padding: '4px 10px', borderRadius: '20px', color: 'white', fontWeight: 'bold', fontSize: '11px', backgroundColor: colors[status] || '#6c757d' };
 };
 
 export default Factures;
