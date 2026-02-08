@@ -64,7 +64,6 @@ const Devis = () => {
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [services, setServices] = useState([]);
     const [quoteItems, setQuoteItems] = useState([]);
-    const [isSearching, setIsSearching] = useState(false);
     const [menuDetails, setMenuDetails] = useState('');
 
     const [existingQuotes, setExistingQuotes] = useState([]);
@@ -108,12 +107,10 @@ const Devis = () => {
 
     const handleSearch = async () => {
         if (searchTerm.length < 3) return;
-        setIsSearching(true);
         const { data: c } = await supabase.from('clients').select('*').ilike('last_name', `%${searchTerm}%`);
         const { data: e } = await supabase.from('entreprises').select('*').ilike('nom_entreprise', `%${searchTerm}%`);
         setClients(c || []);
         setEntreprises(e || []);
-        setIsSearching(false);
     };
 
     const handleSelectCustomer = (customer, type) => {

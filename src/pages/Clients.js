@@ -68,7 +68,6 @@ const Clients = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [data, setData] = useState([]);
     
-    // Form state
     const [isEditing, setIsEditing] = useState(false);
     const [editId, setEditId] = useState(null);
     const [formData, setFormData] = useState({});
@@ -117,7 +116,6 @@ const Clients = () => {
         const table = activeTab === 'particuliers' ? 'clients' : 'entreprises';
         
         if (editId) {
-            // Update
             const { error } = await supabase.from(table).update(formData).eq('id', editId);
             if (!error) {
                 alert('Mise à jour réussie !');
@@ -125,7 +123,6 @@ const Clients = () => {
                 fetchData();
             } else alert(error.message);
         } else {
-            // Create
             const { error } = await supabase.from(table).insert([formData]);
             if (!error) {
                 alert('Ajout réussi !');
