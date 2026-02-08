@@ -6,8 +6,7 @@ import Scanner from './Scanner';
 import Demandes from './Demandes';
 import DemandesEnCours from './DemandesEnCours';
 import Historique from './pages/Historique';
-import Particuliers from './pages/Particuliers';
-import Entreprises from './pages/Entreprises';
+import Clients from './pages/Clients'; // Nouveau composant unifié
 import Devis from './pages/Devis';
 import Factures from './pages/Factures';
 import Parametres from './pages/Parametres';
@@ -202,8 +201,8 @@ const DashboardLayout = () => {
                     <Route path="/demandes-en-cours" element={<DemandesEnCours />} />
                     <Route path="/a-preparer" element={<APreparer />} />
                     <Route path="/historique" element={<Historique />} />
-                    <Route path="/particuliers" element={<Particuliers />} />
-                    <Route path="/entreprises" element={<Entreprises />} />
+                    <Route path="/particuliers" element={<Clients />} />
+                    <Route path="/entreprises" element={<Clients />} />
                     <Route path="/devis" element={<Devis />} />
                     <Route path="/factures" element={<Factures />} />
                     <Route path="/scanner" element={<Scanner />} />
