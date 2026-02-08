@@ -6,7 +6,8 @@ import {
     User, Building2, 
     Euro, ClipboardList, CheckCircle2, 
     RefreshCw, FilePlus, QrCode, Mail, 
-    Phone, Save, ShoppingCart, ChefHat, XCircle
+    Phone, Save, ShoppingCart, ChefHat, XCircle,
+    MessageCircle
 } from 'lucide-react';
 
 const communesReunion = [
@@ -96,6 +97,32 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
             alert('Lien Stripe généré !');
         } catch (error) { alert(`Erreur: ${error.message}`); }
         finally { setIsGeneratingStripeLink(false); }
+    };
+
+    const formatWhatsAppNumber = (phone) => {
+        if (!phone) return null;
+        let cleaned = phone.replace(/\D/g, '');
+        if (cleaned.startsWith('0')) {
+            cleaned = '262' + cleaned.substring(1);
+        } else if (cleaned.startsWith('33') && cleaned.length === 11) {
+            // Standard métropole
+        } else if (!cleaned.startsWith('262') && !cleaned.startsWith('33')) {
+            cleaned = '262' + cleaned;
+        }
+        return cleaned;
+    };
+
+    const handleSendWhatsApp = () => {
+        const client = demande.clients || demande.entreprises;
+        const phone = client.phone || client.contact_phone;
+        const formattedPhone = formatWhatsAppNumber(phone);
+        if (!formattedPhone) return alert("Numéro de téléphone manquant.");
+
+        const clientName = demande.clients ? client.first_name : (client.contact_name || client.nom_entreprise);
+        const message = `Bonjour ${clientName}, voici votre lien de paiement sécurisé Stripe pour votre commande Asiacuisine : ${paymentLink}`;
+        const encodedMessage = encodeURIComponent(message);
+        
+        window.open(`https://wa.me/${formattedPhone}?text=${encodedMessage}`, '_blank');
     };
 
     const handleSave = async () => {
@@ -225,10 +252,13 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                         {paymentLink && (
                             <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-[2rem] animate-in slide-in-from-right-4">
                                 <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-3">Lien Stripe Actif</p>
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 mb-3">
                                     <input readOnly value={paymentLink} className="flex-1 p-2 bg-white rounded-lg text-[10px] font-mono border-0 outline-none" />
                                     <button onClick={() => { navigator.clipboard.writeText(paymentLink); alert('Copié !'); }} className="bg-indigo-600 text-white px-3 py-2 rounded-lg font-black text-[10px]">COPIER</button>
                                 </div>
+                                <button onClick={handleSendWhatsApp} className="w-full py-3 bg-green-500 text-white rounded-xl font-black text-[10px] flex items-center justify-center gap-2 hover:bg-green-600 transition-all shadow-md">
+                                    <MessageCircle size={16}/> ENVOYER VIA WHATSAPP
+                                </button>
                             </div>
                         )}
 
