@@ -27,6 +27,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
     const [requestDate, setRequestDate] = useState('');
     const [totalAmount, setTotalAmount] = useState(demande.total_amount || '');
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isSendingConfirmation, setIsSendingConfirmation] = useState(false);
     const [isSendingQrCode, setIsSendingQrCode] = useState(false);
     const [isGeneratingStripeLink, setIsGeneratingStripeLink] = useState(false);
     const [paymentLink, setPaymentLink] = useState('');
@@ -45,7 +46,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
 
             let initialAmount = demande.total_amount;
 
-            // Auto-fill price only if it's a menu and price is missing
+            // --- RESTAURATION : Auto-fill price from settings for Menus ---
             if ((!initialAmount || initialAmount <= 0) && demande.type === 'COMMANDE_MENU') {
                 try {
                     const { data: settingsList } = await supabase
@@ -66,6 +67,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                         if (calculated > 0) {
                             initialAmount = calculated;
                             setTotalAmount(calculated);
+                            // Auto-save the found price to avoid re-fetching
                             await supabase.from('demandes').update({ total_amount: calculated }).eq('id', demande.id);
                         }
                     }
@@ -96,6 +98,28 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
         } else alert(error.message);
     };
 
+    const handleSendConfirmation = async () => {
+        if (!window.confirm("Valider officiellement ce dossier et envoyer l'email de confirmation au client ?")) return;
+        setIsSendingConfirmation(true);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/send-confirmation-email`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+                body: JSON.stringify({ demandeId: demande.id })
+            });
+            if (response.ok) {
+                alert('Dossier validé et email envoyé !');
+                if (onRefresh) onRefresh();
+                onClose();
+            } else {
+                const err = await response.json();
+                throw new Error(err.error || "Erreur lors de l'envoi");
+            }
+        } catch (error) { alert(error.message); }
+        finally { setIsSendingConfirmation(false); }
+    };
+
     const handleGenerateStripeLink = async (amountType = 'total') => {
         await handleSave(true);
         setIsGeneratingStripeLink(true);
@@ -114,22 +138,17 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
         finally { setIsGeneratingStripeLink(false); }
     };
 
-    const formatWhatsAppNumber = (phone) => {
-        if (!phone) return null;
-        let cleaned = phone.replace(/\D/g, '');
-        if (cleaned.startsWith('0')) cleaned = '262' + cleaned.substring(1);
-        else if (!cleaned.startsWith('262') && !cleaned.startsWith('33')) cleaned = '262' + cleaned;      
-        return cleaned;
-    };
-
     const handleSendWhatsApp = () => {
         const client = demande.clients || demande.entreprises;
         const phone = client.phone || client.contact_phone;
-        const formattedPhone = formatWhatsAppNumber(phone);
-        if (!formattedPhone) return alert("Numéro manquant.");
+        let cleaned = phone?.replace(/\D/g, '');
+        if (cleaned?.startsWith('0')) cleaned = '262' + cleaned.substring(1);
+        else if (cleaned && !cleaned.startsWith('262') && !cleaned.startsWith('33')) cleaned = '262' + cleaned;
+        
+        if (!cleaned) return alert("Numéro manquant.");
         const clientName = demande.clients ? client.first_name : (client.contact_name || client.nom_entreprise);
         const message = `Bonjour ${clientName}, voici votre lien Asiacuisine pour le ${new Date(requestDate).toLocaleDateString('fr-FR')} (${totalAmount}€) : ${paymentLink}`;
-        window.open(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`, '_blank');     
+        window.open(`https://wa.me/${cleaned}?text=${encodeURIComponent(message)}`, '_blank');     
     };
 
     const handleAction = async () => {
@@ -154,7 +173,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
     };
 
     const handleSendQr = async () => {
-        if (!window.confirm("Envoyer le QR Code ?")) return;
+        if (!window.confirm("Valider le paiement et envoyer le QR Code ?")) return;
         setIsSendingQrCode(true);
         try {
             const { data: company } = await supabase.from('company_settings').select('*').limit(1).single();
@@ -196,7 +215,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
                     <div className="lg:col-span-7 space-y-8">
                         <div className={`p-8 rounded-[2rem] border-2 ${themeColor === 'blue' ? 'border-blue-200 bg-blue-50/20' : 'border-amber-200 bg-amber-50/20'}`}>
-                            <label className={`text-xs font-black uppercase tracking-widest block mb-4 ${themeColor === 'blue' ? 'text-blue-600' : 'text-amber-600'}`}>Montant de la Commande (€)</label>
+                            <label className={`text-xs font-black uppercase tracking-widest block mb-4 ${themeColor === 'blue' ? 'text-blue-600' : 'text-amber-600'}`}>Montant Total (€)</label>
                             <div className="relative">
                                 <input type="number" step="0.01" value={totalAmount} onChange={e => setTotalAmount(e.target.value)} className="w-full bg-white p-5 rounded-2xl font-black text-3xl outline-none shadow-sm focus:ring-2 focus:ring-amber-500" placeholder="0.00" />
                                 <Euro className="absolute right-5 top-6 text-gray-200" size={30} />       
@@ -204,12 +223,12 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                         </div>
 
                         <div className="bg-gray-50 p-8 rounded-[2rem] border border-gray-100">
-                            <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-6 flex items-center gap-2"><ClipboardList size={16}/> Détails</h3>
+                            <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-6 flex items-center gap-2"><ClipboardList size={16}/> Détails du Projet</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div><label className="text-[10px] font-black text-gray-400 uppercase ml-2 mb-1 block">Date Souhaitée</label><input type="date" value={requestDate} onChange={e => setRequestDate(e.target.value)} className="w-full p-3 bg-white border-0 rounded-xl font-bold shadow-sm" /></div>
                                 <div><label className="text-[10px] font-black text-gray-400 uppercase ml-2 mb-1 block">Ville</label><select name="ville" value={details.ville || details.deliveryCity || ''} onChange={handleDetailChange} className="w-full p-3 bg-white border-0 rounded-xl font-bold shadow-sm"><option value="">Choisir...</option>{communesReunion.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
                             </div>
-                            <div className="mt-6"><label className="text-[10px] font-black text-gray-400 uppercase ml-2 mb-1 block">Notes Client</label><textarea name="customerMessage" value={details.customerMessage || details.notes || ''} onChange={handleDetailChange} className="w-full p-4 bg-white border-0 rounded-xl font-medium shadow-sm h-24" /></div>
+                            <div className="mt-6"><label className="text-[10px] font-black text-gray-400 uppercase ml-2 mb-1 block">Notes / Message Client</label><textarea name="customerMessage" value={details.customerMessage || details.notes || ''} onChange={handleDetailChange} className="w-full p-4 bg-white border-0 rounded-xl font-medium shadow-sm h-24" /></div>
                         </div>
                     </div>
 
@@ -233,19 +252,31 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                         <div className="space-y-3">
                             <button onClick={() => handleSave(false)} className="w-full py-4 bg-gray-800 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-black transition-all flex items-center justify-center gap-2 uppercase tracking-widest"><Save size={16}/> SAUVEGARDER MODIFS</button>
 
-                            {demande.status === 'En attente de traitement' && <button onClick={() => onUpdateStatus(demande.id, 'confirmed')} className="w-full py-4 bg-green-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-green-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest"><CheckCircle2 size={16}/> CONFIRMER LA DEMANDE</button>}
-
-                            {isMenuOrder && (demande.status === 'En attente de paiement' || demande.status === 'confirmed') && (
-                                <button onClick={() => handleGenerateStripeLink('total')} disabled={isGeneratingStripeLink} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest">    
-                                    {isGeneratingStripeLink ? <RefreshCw className="animate-spin" size={16}/> : <RefreshCw size={16}/>} GÉNÉRER LIEN STRIPE
+                            {/* ÉTAPE 1 : Validation d'intention */}
+                            {demande.status === 'Intention WhatsApp' && (
+                                <button onClick={handleSendConfirmation} disabled={isSendingConfirmation} className="w-full py-5 bg-amber-500 text-white rounded-2xl font-black text-sm shadow-xl hover:bg-amber-600 transition-all flex items-center justify-center gap-3 uppercase tracking-widest active:scale-95">
+                                    {isSendingConfirmation ? <RefreshCw className="animate-spin" size={20}/> : <Mail size={20}/>} VALIDER & ENVOYER EMAIL
                                 </button>
                             )}
 
-                            {demande.status === 'En attente de paiement' && <button onClick={handleSendQr} disabled={isSendingQrCode} className="w-full py-4 bg-green-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-green-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest"><QrCode size={16}/> PAIEMENT REÇU & ENV. QR</button>}
+                            {/* ÉTAPE 2 : Flux de paiement & documents */}
+                            {(demande.status === 'Nouvelle' || demande.status === 'En attente de paiement' || demande.status === 'confirmed') && (
+                                <>
+                                    <button onClick={() => handleGenerateStripeLink('total')} disabled={isGeneratingStripeLink} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest">    
+                                        {isGeneratingStripeLink ? <RefreshCw className="animate-spin" size={16}/> : <RefreshCw size={16}/>} GÉNÉRER LIEN STRIPE
+                                    </button>
 
-                            {(demande.status === 'confirmed' && !isMenuOrder) && <button onClick={handleAction} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest"><FilePlus size={16}/> CRÉER UN DEVIS</button>}
+                                    {/* Confirmation logistique manuelle pour prestations */}
+                                    {(demande.status === 'Nouvelle' && !isMenuOrder) && <button onClick={() => onUpdateStatus(demande.id, 'confirmed')} className="w-full py-4 bg-green-100 text-green-700 border border-green-200 rounded-2xl font-black text-xs hover:bg-green-200 transition-all flex items-center justify-center gap-2 uppercase tracking-widest"><CheckCircle2 size={16}/> CONFIRMER LOGISTIQUE</button>}
 
-                            {isMenuOrder && (demande.status === 'confirmed' || demande.status === 'En attente de traitement') && <button onClick={handleAction} disabled={isGenerating} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest">{isGenerating ? <RefreshCw className="animate-spin" size={16}/> : <Mail size={16}/>} GÉNÉRER & ENVOYER FACTURE</button>}
+                                    {/* Boutons documents */}
+                                    {(!isMenuOrder) && <button onClick={handleAction} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest"><FilePlus size={16}/> CRÉER UN DEVIS</button>}
+                                    {(isMenuOrder && demande.status !== 'En attente de traitement') && <button onClick={handleAction} disabled={isGenerating} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest">{isGenerating ? <RefreshCw className="animate-spin" size={16}/> : <Mail size={16}/>} GÉNÉRER & ENVOYER FACTURE</button>}
+                                    
+                                    {/* Validation de paiement manuelle */}
+                                    <button onClick={handleSendQr} disabled={isSendingQrCode} className="w-full py-4 bg-green-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-green-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest"><QrCode size={16}/> PAIEMENT REÇU & ENV. QR</button>
+                                </>
+                            )}
 
                             <button onClick={() => window.confirm('Annuler ce dossier ?') && onUpdateStatus(demande.id, 'cancelled')} className="w-full py-4 bg-red-50 text-red-600 rounded-2xl font-black text-xs hover:bg-red-100 transition-all flex items-center justify-center gap-2 uppercase tracking-widest"><XCircle size={16}/> ANNULER LE DOSSIER</button>
                         </div>
