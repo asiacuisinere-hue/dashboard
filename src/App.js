@@ -94,6 +94,24 @@ const DashboardLayout = () => {
     const [subscriptionsNeedAttentionCount, setSubscriptionsNeedAttentionCount] = useState(0);
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
     const [notifications, setNotifications] = useState([]);
+    const [audioUnlocked, setAudioUnlocked] = useState(false);
+
+    // Effect to unlock audio on first interaction
+    useEffect(() => {
+        const unlock = () => {
+            if (!audioUnlocked) {
+                const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
+                audio.volume = 0; // Silent play to unlock
+                audio.play().then(() => {
+                    console.log("[AUDIO] System unlocked");
+                    setAudioUnlocked(true);
+                    window.removeEventListener('click', unlock);
+                }).catch(() => {});
+            }
+        };
+        window.addEventListener('click', unlock);
+        return () => window.removeEventListener('click', unlock);
+    }, [audioUnlocked]);
 
     const fetchCounts = useCallback(async () => {
         const { count: newDemandsCount } = await supabase.from('demandes').select('*', { count: 'exact', head: true }).eq('status', 'Nouvelle').eq('business_unit', businessUnit);
@@ -135,12 +153,10 @@ const DashboardLayout = () => {
 
             let newNotification = null;
 
-            // --- 1. TABLE DEMANDES ---
             if (payload.table === 'demandes') {
                 if (payload.eventType === 'INSERT') {
                     newNotification = { id: Date.now(), type: 'info', message: `Nouvelle demande reçue (${payload.new.type}).`, timestamp: new Date(), link: '/nouvelles-demandes' };
                 } 
-                // Detection paiement direct (Menu)
                 else if (payload.eventType === 'UPDATE' && payload.new.status === 'En attente de préparation' && payload.old.status !== 'En attente de préparation') {
                     newNotification = { id: Date.now(), type: 'success', message: `💰 Commande Menu payée ! À préparer.`, timestamp: new Date(), link: '/a-preparer' };
                 }
@@ -148,7 +164,6 @@ const DashboardLayout = () => {
                     newNotification = { id: Date.now(), type: 'success', message: `Un client a confirmé son intérêt pour une prestation !`, timestamp: new Date(), link: '/demandes-en-cours' };
                 }
             }
-            // --- 2. TABLE QUOTES (DEVIS) ---
             else if (payload.table === 'quotes' && payload.eventType === 'UPDATE') {
                 if (payload.new.status === 'accepted' && payload.old.status !== 'accepted') {
                     newNotification = { id: Date.now(), type: 'success', message: `✅ Devis #${payload.new.document_number} accepté !`, timestamp: new Date(), link: '/devis' };
@@ -156,7 +171,6 @@ const DashboardLayout = () => {
                     newNotification = { id: Date.now(), type: 'error', message: `❌ Devis #${payload.new.document_number} refusé.`, timestamp: new Date(), link: '/devis' };
                 }
             }
-            // --- 3. TABLE INVOICES (FACTURES) ---
             else if (payload.table === 'invoices' && payload.eventType === 'UPDATE') {
                  if (payload.new.status === 'paid' && payload.old.status !== 'paid') {
                     newNotification = { id: Date.now(), type: 'success', message: `💰 Facture #${payload.new.document_number} entièrement payée !`, timestamp: new Date(), link: '/factures' };
@@ -167,15 +181,20 @@ const DashboardLayout = () => {
 
             if (newNotification) {
                 setNotifications(prev => [newNotification, ...prev]);
-                // Notification système (Navigateur)
                 if ('Notification' in window && Notification.permission === 'granted') {
                     new Notification('Asiacuisine.re', { body: newNotification.message });
                 }
-                // Optionnel : Jouer un petit son
+                
+                // FIXED: Catch NotAllowedError for audio play
                 try {
                     const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
-                    audio.play();
-                } catch (e) { console.log("Audio play blocked by browser"); }
+                    const playPromise = audio.play();
+                    if (playPromise !== undefined) {
+                        playPromise.catch(e => {
+                            console.log("[AUDIO] Playback blocked until user interaction.");
+                        });
+                    }
+                } catch (e) { console.log("[AUDIO] Playback error:", e); }
             }
             fetchCounts();
         };
