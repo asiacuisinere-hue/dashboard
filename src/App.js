@@ -6,7 +6,7 @@ import Scanner from './Scanner';
 import Demandes from './Demandes';
 import DemandesEnCours from './DemandesEnCours';
 import Historique from './pages/Historique';
-import Clients from './pages/Clients'; // Nouveau composant unifié
+import Clients from './pages/Clients'; 
 import Devis from './pages/Devis';
 import Factures from './pages/Factures';
 import Parametres from './pages/Parametres';
@@ -18,9 +18,9 @@ import APreparer from './pages/APreparer';
 import Validation from './pages/Validation';
 import Statistiques from './pages/Statistiques';
 import Depenses from './pages/Depenses';
-import Plats from './pages/Plats'; 
-import Events from './pages/Events'; 
-import Accueil from './pages/Accueil'; 
+import Plats from './pages/Plats';
+import Events from './pages/Events';
+import Accueil from './pages/Accueil';
 import { useBusinessUnit } from './BusinessUnitContext';
 
 // --- Composants Login ---
@@ -101,7 +101,7 @@ const DashboardLayout = () => {
 
         const { count: inProgressDemandsCount } = await supabase.from('demandes').select('*', { count: 'exact', head: true }).eq('business_unit', businessUnit).or(`and(type.in.("COMMANDE_MENU","COMMANDE_SPECIALE"),status.not.in.("completed","cancelled","paid","Nouvelle","En attente de préparation","Préparation en cours")),and(type.eq.RESERVATION_SERVICE,status.in.("En attente de traitement",confirmed))`);
         setInProgressCount(inProgressDemandsCount || 0);
-        
+
         const { count: sentQuotesCount } = await supabase.from('quotes').select('*', { count: 'exact', head: true }).eq('status', 'sent').eq('business_unit', businessUnit);
         setPendingQuotesCount(sentQuotesCount || 0);
 
@@ -127,11 +127,10 @@ const DashboardLayout = () => {
 
     useEffect(() => {
         fetchCounts();
-        
+
         const handleDbChanges = (payload) => {
             console.log(`[REALTIME] Event detected on ${payload.table}`);
-            
-            // Sécurité Unité Commerciale
+
             if (payload.new && payload.new.business_unit && payload.new.business_unit !== businessUnit) return;
 
             let newNotification = null;
@@ -140,59 +139,70 @@ const DashboardLayout = () => {
             if (payload.table === 'demandes') {
                 if (payload.eventType === 'INSERT') {
                     newNotification = { id: Date.now(), type: 'info', message: `Nouvelle demande reçue (${payload.new.type}).`, timestamp: new Date(), link: '/nouvelles-demandes' };
-                } else if (payload.eventType === 'UPDATE' && payload.new.status === 'Confirmée par client' && payload.old.status !== 'Confirmée par client') {
+                } 
+                // Detection paiement direct (Menu)
+                else if (payload.eventType === 'UPDATE' && payload.new.status === 'En attente de préparation' && payload.old.status !== 'En attente de préparation') {
+                    newNotification = { id: Date.now(), type: 'success', message: `💰 Commande Menu payée ! À préparer.`, timestamp: new Date(), link: '/a-preparer' };
+                }
+                else if (payload.eventType === 'UPDATE' && payload.new.status === 'Confirmée par client' && payload.old.status !== 'Confirmée par client') {
                     newNotification = { id: Date.now(), type: 'success', message: `Un client a confirmé son intérêt pour une prestation !`, timestamp: new Date(), link: '/demandes-en-cours' };
                 }
-            } 
+            }
             // --- 2. TABLE QUOTES (DEVIS) ---
             else if (payload.table === 'quotes' && payload.eventType === 'UPDATE') {
                 if (payload.new.status === 'accepted' && payload.old.status !== 'accepted') {
-                    newNotification = { id: Date.now(), type: 'success', message: `Le devis #${payload.new.document_number} a été accepté.`, timestamp: new Date(), link: '/devis' };
-                } else if (payload.new.status === 'rejected' && payload.old.status !== 'rejected') {
-                    newNotification = { id: Date.now(), type: 'error', message: `Le devis #${payload.new.document_number} a été refusé.`, timestamp: new Date(), link: '/devis' };
+                    newNotification = { id: Date.now(), type: 'success', message: `✅ Devis #${payload.new.document_number} accepté !`, timestamp: new Date(), link: '/devis' };
+                } else if (payload.new.status === 'rejected' && payload.old.status !== 'rejected') {      
+                    newNotification = { id: Date.now(), type: 'error', message: `❌ Devis #${payload.new.document_number} refusé.`, timestamp: new Date(), link: '/devis' };
                 }
-            } 
+            }
             // --- 3. TABLE INVOICES (FACTURES) ---
             else if (payload.table === 'invoices' && payload.eventType === 'UPDATE') {
                  if (payload.new.status === 'paid' && payload.old.status !== 'paid') {
-                    newNotification = { id: Date.now(), type: 'success', message: `Facture #${payload.new.document_number} entièrement payée !`, timestamp: new Date(), link: '/factures' };
+                    newNotification = { id: Date.now(), type: 'success', message: `💰 Facture #${payload.new.document_number} entièrement payée !`, timestamp: new Date(), link: '/factures' };
                 } else if (payload.new.status === 'deposit_paid' && payload.old.status !== 'deposit_paid') {
-                    newNotification = { id: Date.now(), type: 'info', message: `Acompte reçu pour la facture #${payload.new.document_number}.`, timestamp: new Date(), link: '/factures' };
+                    newNotification = { id: Date.now(), type: 'info', message: `💳 Acompte reçu pour la facture #${payload.new.document_number}.`, timestamp: new Date(), link: '/factures' };
                 }
             }
 
             if (newNotification) {
                 setNotifications(prev => [newNotification, ...prev]);
+                // Notification système (Navigateur)
                 if ('Notification' in window && Notification.permission === 'granted') {
                     new Notification('Asiacuisine.re', { body: newNotification.message });
                 }
+                // Optionnel : Jouer un petit son
+                try {
+                    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
+                    audio.play();
+                } catch (e) { console.log("Audio play blocked by browser"); }
             }
             fetchCounts();
         };
 
         const channel = supabase.channel('all-db-changes')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'demandes' }, handleDbChanges)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'quotes' }, handleDbChanges)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, handleDbChanges)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'demandes' }, handleDbChanges) 
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'quotes' }, handleDbChanges)   
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, handleDbChanges) 
             .subscribe();
 
         const handleResize = () => setIsMobile(window.innerWidth <= 768);
         window.addEventListener('resize', handleResize);
 
-        return () => { 
-            supabase.removeChannel(channel); 
+        return () => {
+            supabase.removeChannel(channel);
             window.removeEventListener('resize', handleResize);
         };
     }, [fetchCounts, businessUnit]);
 
     return (
         <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', height: '100vh', overflow: 'hidden' }}>
-            <Sidebar 
-                newCount={newCount} inProgressCount={inProgressCount} pendingQuotesCount={pendingQuotesCount} 
+            <Sidebar
+                newCount={newCount} inProgressCount={inProgressCount} pendingQuotesCount={pendingQuotesCount}
                 toPrepareCount={toPrepareCount} pendingInvoicesCount={pendingInvoicesCount}
                 depositPaidInvoicesCount={depositPaidInvoicesCount} waitingForPrepCount={waitingForPrepCount}
                 activeSubscriptionsCount={activeSubscriptionsCount} subscriptionsNeedAttentionCount={subscriptionsNeedAttentionCount}
-                isMobile={isMobile} notifications={notifications} setNotifications={setNotifications} 
+                isMobile={isMobile} notifications={notifications} setNotifications={setNotifications}     
             />
             <main style={mainContentStyle}>
                 <Routes>
@@ -231,7 +241,7 @@ function App() {
     supabase.auth.onAuthStateChange((_event, session) => { setSession(session); });
   }, []);
 
-  if (loading) return <div style={{ textAlign: 'center', marginTop: '50px' }}>Chargement...</div>;
+  if (loading) return <div style={{ textAlign: 'center', marginTop: '50px' }}>Chargement...</div>;        
 
   return (
       <Routes>
