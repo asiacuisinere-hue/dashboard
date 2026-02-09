@@ -166,34 +166,40 @@ const Clients = () => {
         console.log('[DEBUG] Final Payload for Supabase:', payload);
 
         if (editId) {
-            console.log(`[DEBUG] Executing UPDATE on ${table} WHERE id = ${editId}`);
+            console.log(`[DEBUG] Executing API UPDATE on ${table} via /api/update-client`);
             
-            const { data: updatedData, error, status, statusText } = await supabase
-                .from(table)
-                .update(payload)
-                .eq('id', editId)
-                .select();
-            
-            console.log('[DEBUG] Supabase response - Status:', status, statusText);
-            
-            if (error) {
-                console.error('[CRITICAL] Supabase Update Error:', error);
-                alert(`Erreur lors de la mise à jour: ${error.message}`);
-            } else {
-                console.log('[DEBUG] Updated Data returned:', updatedData);
-                if (updatedData && updatedData.length > 0) {
-                    alert('Mise à jour réussie !');
-                    handleCloseEdit();
-                    fetchData();
-                } else {
-                    console.warn('[WARNING] No rows returned from update. Check RLS or ID existence.');
-                    alert('La modification semble avoir été envoyée, mais aucune donnée n\'est revenue. Vérification en cours...');
-                    handleCloseEdit();
-                    fetchData();
+            // --- NEW: USE SERVER-SIDE API TO BYPASS RLS ---
+            try {
+                const response = await fetch('/api/update-client', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: editId,
+                        table: table,
+                        ...payload
+                    })
+                });
+
+                const result = await response.json();
+                console.log('[DEBUG] API Response:', result);
+
+                if (!response.ok || result.error) {
+                    throw new Error(result.error || 'Erreur API');
                 }
+
+                console.log('[DEBUG] API Update Success:', result.data);
+                alert('Mise à jour réussie (via API) !');
+                handleCloseEdit();
+                fetchData();
+
+            } catch (err) {
+                console.error('[CRITICAL] API Update Failed:', err);
+                alert(`Erreur de sauvegarde : ${err.message}`);
             }
+
         } else {
             console.log(`[DEBUG] Executing INSERT on ${table}`);
+            // Note: For INSERT, we still try direct access first. If it fails, we'll need an API too.
             const { data: insertedData, error, status } = await supabase
                 .from(table)
                 .insert([payload])
