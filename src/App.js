@@ -96,14 +96,12 @@ const DashboardLayout = () => {
     const [notifications, setNotifications] = useState([]);
     const [audioUnlocked, setAudioUnlocked] = useState(false);
 
-    // Effect to unlock audio on first interaction
     useEffect(() => {
         const unlock = () => {
             if (!audioUnlocked) {
                 const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
-                audio.volume = 0; // Silent play to unlock
+                audio.volume = 0; 
                 audio.play().then(() => {
-                    console.log("[AUDIO] System unlocked");
                     setAudioUnlocked(true);
                     window.removeEventListener('click', unlock);
                 }).catch(() => {});
@@ -114,10 +112,20 @@ const DashboardLayout = () => {
     }, [audioUnlocked]);
 
     const fetchCounts = useCallback(async () => {
-        const { count: newDemandsCount } = await supabase.from('demandes').select('*', { count: 'exact', head: true }).eq('status', 'Nouvelle').eq('business_unit', businessUnit);
+        // FIXED: Count Intention WhatsApp + Nouvelle + En attente de traitement for "Nouvelles"
+        const { count: newDemandsCount } = await supabase
+            .from('demandes')
+            .select('*', { count: 'exact', head: true })
+            .in('status', ['Nouvelle', 'Intention WhatsApp', 'En attente de traitement'])
+            .eq('business_unit', businessUnit);
         setNewCount(newDemandsCount || 0);
 
-        const { count: inProgressDemandsCount } = await supabase.from('demandes').select('*', { count: 'exact', head: true }).eq('business_unit', businessUnit).or(`and(type.in.("COMMANDE_MENU","COMMANDE_SPECIALE"),status.not.in.("completed","cancelled","paid","Nouvelle","En attente de préparation","Préparation en cours")),and(type.eq.RESERVATION_SERVICE,status.in.("En attente de traitement",confirmed))`);
+        // FIXED: Count only confirmed/paying for "En cours" (exclude draft/awaiting review)
+        const { count: inProgressDemandsCount } = await supabase
+            .from('demandes')
+            .select('*', { count: 'exact', head: true })
+            .eq('business_unit', businessUnit)
+            .or(`and(type.in.("COMMANDE_MENU","COMMANDE_SPECIALE"),status.in.("confirmed","En attente de paiement")),and(type.eq.RESERVATION_SERVICE,status.in.("confirmed","En attente de paiement","En attente de validation de devis"))`);
         setInProgressCount(inProgressDemandsCount || 0);
 
         const { count: sentQuotesCount } = await supabase.from('quotes').select('*', { count: 'exact', head: true }).eq('status', 'sent').eq('business_unit', businessUnit);
@@ -147,8 +155,6 @@ const DashboardLayout = () => {
         fetchCounts();
 
         const handleDbChanges = (payload) => {
-            console.log(`[REALTIME] Event detected on ${payload.table}`);
-
             if (payload.new && payload.new.business_unit && payload.new.business_unit !== businessUnit) return;
 
             let newNotification = null;
@@ -184,17 +190,13 @@ const DashboardLayout = () => {
                 if ('Notification' in window && Notification.permission === 'granted') {
                     new Notification('Asiacuisine.re', { body: newNotification.message });
                 }
-                
-                // FIXED: Catch NotAllowedError for audio play
                 try {
                     const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
                     const playPromise = audio.play();
                     if (playPromise !== undefined) {
-                        playPromise.catch(e => {
-                            console.log("[AUDIO] Playback blocked until user interaction.");
-                        });
+                        playPromise.catch(() => {});
                     }
-                } catch (e) { console.log("[AUDIO] Playback error:", e); }
+                } catch (e) {}
             }
             fetchCounts();
         };

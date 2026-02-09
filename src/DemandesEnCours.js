@@ -90,13 +90,13 @@ const DemandesEnCours = () => {
         setLoading(true);
         let query = supabase.from('demandes').select(`*, clients (*), entreprises (*)`).eq('business_unit', businessUnit);
 
-        // --- FILTER: Exclude 'Intention WhatsApp' and 'Nouvelle' (already in Inbox) ---
-        const ongoingStatuses = ['En attente de traitement', 'confirmed', 'En attente de paiement', 'En attente de validation de devis'];
+        // --- FILTER: EXCLUDE 'Intention WhatsApp', 'Nouvelle', and 'En attente de traitement' (they stay in Inbox) ---
+        const ongoingStatuses = ['confirmed', 'En attente de paiement', 'En attente de validation de devis'];
 
         if (activeTab === 'SERVICE') {
             query = query.eq('type', 'RESERVATION_SERVICE').in('status', ongoingStatuses);
         } else if (activeTab === 'MENU') {
-            query = query.in('type', ['COMMANDE_MENU', 'COMMANDE_SPECIALE']).in('status', ['En attente de traitement', 'En attente de paiement', 'confirmed']);
+            query = query.in('type', ['COMMANDE_MENU', 'COMMANDE_SPECIALE']).in('status', ['En attente de paiement', 'confirmed']);
         } else if (activeTab === 'SUBS') {
             query = query.eq('type', 'SOUSCRIPTION_ABONNEMENT');
         } else {
@@ -130,7 +130,6 @@ const DemandesEnCours = () => {
     });
 
     const statusOptions = [
-        { value: 'En attente de traitement', label: 'À Traiter' },
         { value: 'confirmed', label: 'Confirmée' },
         { value: 'En attente de paiement', label: 'Attente Paiement' },
         { value: 'Payée', label: 'Payée' }
