@@ -166,40 +166,45 @@ const Clients = () => {
         console.log('[DEBUG] Final Payload for Supabase:', payload);
 
         if (editId) {
-            console.log(`[DEBUG] Executing API UPDATE on ${table} via /api/update-client`);
+            // --- NEW: USE SUPABASE EDGE FUNCTION INSTEAD OF LOCAL API ---
+            console.log(`[DEBUG] Executing Supabase Edge Function: update-client`);
             
-            // --- NEW: USE SERVER-SIDE API TO BYPASS RLS ---
             try {
-                const response = await fetch('/api/update-client', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
+                // Call Supabase Edge Function directly
+                const { data: edgeResult, error: edgeError } = await supabase.functions.invoke('update-client', {
+                    body: {
                         id: editId,
                         table: table,
                         ...payload
-                    })
+                    }
                 });
 
-                const result = await response.json();
-                console.log('[DEBUG] API Response:', result);
-
-                if (!response.ok || result.error) {
-                    throw new Error(result.error || 'Erreur API');
+                if (edgeError) {
+                    console.error('[CRITICAL] Edge Function Error:', edgeError);
+                    alert(`Erreur de sauvegarde (Edge): ${edgeError.message}`);
+                    throw edgeError;
                 }
 
-                console.log('[DEBUG] API Update Success:', result.data);
-                alert('Mise à jour réussie (via API) !');
+                console.log('[DEBUG] Edge Function Success:', edgeResult);
+                alert('Mise à jour réussie (via Edge Function) !');
                 handleCloseEdit();
                 fetchData();
 
             } catch (err) {
-                console.error('[CRITICAL] API Update Failed:', err);
-                alert(`Erreur de sauvegarde : ${err.message}`);
+                console.error('[CRITICAL] Save operation failed:', err);
+                // Fallback direct if function not deployed (warning)
+                console.warn('[DEBUG] Falling back to direct update (might fail due to RLS)...');
+                const { error: directError } = await supabase.from(table).update(payload).eq('id', editId);
+                if (directError) alert(`Erreur persistante: ${directError.message}`);
+                else {
+                    alert('Sauvegarde directe réussie (Fallback).');
+                    handleCloseEdit();
+                    fetchData();
+                }
             }
 
         } else {
             console.log(`[DEBUG] Executing INSERT on ${table}`);
-            // Note: For INSERT, we still try direct access first. If it fails, we'll need an API too.
             const { data: insertedData, error, status } = await supabase
                 .from(table)
                 .insert([payload])
