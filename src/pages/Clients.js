@@ -68,7 +68,6 @@ const Clients = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [data, setData] = useState([]);
     
-    // Form state
     const [isEditing, setIsEditing] = useState(false);
     const [editId, setEditId] = useState(null);
     const [formData, setFormData] = useState({});
@@ -78,6 +77,8 @@ const Clients = () => {
     const fetchData = useCallback(async () => {
         setLoading(true);
         const table = activeTab === 'particuliers' ? 'clients' : 'entreprises';
+        console.log(`[CLIENTS_FETCH] Fetching from table: ${table}`);
+        
         let query = supabase.from(table).select('*');
 
         if (searchTerm) {
@@ -91,8 +92,12 @@ const Clients = () => {
         const orderBy = activeTab === 'particuliers' ? 'last_name' : 'nom_entreprise';
         const { data: results, error } = await query.order(orderBy, { ascending: true });
 
-        if (error) console.error('Error fetching data:', error);
-        else setData(results || []);
+        if (error) {
+            console.error('[CLIENTS_FETCH] Error:', error);
+        } else {
+            console.log(`[CLIENTS_FETCH] Success: ${results?.length || 0} records found`);
+            setData(results || []);
+        }
         setLoading(false);
     }, [activeTab, searchTerm]);
 
@@ -103,10 +108,9 @@ const Clients = () => {
     const handleOpenEdit = (item) => {
         let initialData = { ...item };
         if (activeTab === 'particuliers') {
-            const first = item.first_name || '';
-            const last = item.last_name || '';
-            initialData.fullName = `${last} ${first}`.trim();
+            initialData.fullName = `${item.last_name || ''} ${item.first_name || ''}`.trim();
         }
+        console.log('[CLIENTS_UI] Opening Edit for:', item.id, initialData);
         setFormData(initialData);
         setEditId(item.id);
         setIsEditing(true);
@@ -122,6 +126,12 @@ const Clients = () => {
         e.preventDefault();
         const table = activeTab === 'particuliers' ? 'clients' : 'entreprises';
         
+        console.log('--- START SAVE PROCESS ---');
+        console.log('[DEBUG] Active Tab:', activeTab);
+        console.log('[DEBUG] Table:', table);
+        console.log('[DEBUG] Edit ID:', editId);
+        console.log('[DEBUG] Form Data (Raw):', formData);
+
         let payload = {};
         if (activeTab === 'particuliers') {
             const fullName = formData.fullName || '';
@@ -153,43 +163,69 @@ const Clients = () => {
             };
         }
 
+        console.log('[DEBUG] Final Payload for Supabase:', payload);
+
         if (editId) {
-            // Update the record
-            const { data: updatedData, error } = await supabase.from(table).update(payload).eq('id', editId).select();
+            console.log(`[DEBUG] Executing UPDATE on ${table} WHERE id = ${editId}`);
+            
+            const { data: updatedData, error, status, statusText } = await supabase
+                .from(table)
+                .update(payload)
+                .eq('id', editId)
+                .select();
+            
+            console.log('[DEBUG] Supabase response - Status:', status, statusText);
             
             if (error) {
+                console.error('[CRITICAL] Supabase Update Error:', error);
                 alert(`Erreur lors de la mise à jour: ${error.message}`);
             } else {
+                console.log('[DEBUG] Updated Data returned:', updatedData);
                 if (updatedData && updatedData.length > 0) {
                     alert('Mise à jour réussie !');
                     handleCloseEdit();
                     fetchData();
                 } else {
-                    // If update succeeded but returned nothing, it might be due to RLS or immediate fetch
-                    alert('Modification enregistrée.');
+                    console.warn('[WARNING] No rows returned from update. Check RLS or ID existence.');
+                    alert('La modification semble avoir été envoyée, mais aucune donnée n\'est revenue. Vérification en cours...');
                     handleCloseEdit();
                     fetchData();
                 }
             }
         } else {
-            const { error } = await supabase.from(table).insert([payload]).select();
+            console.log(`[DEBUG] Executing INSERT on ${table}`);
+            const { data: insertedData, error, status } = await supabase
+                .from(table)
+                .insert([payload])
+                .select();
             
+            console.log('[DEBUG] Supabase response - Status:', status);
+
             if (error) {
+                console.error('[CRITICAL] Supabase Insert Error:', error);
                 alert(`Erreur lors de l'ajout: ${error.message}`);
             } else {
+                console.log('[DEBUG] Inserted Data returned:', insertedData);
                 alert('Ajout réussi !');
                 handleCloseEdit();
                 fetchData();
             }
         }
+        console.log('--- END SAVE PROCESS ---');
     };
 
     const handleDelete = async (id) => {
         if (!window.confirm("Supprimer définitivement ?")) return;
         const table = activeTab === 'particuliers' ? 'clients' : 'entreprises';
+        console.log(`[DEBUG] Deleting from ${table} ID: ${id}`);
         const { error } = await supabase.from(table).delete().eq('id', id);
-        if (!error) fetchData();
-        else alert(error.message);
+        if (!error) {
+            console.log('[DEBUG] Delete success');
+            fetchData();
+        } else {
+            console.error('[DEBUG] Delete error:', error);
+            alert(error.message);
+        }
     };
 
     return (
