@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from './supabaseClient';
 import { useBusinessUnit } from './BusinessUnitContext';
 import DemandeDetail from './DemandeDetail';
-import { 
-    Search, ChefHat, Truck, Star, RefreshCw, 
+import {
+    Search, ChefHat, Truck, Star, RefreshCw,
     Calendar, MapPin, List, Layout, ArrowRight,
     XCircle
 } from 'lucide-react';
@@ -41,7 +41,6 @@ const DemandeEnCoursCard = ({ demande, onSelect, themeColor }) => {
         ? `${demande.clients.last_name || ''} ${demande.clients.first_name || ''}`.trim()
         : (demande.entreprises?.nom_entreprise || 'Client Inconnu');
 
-    // Fix: Check both possible keys for location
     const location = demande.details_json?.deliveryCity || demande.details_json?.ville || '—';
 
     return (
@@ -91,13 +90,17 @@ const DemandesEnCours = () => {
         setLoading(true);
         let query = supabase.from('demandes').select(`*, clients (*), entreprises (*)`).eq('business_unit', businessUnit);
 
-        if (activeTab === 'SERVICE') query = query.eq('type', 'RESERVATION_SERVICE').in('status', ['En attente de traitement', 'confirmed', 'En attente de validation de devis']);
-        else if (activeTab === 'MENU') query = query.in('type', ['COMMANDE_MENU', 'COMMANDE_SPECIALE']).not('status', 'in', '(completed,cancelled,paid,Nouvelle)');
-        else if (activeTab === 'SUBS') query = query.eq('type', 'SOUSCRIPTION_ABONNEMENT');
-        else {
-            const commandeMenuFilter = `and(type.in.("COMMANDE_MENU","COMMANDE_SPECIALE"),status.not.in.(completed,cancelled,paid,Nouvelle,"En attente de préparation","Préparation en cours"))`;
-            const reservationServiceFilter = `and(type.in.("RESERVATION_SERVICE","SOUSCRIPTION_ABONNEMENT"),status.in.("En attente de traitement",confirmed,"En attente de validation de devis"))`;
-            query = query.or(`${commandeMenuFilter},${reservationServiceFilter}`);
+        // --- FILTER: Exclude 'Intention WhatsApp' and 'Nouvelle' (already in Inbox) ---
+        const ongoingStatuses = ['En attente de traitement', 'confirmed', 'En attente de paiement', 'En attente de validation de devis'];
+
+        if (activeTab === 'SERVICE') {
+            query = query.eq('type', 'RESERVATION_SERVICE').in('status', ongoingStatuses);
+        } else if (activeTab === 'MENU') {
+            query = query.in('type', ['COMMANDE_MENU', 'COMMANDE_SPECIALE']).in('status', ['En attente de traitement', 'En attente de paiement', 'confirmed']);
+        } else if (activeTab === 'SUBS') {
+            query = query.eq('type', 'SOUSCRIPTION_ABONNEMENT');
+        } else {
+            query = query.in('status', ongoingStatuses);
         }
 
         if (filter.date) query = query.eq('request_date', filter.date);
@@ -120,8 +123,8 @@ const DemandesEnCours = () => {
     };
 
     const filteredList = demandes.filter(d => {
-        const name = d.clients 
-            ? `${d.clients.last_name || ''} ${d.clients.first_name || ''}`.trim() 
+        const name = d.clients
+            ? `${d.clients.last_name || ''} ${d.clients.first_name || ''}`.trim()
             : (d.entreprises?.nom_entreprise || '');
         return name.toLowerCase().includes(filter.searchTerm.toLowerCase()) || d.id.includes(filter.searchTerm);
     });
@@ -130,15 +133,14 @@ const DemandesEnCours = () => {
         { value: 'En attente de traitement', label: 'À Traiter' },
         { value: 'confirmed', label: 'Confirmée' },
         { value: 'En attente de paiement', label: 'Attente Paiement' },
-        { value: 'Payée', label: 'Payée' },
-        { value: 'En attente de préparation', label: 'Attente Prép.' }
+        { value: 'Payée', label: 'Payée' }
     ];
 
     return (
         <div className="p-6 bg-gray-50 min-h-screen">
             <div className="max-w-7xl mx-auto">
                 <div className="mb-10">
-                    <h1 className="text-3xl font-black text-gray-800 mb-2">Suivi des Dossiers</h1>
+                    <h1 className="text-3xl font-black text-gray-800 mb-2">Suivi des Dossiers</h1>        
                     <p className="text-gray-500 font-medium italic">Pilotage des demandes actives ({businessUnit}).</p>
                 </div>
 
@@ -186,7 +188,14 @@ const DemandesEnCours = () => {
                 )}
             </div>
 
-            {selectedDemande && <DemandeDetail demande={selectedDemande} onClose={() => setSelectedDemande(null)} onUpdateStatus={handleUpdateStatus} onRefresh={fetchDemandes} />}
+            {selectedDemande && (
+                <DemandeDetail 
+                    demande={selectedDemande} 
+                    onClose={() => setSelectedDemande(null)} 
+                    onUpdateStatus={handleUpdateStatus} 
+                    onRefresh={fetchDemandes} 
+                />
+            )}
         </div>
     );
 };
