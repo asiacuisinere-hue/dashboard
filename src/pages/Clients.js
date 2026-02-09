@@ -91,7 +91,7 @@ const Clients = () => {
         const orderBy = activeTab === 'particuliers' ? 'last_name' : 'nom_entreprise';
         const { data: results, error } = await query.order(orderBy, { ascending: true });
 
-        if (error) console.error('Error:', error);
+        if (error) console.error('Error fetching data:', error);
         else setData(results || []);
         setLoading(false);
     }, [activeTab, searchTerm]);
@@ -116,7 +116,8 @@ const Clients = () => {
         e.preventDefault();
         const table = activeTab === 'particuliers' ? 'clients' : 'entreprises';
         
-        // --- FIX: Extract ONLY editable fields to avoid metadata conflicts ---
+        console.log(`[DEBUG] Attempting save on table: ${table}`);
+        
         let payload = {};
         if (activeTab === 'particuliers') {
             payload = {
@@ -125,7 +126,7 @@ const Clients = () => {
                 email: formData.email,
                 phone: formData.phone || '',
                 address: formData.address || '',
-                type: 'client' // Force correct internal type
+                type: 'client'
             };
         } else {
             payload = {
@@ -137,21 +138,34 @@ const Clients = () => {
             };
         }
 
+        console.log('[DEBUG] Payload constructed:', payload);
+
         if (editId) {
-            const { error } = await supabase.from(table).update(payload).eq('id', editId);
-            if (!error) {
+            console.log(`[DEBUG] Updating record with ID: ${editId}`);
+            const { data: updatedData, error } = await supabase.from(table).update(payload).eq('id', editId).select();
+            
+            if (error) {
+                console.error('[DEBUG] Supabase Update Error:', error);
+                alert(`Erreur lors de la mise à jour: ${error.message}`);
+            } else {
+                console.log('[DEBUG] Supabase Update Success:', updatedData);
                 alert('Mise à jour réussie !');
                 handleCloseEdit();
                 fetchData();
-            } else alert(`Erreur lors de la mise à jour: ${error.message}`);
+            }
         } else {
-            // New creation: always attach business_unit if column exists
-            const { error } = await supabase.from(table).insert([payload]);
-            if (!error) {
+            console.log('[DEBUG] Creating new record');
+            const { data: insertedData, error } = await supabase.from(table).insert([payload]).select();
+            
+            if (error) {
+                console.error('[DEBUG] Supabase Insert Error:', error);
+                alert(`Erreur lors de l'ajout: ${error.message}`);
+            } else {
+                console.log('[DEBUG] Supabase Insert Success:', insertedData);
                 alert('Ajout réussi !');
                 handleCloseEdit();
                 fetchData();
-            } else alert(`Erreur lors de l'ajout: ${error.message}`);
+            }
         }
     };
 
