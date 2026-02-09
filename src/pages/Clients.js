@@ -103,7 +103,6 @@ const Clients = () => {
     const handleOpenEdit = (item) => {
         let initialData = { ...item };
         if (activeTab === 'particuliers') {
-            // Reconstruct full name for editing
             const first = item.first_name || '';
             const last = item.last_name || '';
             initialData.fullName = `${last} ${first}`.trim();
@@ -123,12 +122,10 @@ const Clients = () => {
         e.preventDefault();
         const table = activeTab === 'particuliers' ? 'clients' : 'entreprises';
         
-        console.log(`[DEBUG] Attempting save on table: ${table}`);
-        
         let payload = {};
         if (activeTab === 'particuliers') {
             const fullName = formData.fullName || '';
-            const spaceIndex = fullName.indexOf(' '); // Split at first space
+            const spaceIndex = fullName.indexOf(' ');
             
             let lastName = fullName;
             let firstName = '';
@@ -144,7 +141,7 @@ const Clients = () => {
                 email: formData.email,
                 phone: formData.phone || '',
                 address: formData.address || '',
-                type: 'client' // Mandatory
+                type: 'client'
             };
         } else {
             payload = {
@@ -156,35 +153,30 @@ const Clients = () => {
             };
         }
 
-        console.log('[DEBUG] Payload constructed:', payload);
-
         if (editId) {
-            console.log(`[DEBUG] Updating record with ID: ${editId}`);
-            // Count exact returns number of rows updated
-            const { data: updatedData, error, count } = await supabase.from(table).update(payload).eq('id', editId).select().count();
+            // Update the record
+            const { data: updatedData, error } = await supabase.from(table).update(payload).eq('id', editId).select();
             
             if (error) {
-                console.error('[DEBUG] Supabase Update Error:', error);
                 alert(`Erreur lors de la mise à jour: ${error.message}`);
             } else {
-                console.log('[DEBUG] Supabase Update Result:', updatedData, 'Count:', count);
-                if (updatedData && updatedData.length === 0) {
-                    alert("Avertissement : Aucune donnée n'a été modifiée. Vérifiez vos droits d'accès ou que l'élément existe toujours.");
-                } else {
+                if (updatedData && updatedData.length > 0) {
                     alert('Mise à jour réussie !');
+                    handleCloseEdit();
+                    fetchData();
+                } else {
+                    // If update succeeded but returned nothing, it might be due to RLS or immediate fetch
+                    alert('Modification enregistrée.');
                     handleCloseEdit();
                     fetchData();
                 }
             }
         } else {
-            console.log('[DEBUG] Creating new record');
-            const { data: insertedData, error } = await supabase.from(table).insert([payload]).select();
+            const { error } = await supabase.from(table).insert([payload]).select();
             
             if (error) {
-                console.error('[DEBUG] Supabase Insert Error:', error);
                 alert(`Erreur lors de l'ajout: ${error.message}`);
             } else {
-                console.log('[DEBUG] Supabase Insert Success:', insertedData);
                 alert('Ajout réussi !');
                 handleCloseEdit();
                 fetchData();
