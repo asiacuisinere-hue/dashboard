@@ -101,10 +101,12 @@ const Clients = () => {
     }, [fetchData]);
 
     const handleOpenEdit = (item) => {
-        // Pré-remplir le champ "Nom Complet" si on est en mode particulier
         let initialData = { ...item };
         if (activeTab === 'particuliers') {
-            initialData.fullName = `${item.last_name || ''} ${item.first_name || ''}`.trim();
+            // Reconstruct full name for editing
+            const first = item.first_name || '';
+            const last = item.last_name || '';
+            initialData.fullName = `${last} ${first}`.trim();
         }
         setFormData(initialData);
         setEditId(item.id);
@@ -121,31 +123,28 @@ const Clients = () => {
         e.preventDefault();
         const table = activeTab === 'particuliers' ? 'clients' : 'entreprises';
         
+        console.log(`[DEBUG] Attempting save on table: ${table}`);
+        
         let payload = {};
         if (activeTab === 'particuliers') {
-            // Séparation intelligente du Nom Complet
             const fullName = formData.fullName || '';
-            const lastSpaceIndex = fullName.lastIndexOf(' ');
+            const spaceIndex = fullName.indexOf(' '); // Split at first space
             
-            let firstName = '';
             let lastName = fullName;
+            let firstName = '';
 
-            if (lastSpaceIndex !== -1) {
-                lastName = fullName.substring(0, lastSpaceIndex).trim(); // On considère le début comme le nom de famille (usage courant Réunion/France)
-                firstName = fullName.substring(lastSpaceIndex + 1).trim();
-                // Note: Si vous préférez "Prénom Nom", inversez la logique.
-                // Ici je suppose format "NOM Prénom" ou "NOM DE FAMILLE Prénom"
+            if (spaceIndex !== -1) {
+                lastName = fullName.substring(0, spaceIndex).trim(); 
+                firstName = fullName.substring(spaceIndex + 1).trim();
             }
 
-            // Si un seul mot, on met tout dans Last Name pour être sûr
-            
             payload = {
-                last_name: lastName, // ou formData.fullName si on ne veut pas séparer
+                last_name: lastName, 
                 first_name: firstName,
                 email: formData.email,
                 phone: formData.phone || '',
                 address: formData.address || '',
-                type: 'client'
+                type: 'client' // Mandatory
             };
         } else {
             payload = {
@@ -157,20 +156,39 @@ const Clients = () => {
             };
         }
 
+        console.log('[DEBUG] Payload constructed:', payload);
+
         if (editId) {
-            const { error } = await supabase.from(table).update(payload).eq('id', editId);
-            if (!error) {
-                alert('Mise à jour réussie !');
-                handleCloseEdit();
-                fetchData(); // Rafraîchir la liste
-            } else alert(`Erreur: ${error.message}`);
+            console.log(`[DEBUG] Updating record with ID: ${editId}`);
+            // Count exact returns number of rows updated
+            const { data: updatedData, error, count } = await supabase.from(table).update(payload).eq('id', editId).select().count();
+            
+            if (error) {
+                console.error('[DEBUG] Supabase Update Error:', error);
+                alert(`Erreur lors de la mise à jour: ${error.message}`);
+            } else {
+                console.log('[DEBUG] Supabase Update Result:', updatedData, 'Count:', count);
+                if (updatedData && updatedData.length === 0) {
+                    alert("Avertissement : Aucune donnée n'a été modifiée. Vérifiez vos droits d'accès ou que l'élément existe toujours.");
+                } else {
+                    alert('Mise à jour réussie !');
+                    handleCloseEdit();
+                    fetchData();
+                }
+            }
         } else {
-            const { error } = await supabase.from(table).insert([payload]);
-            if (!error) {
+            console.log('[DEBUG] Creating new record');
+            const { data: insertedData, error } = await supabase.from(table).insert([payload]).select();
+            
+            if (error) {
+                console.error('[DEBUG] Supabase Insert Error:', error);
+                alert(`Erreur lors de l'ajout: ${error.message}`);
+            } else {
+                console.log('[DEBUG] Supabase Insert Success:', insertedData);
                 alert('Ajout réussi !');
                 handleCloseEdit();
                 fetchData();
-            } else alert(`Erreur: ${error.message}`);
+            }
         }
     };
 
