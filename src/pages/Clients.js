@@ -116,25 +116,42 @@ const Clients = () => {
         e.preventDefault();
         const table = activeTab === 'particuliers' ? 'clients' : 'entreprises';
         
-        const finalData = { ...formData };
+        // --- FIX: Extract ONLY editable fields to avoid metadata conflicts ---
+        let payload = {};
         if (activeTab === 'particuliers') {
-            finalData.type = 'client'; // Internal value used in DB to satisfy NOT NULL
+            payload = {
+                last_name: formData.last_name,
+                first_name: formData.first_name || '',
+                email: formData.email,
+                phone: formData.phone || '',
+                address: formData.address || '',
+                type: 'client' // Force correct internal type
+            };
+        } else {
+            payload = {
+                nom_entreprise: formData.nom_entreprise,
+                siret: formData.siret || '',
+                contact_email: formData.contact_email,
+                contact_name: formData.contact_name || '',
+                contact_phone: formData.contact_phone || ''
+            };
         }
 
         if (editId) {
-            const { error } = await supabase.from(table).update(finalData).eq('id', editId);
+            const { error } = await supabase.from(table).update(payload).eq('id', editId);
             if (!error) {
                 alert('Mise à jour réussie !');
                 handleCloseEdit();
                 fetchData();
-            } else alert(error.message);
+            } else alert(`Erreur lors de la mise à jour: ${error.message}`);
         } else {
-            const { error } = await supabase.from(table).insert([finalData]);
+            // New creation: always attach business_unit if column exists
+            const { error } = await supabase.from(table).insert([payload]);
             if (!error) {
                 alert('Ajout réussi !');
                 handleCloseEdit();
                 fetchData();
-            } else alert(error.message);
+            } else alert(`Erreur lors de l'ajout: ${error.message}`);
         }
     };
 
