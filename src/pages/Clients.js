@@ -101,7 +101,12 @@ const Clients = () => {
     }, [fetchData]);
 
     const handleOpenEdit = (item) => {
-        setFormData(item);
+        // Pré-remplir le champ "Nom Complet" si on est en mode particulier
+        let initialData = { ...item };
+        if (activeTab === 'particuliers') {
+            initialData.fullName = `${item.last_name || ''} ${item.first_name || ''}`.trim();
+        }
+        setFormData(initialData);
         setEditId(item.id);
         setIsEditing(true);
     };
@@ -116,13 +121,27 @@ const Clients = () => {
         e.preventDefault();
         const table = activeTab === 'particuliers' ? 'clients' : 'entreprises';
         
-        console.log(`[DEBUG] Attempting save on table: ${table}`);
-        
         let payload = {};
         if (activeTab === 'particuliers') {
+            // Séparation intelligente du Nom Complet
+            const fullName = formData.fullName || '';
+            const lastSpaceIndex = fullName.lastIndexOf(' ');
+            
+            let firstName = '';
+            let lastName = fullName;
+
+            if (lastSpaceIndex !== -1) {
+                lastName = fullName.substring(0, lastSpaceIndex).trim(); // On considère le début comme le nom de famille (usage courant Réunion/France)
+                firstName = fullName.substring(lastSpaceIndex + 1).trim();
+                // Note: Si vous préférez "Prénom Nom", inversez la logique.
+                // Ici je suppose format "NOM Prénom" ou "NOM DE FAMILLE Prénom"
+            }
+
+            // Si un seul mot, on met tout dans Last Name pour être sûr
+            
             payload = {
-                last_name: formData.last_name,
-                first_name: formData.first_name || '',
+                last_name: lastName, // ou formData.fullName si on ne veut pas séparer
+                first_name: firstName,
                 email: formData.email,
                 phone: formData.phone || '',
                 address: formData.address || '',
@@ -138,34 +157,20 @@ const Clients = () => {
             };
         }
 
-        console.log('[DEBUG] Payload constructed:', payload);
-
         if (editId) {
-            console.log(`[DEBUG] Updating record with ID: ${editId}`);
-            const { data: updatedData, error } = await supabase.from(table).update(payload).eq('id', editId).select();
-            
-            if (error) {
-                console.error('[DEBUG] Supabase Update Error:', error);
-                alert(`Erreur lors de la mise à jour: ${error.message}`);
-            } else {
-                console.log('[DEBUG] Supabase Update Success:', updatedData);
+            const { error } = await supabase.from(table).update(payload).eq('id', editId);
+            if (!error) {
                 alert('Mise à jour réussie !');
                 handleCloseEdit();
-                fetchData();
-            }
+                fetchData(); // Rafraîchir la liste
+            } else alert(`Erreur: ${error.message}`);
         } else {
-            console.log('[DEBUG] Creating new record');
-            const { data: insertedData, error } = await supabase.from(table).insert([payload]).select();
-            
-            if (error) {
-                console.error('[DEBUG] Supabase Insert Error:', error);
-                alert(`Erreur lors de l'ajout: ${error.message}`);
-            } else {
-                console.log('[DEBUG] Supabase Insert Success:', insertedData);
+            const { error } = await supabase.from(table).insert([payload]);
+            if (!error) {
                 alert('Ajout réussi !');
                 handleCloseEdit();
                 fetchData();
-            }
+            } else alert(`Erreur: ${error.message}`);
         }
     };
 
@@ -221,8 +226,7 @@ const Clients = () => {
                         <form onSubmit={handleSave} className="space-y-4">
                             {activeTab === 'particuliers' ? (
                                 <>
-                                    <div><label className="block text-xs font-bold text-gray-400 uppercase mb-1">Nom Complet</label><input required type="text" value={formData.last_name || ''} onChange={e => setFormData({...formData, last_name: e.target.value})} className="w-full p-3 border rounded-xl" placeholder="Ex: Jean Dupont" /></div>
-                                    <div className="hidden"><label className="block text-xs font-bold text-gray-400 uppercase mb-1">Prénom</label><input type="text" value={formData.first_name || ''} onChange={e => setFormData({...formData, first_name: e.target.value})} className="w-full p-3 border rounded-xl" /></div>
+                                    <div><label className="block text-xs font-bold text-gray-400 uppercase mb-1">Nom Complet</label><input required type="text" value={formData.fullName || ''} onChange={e => setFormData({...formData, fullName: e.target.value})} className="w-full p-3 border rounded-xl" placeholder="Ex: Jean Dupont" /></div>
                                     <div><label className="block text-xs font-bold text-gray-400 uppercase mb-1">Email</label><input required type="email" value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full p-3 border rounded-xl" /></div>
                                     <div><label className="block text-xs font-bold text-gray-400 uppercase mb-1">Téléphone</label><input type="tel" value={formData.phone || ''} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full p-3 border rounded-xl" /></div>
                                     <div><label className="block text-xs font-bold text-gray-400 uppercase mb-1">Adresse</label><textarea value={formData.address || ''} onChange={e => setFormData({...formData, address: e.target.value})} className="w-full p-3 border rounded-xl h-24" /></div>
