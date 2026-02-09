@@ -144,11 +144,22 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
         let cleaned = phone?.replace(/\D/g, '');
         if (cleaned?.startsWith('0')) cleaned = '262' + cleaned.substring(1);
         else if (cleaned && !cleaned.startsWith('262') && !cleaned.startsWith('33')) cleaned = '262' + cleaned;
-        
+
         if (!cleaned) return alert("Numéro manquant.");
         const clientName = demande.clients ? client.first_name : (client.contact_name || client.nom_entreprise);
-        const message = `Bonjour ${clientName}, voici votre lien Asiacuisine pour le ${new Date(requestDate).toLocaleDateString('fr-FR')} (${totalAmount}€) : ${paymentLink}`;
-        window.open(`https://wa.me/${cleaned}?text=${encodeURIComponent(message)}`, '_blank');     
+        
+        // --- OPTIMIZED MESSAGE PRESENTATION ---
+        const formattedDate = new Date(requestDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+        const message = `🍱 *Asiacuisine.re - Confirmation de Commande*\n\n` +
+                        `Bonjour ${clientName},\n\n` +
+                        `C'est avec plaisir que je valide votre demande pour le *${formattedDate}*.\n\n` +
+                        `💰 *Montant total :* ${totalAmount}€\n\n` +
+                        `Pour confirmer votre réservation, merci de procéder au règlement via notre lien sécurisé Stripe ci-dessous :\n\n` +
+                        `🔗 ${paymentLink}\n\n` +
+                        `_Note : Une fois le règlement effectué, vous recevrez automatiquement votre QR code par e-mail._\n\n` +
+                        `À très bientôt !\n👨‍🍳 *Le Chef*`;
+
+        window.open(`https://wa.me/${cleaned}?text=${encodeURIComponent(message)}`, '_blank');
     };
 
     const handleAction = async () => {
@@ -254,7 +265,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
 
                             {/* ÉTAPE 1 : Validation d'intention */}
                             {demande.status === 'Intention WhatsApp' && (
-                                <button onClick={handleSendConfirmation} disabled={isSendingConfirmation} className="w-full py-5 bg-amber-500 text-white rounded-2xl font-black text-sm shadow-xl hover:bg-amber-600 transition-all flex items-center justify-center gap-3 uppercase tracking-widest active:scale-95">
+                                <button onClick={handleSendConfirmation} disabled={isSendingConfirmation} className="w-full py-5 bg-amber-500 text-white rounded-2xl font-black text-sm shadow-xl hover:bg-amber-600 transition-all flex items-center justify-center gap-3 uppercase tracking-widest active:scale-95">        
                                     {isSendingConfirmation ? <RefreshCw className="animate-spin" size={20}/> : <Mail size={20}/>} VALIDER & ENVOYER EMAIL
                                 </button>
                             )}
@@ -262,7 +273,8 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                             {/* ÉTAPE 2 : Flux de paiement & documents */}
                             {(demande.status === 'Nouvelle' || demande.status === 'En attente de paiement' || demande.status === 'confirmed') && (
                                 <>
-                                    <button onClick={() => handleGenerateStripeLink('total')} disabled={isGeneratingStripeLink} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest">    
+                                    <button onClick={() => handleGenerateStripeLink('total')} disabled={isGeneratingStripeLink} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest">
+
                                         {isGeneratingStripeLink ? <RefreshCw className="animate-spin" size={16}/> : <RefreshCw size={16}/>} GÉNÉRER LIEN STRIPE
                                     </button>
 
@@ -272,7 +284,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                                     {/* Boutons documents */}
                                     {(!isMenuOrder) && <button onClick={handleAction} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest"><FilePlus size={16}/> CRÉER UN DEVIS</button>}
                                     {(isMenuOrder && demande.status !== 'En attente de traitement') && <button onClick={handleAction} disabled={isGenerating} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest">{isGenerating ? <RefreshCw className="animate-spin" size={16}/> : <Mail size={16}/>} GÉNÉRER & ENVOYER FACTURE</button>}
-                                    
+
                                     {/* Validation de paiement manuelle */}
                                     <button onClick={handleSendQr} disabled={isSendingQrCode} className="w-full py-4 bg-green-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-green-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest"><QrCode size={16}/> PAIEMENT REÇU & ENV. QR</button>
                                 </>
