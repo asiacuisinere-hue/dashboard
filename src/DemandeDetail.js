@@ -7,7 +7,7 @@ import {
     Euro, ClipboardList, CheckCircle2,
     RefreshCw, FilePlus, QrCode, Mail,
     Phone, Save, ShoppingCart, ChefHat, XCircle,
-    MessageCircle
+    MessageCircle, PackageCheck, Truck
 } from 'lucide-react';
 
 const communesReunion = [
@@ -43,40 +43,10 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
             setDetails(demande.details_json || {});
             setRequestDate(demande.request_date ? new Date(demande.request_date).toISOString().split('T')[0] : '');
             setPaymentLink('');
-
-            let initialAmount = demande.total_amount;
-
-            // --- RESTAURATION : Auto-fill price from settings for Menus ---
-            if ((!initialAmount || initialAmount <= 0) && demande.type === 'COMMANDE_MENU') {
-                try {
-                    const { data: settingsList } = await supabase
-                        .from('settings')
-                        .select('key, value')
-                        .in('key', ['menu_decouverte_price', 'menu_standard_price', 'menu_duo_price', 'menu_confort_price']);
-
-                    if (settingsList) {
-                        const prices = {};
-                        settingsList.forEach(s => { prices[s.key] = parseFloat(s.value); });
-                        const formula = demande.details_json?.formulaName || "";
-                        let calculated = 0;
-                        if (formula.includes('Découverte')) calculated = prices['menu_decouverte_price'];
-                        else if (formula.includes('Standard')) calculated = prices['menu_standard_price'];
-                        else if (formula.includes('Confort')) calculated = prices['menu_confort_price'];  
-                        else if (formula.includes('Duo')) calculated = prices['menu_duo_price'];
-
-                        if (calculated > 0) {
-                            initialAmount = calculated;
-                            setTotalAmount(calculated);
-                            // Auto-save the found price to avoid re-fetching
-                            await supabase.from('demandes').update({ total_amount: calculated }).eq('id', demande.id);
-                        }
-                    }
-                } catch (err) { console.error("Error in auto-fill:", err); }
-            }
-            setTotalAmount(initialAmount || '');
+            setTotalAmount(demande.total_amount || '');
         };
         initializeModal();
-    }, [demande.id, demande.details_json, demande.request_date, demande.total_amount, demande.type]);     
+    }, [demande.id, demande.details_json, demande.request_date, demande.total_amount]);
 
     if (!demande) return null;
 
@@ -147,18 +117,8 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
 
         if (!cleaned) return alert("Numéro manquant.");
         const clientName = demande.clients ? client.first_name : (client.contact_name || client.nom_entreprise);
-        
-        // --- OPTIMIZED MESSAGE PRESENTATION ---
         const formattedDate = new Date(requestDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-        const message = `🍱 *Asiacuisine.re - Confirmation de Commande*\n\n` +
-                        `Bonjour ${clientName},\n\n` +
-                        `C'est avec plaisir que je valide votre demande pour le *${formattedDate}*.\n\n` +
-                        `💰 *Montant total :* ${totalAmount}€\n\n` +
-                        `Pour confirmer votre réservation, merci de procéder au règlement via notre lien sécurisé Stripe ci-dessous :\n\n` +
-                        `🔗 ${paymentLink}\n\n` +
-                        `_Note : Une fois le règlement effectué, vous recevrez automatiquement votre QR code par e-mail._\n\n` +
-                        `À très bientôt !\n👨‍🍳 *Le Chef*`;
-
+        const message = `🍱 *Asiacuisine.re - Confirmation de Commande*\n\nBonjour ${clientName},\n\nC'est avec plaisir que je valide votre demande pour le *${formattedDate}*.\n\n💰 *Montant total :* ${totalAmount}€\n\nPour confirmer votre réservation, merci de procéder au règlement via notre lien sécurisé Stripe ci-dessous :\n\n🔗 ${paymentLink}\n\n_Note : Une fois le règlement effectué, vous recevrez automatiquement votre QR code par e-mail._\n\nÀ très bientôt !\n👨‍🍳 *Le Chef*`;
         window.open(`https://wa.me/${cleaned}?text=${encodeURIComponent(message)}`, '_blank');
     };
 
@@ -270,22 +230,31 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                                 </button>
                             )}
 
-                            {/* ÉTAPE 2 : Flux de paiement & documents */}
+                            {/* LOGISTIQUE & PRÉPARATION : Nouveaux boutons rapides */}
+                            {demande.status === 'En attente de préparation' && (
+                                <button onClick={() => onUpdateStatus(demande.id, 'Préparation en cours')} className="w-full py-4 bg-cyan-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-cyan-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest"><ChefHat size={16}/> LANCER LA CUISINE</button>
+                            )}
+                            
+                            {demande.status === 'Préparation en cours' && (
+                                <button onClick={() => onUpdateStatus(demande.id, 'Prêt pour livraison')} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest"><PackageCheck size={16}/> MARQUER COMME PRÊT</button>
+                            )}
+
+                            {demande.status === 'Prêt pour livraison' && (
+                                <button onClick={() => onUpdateStatus(demande.id, 'completed')} className="w-full py-4 bg-green-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-green-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest"><Truck size={16}/> LIVRAISON EFFECTUÉE (CLÔTURER)</button>
+                            )}
+
+                            {/* Flux de paiement & documents */}
                             {(demande.status === 'Nouvelle' || demande.status === 'En attente de paiement' || demande.status === 'confirmed') && (
                                 <>
                                     <button onClick={() => handleGenerateStripeLink('total')} disabled={isGeneratingStripeLink} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest">
-
                                         {isGeneratingStripeLink ? <RefreshCw className="animate-spin" size={16}/> : <RefreshCw size={16}/>} GÉNÉRER LIEN STRIPE
                                     </button>
 
-                                    {/* Confirmation logistique manuelle pour prestations */}
                                     {(demande.status === 'Nouvelle' && !isMenuOrder) && <button onClick={() => onUpdateStatus(demande.id, 'confirmed')} className="w-full py-4 bg-green-100 text-green-700 border border-green-200 rounded-2xl font-black text-xs hover:bg-green-200 transition-all flex items-center justify-center gap-2 uppercase tracking-widest"><CheckCircle2 size={16}/> CONFIRMER LOGISTIQUE</button>}
 
-                                    {/* Boutons documents */}
                                     {(!isMenuOrder) && <button onClick={handleAction} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest"><FilePlus size={16}/> CRÉER UN DEVIS</button>}
                                     {(isMenuOrder && demande.status !== 'En attente de traitement') && <button onClick={handleAction} disabled={isGenerating} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest">{isGenerating ? <RefreshCw className="animate-spin" size={16}/> : <Mail size={16}/>} GÉNÉRER & ENVOYER FACTURE</button>}
 
-                                    {/* Validation de paiement manuelle */}
                                     <button onClick={handleSendQr} disabled={isSendingQrCode} className="w-full py-4 bg-green-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-green-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest"><QrCode size={16}/> PAIEMENT REÇU & ENV. QR</button>
                                 </>
                             )}
