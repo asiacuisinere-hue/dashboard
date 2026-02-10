@@ -7,7 +7,7 @@ import {
     Euro, ClipboardList, CheckCircle2,
     RefreshCw, FilePlus, QrCode, Mail,
     Phone, Save, ShoppingCart, ChefHat, XCircle,
-    MessageCircle, PackageCheck, Truck
+    MessageCircle, PackageCheck, Truck, ListChecks
 } from 'lucide-react';
 
 const communesReunion = [
@@ -46,7 +46,6 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
 
             let initialAmount = demande.total_amount;
 
-            // --- RESTAURATION : Auto-fill price from settings for Menus ---
             if ((!initialAmount || initialAmount <= 0) && demande.type === 'COMMANDE_MENU') {
                 try {
                     const { data: settingsList } = await supabase
@@ -192,7 +191,6 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
         ? `${demande.clients.last_name || ''} ${demande.clients.first_name || ''}`.trim()
         : (demande.entreprises?.nom_entreprise || 'Inconnu');
 
-    // --- NEW: Helper to render additional details from JSON ---
     const renderExtraDetails = () => {
         const excludeKeys = ['ville', 'deliveryCity', 'heure', 'numberOfPeople', 'customerMessage', 'notes', 'items', 'total'];
         const keyMap = {
@@ -204,9 +202,9 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
         };
 
         return Object.entries(details).map(([key, value]) => {
-            if (excludeKeys.includes(key) || !value) return null;
+            if (excludeKeys.includes(key) || !value || typeof value !== 'string') return null;
             return (
-                <div key={key} className="bg-white/50 p-3 rounded-xl border border-gray-100 shadow-sm">
+                <div key={key} className="bg-white/50 p-3 rounded-xl border border-gray-100 shadow-sm">   
                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-tighter mb-0.5">{keyMap[key] || key}</p>
                     <p className="text-xs font-bold text-gray-700">{String(value)}</p>
                 </div>
@@ -236,7 +234,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
                     <div className="lg:col-span-7 space-y-8">
-                        <div className={`p-8 rounded-[2rem] border-2 ${themeColor === 'blue' ? 'border-blue-200 bg-blue-50/20' : 'border-amber-200 bg-amber-50/20'}`}>
+                        <div className={`p-8 rounded-[2rem] border-2 ${themeColor === 'blue' ? 'border-blue-200 bg-blue-50/20' : 'border-amber-200 bg-amber-50/10'}`}>
                             <label className={`text-xs font-black uppercase tracking-widest block mb-4 ${themeColor === 'blue' ? 'text-blue-600' : 'text-amber-600'}`}>Montant Total (€)</label>
                             <div className="relative">
                                 <input type="number" step="0.01" value={totalAmount} onChange={e => setTotalAmount(e.target.value)} className="w-full bg-white p-5 rounded-2xl font-black text-3xl outline-none shadow-sm focus:ring-2 focus:ring-amber-500" placeholder="0.00" />
@@ -244,14 +242,35 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                             </div>
                         </div>
 
+                        {/* SECTION PANIER (POUR OFFRES SPÉCIALES) */}
+                        {demande.type === 'COMMANDE_SPECIALE' && Array.isArray(details) && details.length > 0 && (
+                            <div className="bg-amber-50 p-8 rounded-[2rem] border border-amber-100 shadow-sm">
+                                <h3 className="text-sm font-black uppercase tracking-widest text-amber-600 mb-6 flex items-center gap-2"><ListChecks size={18}/> Sélection Offre Spéciale</h3>
+                                <div className="space-y-3">
+                                    {details.map((item, idx) => (
+                                        <div key={idx} className="flex justify-between items-center bg-white p-4 rounded-2xl border border-amber-50 shadow-sm">
+                                            <div>
+                                                <p className="font-black text-gray-800 text-sm">{item.name}</p>
+                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{item.portion}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-xs font-black text-gray-700">x{item.quantity}</p>
+                                                <p className="text-[10px] font-bold text-amber-600">{(item.price * item.quantity).toFixed(2)}€</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         <div className="bg-gray-50 p-8 rounded-[2rem] border border-gray-100">
                             <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-6 flex items-center gap-2"><ClipboardList size={16}/> Détails du Projet</h3>
-                            
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                                 <div><label className="text-[10px] font-black text-gray-400 uppercase ml-2 mb-1 block">Date Souhaitée</label><input type="date" value={requestDate} onChange={e => setRequestDate(e.target.value)} className="w-full p-3 bg-white border-0 rounded-xl font-bold shadow-sm" /></div>
                                 <div><label className="text-[10px] font-black text-gray-400 uppercase ml-2 mb-1 block">Ville</label><select name="ville" value={details.ville || details.deliveryCity || ''} onChange={handleDetailChange} className="w-full p-3 bg-white border-0 rounded-xl font-bold shadow-sm"><option value="">Choisir...</option>{communesReunion.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
-                                
-                                {!isMenuOrder && (
+
+                                {demande.type === 'RESERVATION_SERVICE' && (
                                     <>
                                         <div><label className="text-[10px] font-black text-gray-400 uppercase ml-2 mb-1 block">Heure</label><select name="heure" value={details.heure || ''} onChange={handleDetailChange} className="w-full p-3 bg-white border-0 rounded-xl font-bold shadow-sm"><option value="">Non défini</option><option value="Midi">Midi</option><option value="Soir">Soir</option></select></div>
                                         <div><label className="text-[10px] font-black text-gray-400 uppercase ml-2 mb-1 block">Nombre d'invités</label><input type="text" name="numberOfPeople" value={details.numberOfPeople || ''} onChange={handleDetailChange} className="w-full p-3 bg-white border-0 rounded-xl font-bold shadow-sm" /></div>
@@ -297,7 +316,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                             {demande.status === 'En attente de préparation' && (
                                 <button onClick={() => onUpdateStatus(demande.id, 'Préparation en cours')} className="w-full py-4 bg-cyan-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-cyan-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest"><ChefHat size={16}/> LANCER LA CUISINE</button>
                             )}
-                            
+
                             {demande.status === 'Préparation en cours' && (
                                 <button onClick={() => onUpdateStatus(demande.id, 'Prêt pour livraison')} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest"><PackageCheck size={16}/> MARQUER COMME PRÊT</button>
                             )}
