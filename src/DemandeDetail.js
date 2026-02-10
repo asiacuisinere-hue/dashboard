@@ -23,7 +23,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
     const { businessUnit } = useBusinessUnit();
     const initializedRef = useRef(null);
 
-    const [details, setDetails] = useState(demande.details_json || {});
+    const [details, setDetails] = useState({});
     const [requestDate, setRequestDate] = useState('');
     const [totalAmount, setTotalAmount] = useState(demande.total_amount || '');
     const [isGenerating, setIsGenerating] = useState(false);
@@ -33,30 +33,50 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
     const [paymentLink, setPaymentLink] = useState('');
 
     const themeColor = businessUnit === 'courtage' ? 'blue' : 'amber';
-    const isMenuOrder = demande.type === 'COMMANDE_MENU' || demande.type === 'COMMANDE_SPECIALE';
 
     useEffect(() => {
         if (initializedRef.current === demande.id) return;
         initializedRef.current = demande.id;
 
         const initializeModal = async () => {
-            setDetails(demande.details_json || {});
+            let rawData = demande.details_json || {};
+            let parsedDetails = rawData;
+
+            // --- STRATÉGIE DE DÉBOGAGE NUCLÉAIRE ---
+            
+            // 1. Si c'est du texte brut (JSON stringifié)
+            if (typeof rawData === 'string') {
+                try { parsedDetails = JSON.parse(rawData); } catch (e) {}
+            }
+            
+            // 2. Si c'est l'objet corrompu avec des index "0", "1", "2"... (Le problème actuel)
+            if (typeof rawData === 'object' && rawData !== null && rawData["0"] !== undefined) {
+                try {
+                    // On recolle les morceaux de texte
+                    const reconstructedString = Object.values(rawData).join('');
+                    parsedDetails = JSON.parse(reconstructedString);
+                } catch (e) {
+                    console.error("Échec de la reconstruction du JSON", e);
+                }
+            }
+
+            setDetails(parsedDetails);
             setRequestDate(demande.request_date ? new Date(demande.request_date).toISOString().split('T')[0] : '');
             setPaymentLink('');
 
             let initialAmount = demande.total_amount;
 
+            // Auto-fill price for standard menus
             if ((!initialAmount || initialAmount <= 0) && demande.type === 'COMMANDE_MENU') {
                 try {
                     const { data: settingsList } = await supabase
-                        .from('settings')
-                        .select('key, value')
+                        .from('settings').select('key, value')
                         .in('key', ['menu_decouverte_price', 'menu_standard_price', 'menu_duo_price', 'menu_confort_price']);
 
                     if (settingsList) {
                         const prices = {};
                         settingsList.forEach(s => { prices[s.key] = parseFloat(s.value); });
-                        const formula = demande.details_json?.formulaName || "";
+                        const formula = parsedDetails?.formulaName || "";
                         let calculated = 0;
                         if (formula.includes('Découverte')) calculated = prices['menu_decouverte_price'];
                         else if (formula.includes('Standard')) calculated = prices['menu_standard_price'];
@@ -69,7 +89,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                             await supabase.from('demandes').update({ total_amount: calculated }).eq('id', demande.id);
                         }
                     }
-                } catch (err) { console.error("Error in auto-fill:", err); }
+                } catch (err) {}
             }
             setTotalAmount(initialAmount || '');
         };
@@ -152,7 +172,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
 
     const handleAction = async () => {
         const client = demande.clients || demande.entreprises;
-        if (isMenuOrder) {
+        if (demande.type === 'COMMANDE_MENU' || demande.type === 'COMMANDE_SPECIALE') {
             if (!window.confirm("Générer et envoyer la facture par email ?")) return;
             setIsGenerating(true);
             try {
@@ -192,6 +212,9 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
         : (demande.entreprises?.nom_entreprise || 'Inconnu');
 
     const renderExtraDetails = () => {
+        // NE PAS ESSAYER DE RENDRE SI C'EST UNE LISTE (PANIER) OU UN OBJET D'INDEX
+        if (Array.isArray(details) || details["0"] !== undefined) return null;
+
         const excludeKeys = ['ville', 'deliveryCity', 'heure', 'numberOfPeople', 'customerMessage', 'notes', 'items', 'total'];
         const keyMap = {
             formulaName: 'Formule',
@@ -220,7 +243,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                 <div className="mb-10 flex items-start justify-between">
                     <div className="flex items-center gap-5">
                         <div className={`p-5 rounded-[1.5rem] bg-${themeColor}-50 text-${themeColor}-600 shadow-sm border border-${themeColor}-100`}>
-                            {isMenuOrder ? <ShoppingCart size={32}/> : <ChefHat size={32}/>}
+                            {demande.type === 'COMMANDE_SPECIALE' ? <ShoppingCart size={32}/> : <ChefHat size={32}/>}
                         </div>
                         <div>
                             <div className="flex items-center gap-3 mb-2">
@@ -242,7 +265,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                             </div>
                         </div>
 
-                        {/* SECTION PANIER (POUR OFFRES SPÉCIALES) */}
+                        {/* SECTION PANIER RECONSTRUITE */}
                         {demande.type === 'COMMANDE_SPECIALE' && Array.isArray(details) && details.length > 0 && (
                             <div className="bg-amber-50 p-8 rounded-[2rem] border border-amber-100 shadow-sm">
                                 <h3 className="text-sm font-black uppercase tracking-widest text-amber-600 mb-6 flex items-center gap-2"><ListChecks size={18}/> Sélection Offre Spéciale</h3>
@@ -278,7 +301,6 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                                 )}
                             </div>
 
-                            {/* EXTRA DETAILS (Formula, Option, etc.) */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
                                 {renderExtraDetails()}
                             </div>
@@ -331,10 +353,10 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                                         {isGeneratingStripeLink ? <RefreshCw className="animate-spin" size={16}/> : <RefreshCw size={16}/>} GÉNÉRER LIEN STRIPE
                                     </button>
 
-                                    {(demande.status === 'Nouvelle' && !isMenuOrder) && <button onClick={() => onUpdateStatus(demande.id, 'confirmed')} className="w-full py-4 bg-green-100 text-green-700 border border-green-200 rounded-2xl font-black text-xs hover:bg-green-200 transition-all flex items-center justify-center gap-2 uppercase tracking-widest"><CheckCircle2 size={16}/> CONFIRMER LOGISTIQUE</button>}
+                                    {(demande.status === 'Nouvelle' && demande.type === 'RESERVATION_SERVICE') && <button onClick={() => onUpdateStatus(demande.id, 'confirmed')} className="w-full py-4 bg-green-100 text-green-700 border border-green-200 rounded-2xl font-black text-xs hover:bg-green-200 transition-all flex items-center justify-center gap-2 uppercase tracking-widest"><CheckCircle2 size={16}/> CONFIRMER LOGISTIQUE</button>}
 
-                                    {(!isMenuOrder) && <button onClick={handleAction} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest"><FilePlus size={16}/> CRÉER UN DEVIS</button>}
-                                    {(isMenuOrder && demande.status !== 'En attente de traitement') && <button onClick={handleAction} disabled={isGenerating} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest">{isGenerating ? <RefreshCw className="animate-spin" size={16}/> : <Mail size={16}/>} GÉNÉRER & ENVOYER FACTURE</button>}
+                                    {(demande.type === 'RESERVATION_SERVICE') && <button onClick={handleAction} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest"><FilePlus size={16}/> CRÉER UN DEVIS</button>}
+                                    {(demande.type !== 'RESERVATION_SERVICE' && demande.status !== 'En attente de traitement' && demande.status !== 'Intention WhatsApp') && <button onClick={handleAction} disabled={isGenerating} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest">{isGenerating ? <RefreshCw className="animate-spin" size={16}/> : <Mail size={16}/>} GÉNÉRER & ENVOYER FACTURE</button>}
 
                                     <button onClick={handleSendQr} disabled={isSendingQrCode} className="w-full py-4 bg-green-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-green-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest"><QrCode size={16}/> PAIEMENT REÇU & ENV. QR</button>
                                 </>
