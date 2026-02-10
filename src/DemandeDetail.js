@@ -43,10 +43,39 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
             setDetails(demande.details_json || {});
             setRequestDate(demande.request_date ? new Date(demande.request_date).toISOString().split('T')[0] : '');
             setPaymentLink('');
-            setTotalAmount(demande.total_amount || '');
+
+            let initialAmount = demande.total_amount;
+
+            // --- RESTAURATION : Auto-fill price from settings for Menus ---
+            if ((!initialAmount || initialAmount <= 0) && demande.type === 'COMMANDE_MENU') {
+                try {
+                    const { data: settingsList } = await supabase
+                        .from('settings')
+                        .select('key, value')
+                        .in('key', ['menu_decouverte_price', 'menu_standard_price', 'menu_duo_price', 'menu_confort_price']);
+
+                    if (settingsList) {
+                        const prices = {};
+                        settingsList.forEach(s => { prices[s.key] = parseFloat(s.value); });
+                        const formula = demande.details_json?.formulaName || "";
+                        let calculated = 0;
+                        if (formula.includes('Découverte')) calculated = prices['menu_decouverte_price'];
+                        else if (formula.includes('Standard')) calculated = prices['menu_standard_price'];
+                        else if (formula.includes('Confort')) calculated = prices['menu_confort_price'];  
+                        else if (formula.includes('Duo')) calculated = prices['menu_duo_price'];
+
+                        if (calculated > 0) {
+                            initialAmount = calculated;
+                            setTotalAmount(calculated);
+                            await supabase.from('demandes').update({ total_amount: calculated }).eq('id', demande.id);
+                        }
+                    }
+                } catch (err) { console.error("Error in auto-fill:", err); }
+            }
+            setTotalAmount(initialAmount || '');
         };
         initializeModal();
-    }, [demande.id, demande.details_json, demande.request_date, demande.total_amount]);
+    }, [demande.id, demande.details_json, demande.request_date, demande.total_amount, demande.type]);     
 
     if (!demande) return null;
 
@@ -163,6 +192,28 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
         ? `${demande.clients.last_name || ''} ${demande.clients.first_name || ''}`.trim()
         : (demande.entreprises?.nom_entreprise || 'Inconnu');
 
+    // --- NEW: Helper to render additional details from JSON ---
+    const renderExtraDetails = () => {
+        const excludeKeys = ['ville', 'deliveryCity', 'heure', 'numberOfPeople', 'customerMessage', 'notes', 'items', 'total'];
+        const keyMap = {
+            formulaName: 'Formule',
+            formulaOption: 'Option Sélectionnée',
+            serviceType: 'Type de Service',
+            budget: 'Budget Estimé',
+            allergies: 'Allergies / Régimes'
+        };
+
+        return Object.entries(details).map(([key, value]) => {
+            if (excludeKeys.includes(key) || !value) return null;
+            return (
+                <div key={key} className="bg-white/50 p-3 rounded-xl border border-gray-100 shadow-sm">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-tighter mb-0.5">{keyMap[key] || key}</p>
+                    <p className="text-xs font-bold text-gray-700">{String(value)}</p>
+                </div>
+            );
+        });
+    };
+
     return (
         <div className="fixed inset-0 bg-black/70 z-[1000] flex items-center justify-center p-4 backdrop-blur-sm">
             <div className="bg-white rounded-[2.5rem] w-full max-w-4xl max-h-[90vh] overflow-y-auto relative p-10 shadow-2xl animate-in zoom-in duration-300">
@@ -195,10 +246,24 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
 
                         <div className="bg-gray-50 p-8 rounded-[2rem] border border-gray-100">
                             <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-6 flex items-center gap-2"><ClipboardList size={16}/> Détails du Projet</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                                 <div><label className="text-[10px] font-black text-gray-400 uppercase ml-2 mb-1 block">Date Souhaitée</label><input type="date" value={requestDate} onChange={e => setRequestDate(e.target.value)} className="w-full p-3 bg-white border-0 rounded-xl font-bold shadow-sm" /></div>
                                 <div><label className="text-[10px] font-black text-gray-400 uppercase ml-2 mb-1 block">Ville</label><select name="ville" value={details.ville || details.deliveryCity || ''} onChange={handleDetailChange} className="w-full p-3 bg-white border-0 rounded-xl font-bold shadow-sm"><option value="">Choisir...</option>{communesReunion.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
+                                
+                                {!isMenuOrder && (
+                                    <>
+                                        <div><label className="text-[10px] font-black text-gray-400 uppercase ml-2 mb-1 block">Heure</label><select name="heure" value={details.heure || ''} onChange={handleDetailChange} className="w-full p-3 bg-white border-0 rounded-xl font-bold shadow-sm"><option value="">Non défini</option><option value="Midi">Midi</option><option value="Soir">Soir</option></select></div>
+                                        <div><label className="text-[10px] font-black text-gray-400 uppercase ml-2 mb-1 block">Nombre d'invités</label><input type="text" name="numberOfPeople" value={details.numberOfPeople || ''} onChange={handleDetailChange} className="w-full p-3 bg-white border-0 rounded-xl font-bold shadow-sm" /></div>
+                                    </>
+                                )}
                             </div>
+
+                            {/* EXTRA DETAILS (Formula, Option, etc.) */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+                                {renderExtraDetails()}
+                            </div>
+
                             <div className="mt-6"><label className="text-[10px] font-black text-gray-400 uppercase ml-2 mb-1 block">Notes / Message Client</label><textarea name="customerMessage" value={details.customerMessage || details.notes || ''} onChange={handleDetailChange} className="w-full p-4 bg-white border-0 rounded-xl font-medium shadow-sm h-24" /></div>
                         </div>
                     </div>
@@ -223,14 +288,12 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                         <div className="space-y-3">
                             <button onClick={() => handleSave(false)} className="w-full py-4 bg-gray-800 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-black transition-all flex items-center justify-center gap-2 uppercase tracking-widest"><Save size={16}/> SAUVEGARDER MODIFS</button>
 
-                            {/* ÉTAPE 1 : Validation d'intention */}
                             {demande.status === 'Intention WhatsApp' && (
                                 <button onClick={handleSendConfirmation} disabled={isSendingConfirmation} className="w-full py-5 bg-amber-500 text-white rounded-2xl font-black text-sm shadow-xl hover:bg-amber-600 transition-all flex items-center justify-center gap-3 uppercase tracking-widest active:scale-95">        
                                     {isSendingConfirmation ? <RefreshCw className="animate-spin" size={20}/> : <Mail size={20}/>} VALIDER & ENVOYER EMAIL
                                 </button>
                             )}
 
-                            {/* LOGISTIQUE & PRÉPARATION : Nouveaux boutons rapides */}
                             {demande.status === 'En attente de préparation' && (
                                 <button onClick={() => onUpdateStatus(demande.id, 'Préparation en cours')} className="w-full py-4 bg-cyan-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-cyan-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest"><ChefHat size={16}/> LANCER LA CUISINE</button>
                             )}
@@ -243,7 +306,6 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                                 <button onClick={() => onUpdateStatus(demande.id, 'completed')} className="w-full py-4 bg-green-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-green-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest"><Truck size={16}/> LIVRAISON EFFECTUÉE (CLÔTURER)</button>
                             )}
 
-                            {/* Flux de paiement & documents */}
                             {(demande.status === 'Nouvelle' || demande.status === 'En attente de paiement' || demande.status === 'confirmed') && (
                                 <>
                                     <button onClick={() => handleGenerateStripeLink('total')} disabled={isGeneratingStripeLink} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest">
