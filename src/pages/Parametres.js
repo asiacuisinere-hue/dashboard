@@ -19,7 +19,7 @@ const communesReunion = [
 
 const Parametres = () => {
     const { businessUnit } = useBusinessUnit();
-    const [activeTab, setActiveTab] = useState('company'); 
+    const [activeTab, setActiveTab] = useState('company');
     const [status, setStatus] = useState({ message: '', type: 'info' });
 
     const themeColor = businessUnit === 'courtage' ? 'blue' : 'amber';
@@ -53,15 +53,15 @@ const Parametres = () => {
     const [specialOfferDisablesFormulas, setSpecialOfferDisablesFormulas] = useState(true);
 
     const announcementStyles = [
-        { value: 'info', label: '🔵 Info', color: 'rgba(59, 130, 246, 0.1)', border: '#3b82f6' },       
+        { value: 'info', label: '🔵 Info', color: 'rgba(59, 130, 246, 0.1)', border: '#3b82f6' },
         { value: 'attention', label: '⚠️ Attention', color: 'rgba(245, 158, 11, 0.1)', border: '#f59e0b' },
-        { value: 'fete', label: '🎉 Fête', color: 'rgba(236, 72, 153, 0.1)', border: '#ec4899' },      
+        { value: 'fete', label: '🎉 Fête', color: 'rgba(236, 72, 153, 0.1)', border: '#ec4899' },
         { value: 'promotion', label: '⭐ Promotion', color: 'rgba(212, 175, 55, 0.1)', border: '#d4af37' },
-        { value: 'annonce', label: '📢 Annonce', color: 'rgba(139, 92, 246, 0.1)', border: '#8b5cf6' }  
+        { value: 'annonce', label: '📢 Annonce', color: 'rgba(139, 92, 246, 0.1)', border: '#8b5cf6' }
     ];
 
     const saveSetting = async (key, value, silent = false) => {
-        const { error } = await supabase.from('settings').upsert({ key, value }, { onConflict: 'key' });  
+        const { error } = await supabase.from('settings').upsert({ key, value }, { onConflict: 'key' });
         return !error;
     };
 
@@ -92,7 +92,7 @@ const Parametres = () => {
             setSpecialOfferEnabled(map.special_offer_enabled === 'true');
             setSpecialOfferDisablesFormulas(map.special_offer_disables_formulas === 'true');
             if (map.special_offer_details) {
-                try { 
+                try {
                     const parsed = JSON.parse(map.special_offer_details);
                     setSpecialOffer({
                         title: parsed.title || '',
@@ -102,8 +102,8 @@ const Parametres = () => {
                         eventDate: parsed.eventDate || '',
                         dishes: parsed.dishes || []
                     });
-                } catch(e) { 
-                    setSpecialOffer({title:'', description:'', period: '', cutoff: '', dishes:[]}); 
+                } catch(e) {
+                    setSpecialOffer({title:'', description:'', period: '', cutoff: '', eventDate: '', dishes:[]});
                 }
             }
         }
@@ -154,7 +154,7 @@ const Parametres = () => {
         await Promise.all([
             saveSetting('special_offer_enabled', String(specialOfferEnabled), true),
             saveSetting('special_offer_details', JSON.stringify(specialOffer), true),
-            saveSetting('special_offer_disables_formulas', String(specialOfferDisablesFormulas), true),   
+            saveSetting('special_offer_disables_formulas', String(specialOfferDisablesFormulas), true),
         ]);
         setStatus({ message: 'Offre spéciale enregistrée !', type: 'success' });
         setTimeout(() => setStatus({ message: '', type: 'info' }), 2000);
@@ -281,7 +281,7 @@ const Parametres = () => {
                     {activeTab === 'menus' && (
                         <div className="space-y-8">
                             <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border-2 border-amber-400 bg-amber-50/10">
-                                <h2 className="text-xl font-black text-gray-800 mb-8 flex items-center gap-3"><Star className="text-amber-500 fill-amber-500"/> Ville Prioritaire de la Semaine (Star City)</h2>    
+                                <h2 className="text-xl font-black text-gray-800 mb-8 flex items-center gap-3"><Star className="text-amber-500 fill-amber-500"/> Ville Prioritaire de la Semaine (Star City)</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-end">
                                     <div>
                                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 block mb-2">Sélectionnez la ville mise en avant</label>
@@ -290,7 +290,7 @@ const Parametres = () => {
                                             onChange={e => setPriorityCity(e.target.value)}
                                             className="w-full p-4 bg-white border-0 rounded-2xl font-black text-xl shadow-inner ring-1 ring-gray-200 focus:ring-2 focus:ring-amber-500"
                                         >
-                                            <option value="">-- Aucune ville prioritaire --</option>      
+                                            <option value="">-- Aucune ville prioritaire --</option>
                                             {communesReunion.map(c => <option key={c} value={c}>{c}</option>)}
                                         </select>
                                     </div>
@@ -342,9 +342,9 @@ const Parametres = () => {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div><label className="text-[10px] font-black text-gray-400 uppercase block mb-2 ml-2">Titre de l'Offre</label><input type="text" value={specialOffer.title} onChange={e => setSpecialOffer({...specialOffer, title: e.target.value})} className="w-full p-4 bg-white border border-gray-100 rounded-2xl font-black" /></div>
                                         <div><label className="text-[10px] font-black text-gray-400 uppercase block mb-2 ml-2">Description</label><input type="text" value={specialOffer.description} onChange={e => setSpecialOffer({...specialOffer, description: e.target.value})} className="w-full p-4 bg-white border border-gray-100 rounded-2xl" /></div>
-                                        <div><label className="text-[10px] font-black text-gray-400 uppercase block mb-2 ml-2">PÃ©riode de l'offre (ex: 10 au 14 fÃ©v.)</label><input type="text" value={specialOffer.period} onChange={e => setSpecialOffer({...specialOffer, period: e.target.value})} className="w-full p-4 bg-white border border-gray-100 rounded-2xl" /></div>
-                                        <div><label className="text-[10px] font-black text-gray-400 uppercase block mb-2 ml-2">Date de l'Ã©vÃ©nement (Fixe pour la commande)</label><input type="date" value={specialOffer.eventDate} onChange={e => setSpecialOffer({...specialOffer, eventDate: e.target.value})} className="w-full p-4 bg-white border border-gray-100 rounded-2xl font-bold" /></div>
-                                        <div className="md:col-span-2"><label className="text-[10px] font-black text-gray-400 uppercase block mb-2 ml-2">Date limite de commande (pour compte Ã  rebours)</label><input type="datetime-local" value={specialOffer.cutoff} onChange={e => setSpecialOffer({...specialOffer, cutoff: e.target.value})} className="w-full p-4 bg-white border border-gray-100 rounded-2xl font-bold" /></div>
+                                        <div><label className="text-[10px] font-black text-gray-400 uppercase block mb-2 ml-2">Période de l'offre (ex: 10 au 14 fév.)</label><input type="text" value={specialOffer.period} onChange={e => setSpecialOffer({...specialOffer, period: e.target.value})} className="w-full p-4 bg-white border border-gray-100 rounded-2xl" /></div>
+                                        <div><label className="text-[10px] font-black text-gray-400 uppercase block mb-2 ml-2">Date de l'événement (Fixe pour la commande)</label><input type="date" value={specialOffer.eventDate} onChange={e => setSpecialOffer({...specialOffer, eventDate: e.target.value})} className="w-full p-4 bg-white border border-gray-100 rounded-2xl font-bold" /></div>
+                                        <div className="md:col-span-2"><label className="text-[10px] font-black text-gray-400 uppercase block mb-2 ml-2">Date limite de commande (pour compte à rebours)</label><input type="datetime-local" value={specialOffer.cutoff} onChange={e => setSpecialOffer({...specialOffer, cutoff: e.target.value})} className="w-full p-4 bg-white border border-gray-100 rounded-2xl font-bold" /></div>
                                     </div>
                                     <div className="space-y-4">
                                         {specialOffer.dishes?.map((dish, idx) => (
@@ -369,12 +369,12 @@ const Parametres = () => {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
                             <Link to="/calendrier" className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-gray-100 hover:shadow-xl transition-all group text-center">
                                 <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform"><Calendar size={40}/></div>
-                                <h3 className="text-xl font-black text-gray-800 mb-2">Calendrier</h3>     
+                                <h3 className="text-xl font-black text-gray-800 mb-2">Calendrier</h3>
                                 <p className="text-sm text-gray-400 font-medium leading-relaxed">Gérez vos jours de fermeture et les indisponibilités.</p>
                             </Link>
                             <Link to="/abonnements" className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-gray-100 hover:shadow-xl transition-all group text-center">
-                                <div className="w-20 h-20 bg-amber-50 text-amber-600 rounded-3xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform"><Users size={40}/></div> 
-                                <h3 className="text-xl font-black text-gray-800 mb-2">Abonnements</h3>    
+                                <div className="w-20 h-20 bg-amber-50 text-amber-600 rounded-3xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform"><Users size={40}/></div>
+                                <h3 className="text-xl font-black text-gray-800 mb-2">Abonnements</h3>
                                 <p className="text-sm text-gray-400 font-medium leading-relaxed">Pilotez vos contrats récurrents.</p>
                             </Link>
                             <Link to="/admin-account" className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-gray-100 hover:shadow-xl transition-all group text-center">
