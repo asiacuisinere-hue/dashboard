@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 import { useBusinessUnit } from './BusinessUnitContext';
@@ -7,7 +7,8 @@ import {
     Euro, ClipboardList, CheckCircle2,
     RefreshCw, FilePlus, QrCode, Mail,
     Phone, Save, ShoppingCart, ChefHat, XCircle,
-    MessageCircle, PackageCheck, Truck, ListChecks
+    MessageCircle, PackageCheck, Truck, ListChecks,
+    Gift, Tag
 } from 'lucide-react';
 
 const communesReunion = [
@@ -32,69 +33,68 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
     const [isGeneratingStripeLink, setIsGeneratingStripeLink] = useState(false);
     const [paymentLink, setPaymentLink] = useState('');
 
+    // --- NOUVEAUX ÉTATS : REMISE ET LIVRAISON ---
+    const [discount, setDiscount] = useState(0);
+    const [freeDelivery, setFreeDelivery] = useState(false);
+
     const themeColor = businessUnit === 'courtage' ? 'blue' : 'amber';
+
+    const initializeModal = useCallback(async () => {
+        let rawData = demande.details_json || {};
+        let parsedDetails = rawData;
+
+        if (typeof rawData === 'string') {
+            try { parsedDetails = JSON.parse(rawData); } catch (e) {}
+        }
+        
+        if (typeof rawData === 'object' && rawData !== null && rawData["0"] !== undefined) {
+            try {
+                const reconstructedString = Object.values(rawData).join('');
+                parsedDetails = JSON.parse(reconstructedString);
+            } catch (e) { console.error("JSON reconstruction failed", e); }
+        }
+
+        setDetails(parsedDetails);
+        setDiscount(parsedDetails.discount || 0);
+        setFreeDelivery(parsedDetails.freeDelivery || false);
+        setRequestDate(demande.request_date ? new Date(demande.request_date).toISOString().split('T')[0] : '');
+        setPaymentLink('');
+
+        let initialAmount = demande.total_amount;
+
+        // Auto-fill price for standard menus
+        if ((!initialAmount || initialAmount <= 0) && demande.type === 'COMMANDE_MENU') {
+            try {
+                const { data: settingsList } = await supabase
+                    .from('settings').select('key, value')
+                    .in('key', ['menu_decouverte_price', 'menu_standard_price', 'menu_duo_price', 'menu_confort_price']);
+
+                if (settingsList) {
+                    const prices = {};
+                    settingsList.forEach(s => { prices[s.key] = parseFloat(s.value); });
+                    const formula = parsedDetails?.formulaName || "";
+                    let calculated = 0;
+                    if (formula.includes('Découverte')) calculated = prices['menu_decouverte_price'];
+                    else if (formula.includes('Standard')) calculated = prices['menu_standard_price'];
+                    else if (formula.includes('Confort')) calculated = prices['menu_confort_price'];  
+                    else if (formula.includes('Duo')) calculated = prices['menu_duo_price'];
+
+                    if (calculated > 0) {
+                        initialAmount = calculated;
+                        setTotalAmount(calculated);
+                        await supabase.from('demandes').update({ total_amount: calculated }).eq('id', demande.id);
+                    }
+                }
+            } catch (err) {}
+        }
+        setTotalAmount(initialAmount || '');
+    }, [demande]);
 
     useEffect(() => {
         if (initializedRef.current === demande.id) return;
         initializedRef.current = demande.id;
-
-        const initializeModal = async () => {
-            let rawData = demande.details_json || {};
-            let parsedDetails = rawData;
-
-            // --- STRATÉGIE DE DÉBOGAGE NUCLÉAIRE ---
-            
-            // 1. Si c'est du texte brut (JSON stringifié)
-            if (typeof rawData === 'string') {
-                try { parsedDetails = JSON.parse(rawData); } catch (e) {}
-            }
-            
-            // 2. Si c'est l'objet corrompu avec des index "0", "1", "2"... (Le problème actuel)
-            if (typeof rawData === 'object' && rawData !== null && rawData["0"] !== undefined) {
-                try {
-                    // On recolle les morceaux de texte
-                    const reconstructedString = Object.values(rawData).join('');
-                    parsedDetails = JSON.parse(reconstructedString);
-                } catch (e) {
-                    console.error("Échec de la reconstruction du JSON", e);
-                }
-            }
-
-            setDetails(parsedDetails);
-            setRequestDate(demande.request_date ? new Date(demande.request_date).toISOString().split('T')[0] : '');
-            setPaymentLink('');
-
-            let initialAmount = demande.total_amount;
-
-            // Auto-fill price for standard menus
-            if ((!initialAmount || initialAmount <= 0) && demande.type === 'COMMANDE_MENU') {
-                try {
-                    const { data: settingsList } = await supabase
-                        .from('settings').select('key, value')
-                        .in('key', ['menu_decouverte_price', 'menu_standard_price', 'menu_duo_price', 'menu_confort_price']);
-
-                    if (settingsList) {
-                        const prices = {};
-                        settingsList.forEach(s => { prices[s.key] = parseFloat(s.value); });
-                        const formula = parsedDetails?.formulaName || "";
-                        let calculated = 0;
-                        if (formula.includes('Découverte')) calculated = prices['menu_decouverte_price'];
-                        else if (formula.includes('Standard')) calculated = prices['menu_standard_price'];
-                        else if (formula.includes('Confort')) calculated = prices['menu_confort_price'];  
-                        else if (formula.includes('Duo')) calculated = prices['menu_duo_price'];
-
-                        if (calculated > 0) {
-                            initialAmount = calculated;
-                            setTotalAmount(calculated);
-                            await supabase.from('demandes').update({ total_amount: calculated }).eq('id', demande.id);
-                        }
-                    }
-                } catch (err) {}
-            }
-            setTotalAmount(initialAmount || '');
-        };
         initializeModal();
-    }, [demande.id, demande.details_json, demande.request_date, demande.total_amount, demande.type]);     
+    }, [demande.id, initializeModal]);     
 
     if (!demande) return null;
 
@@ -103,9 +103,22 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
         setDetails(prev => ({ ...prev, [name]: value }));
     };
 
+    // --- CALCUL DYNAMIQUE AVEC REMISE ---
+    const handleDiscountChange = (val) => {
+        const newDiscount = parseFloat(val) || 0;
+        const diff = newDiscount - discount;
+        setDiscount(newDiscount);
+        
+        // On déduit la différence du montant total actuel
+        if (totalAmount !== '') {
+            setTotalAmount(prev => Math.max(0, parseFloat(prev) - diff).toFixed(2));
+        }
+    };
+
     const handleSave = async (silent = false) => {
+        const finalDetails = { ...details, discount, freeDelivery };
         const { error } = await supabase.from('demandes').update({
-            details_json: details,
+            details_json: finalDetails,
             request_date: requestDate,
             total_amount: totalAmount === '' ? null : parseFloat(totalAmount)
         }).eq('id', demande.id);
@@ -166,7 +179,12 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
         if (!cleaned) return alert("Numéro manquant.");
         const clientName = demande.clients ? client.first_name : (client.contact_name || client.nom_entreprise);
         const formattedDate = new Date(requestDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-        const message = `🍱 *Asiacuisine.re - Confirmation de Commande*\n\nBonjour ${clientName},\n\nC'est avec plaisir que je valide votre demande pour le *${formattedDate}*.\n\n💰 *Montant total :* ${totalAmount}€\n\nPour confirmer votre réservation, merci de procéder au règlement via notre lien sécurisé Stripe ci-dessous :\n\n🔗 ${paymentLink}\n\n_Note : Une fois le règlement effectué, vous recevrez automatiquement votre QR code par e-mail._\n\nÀ très bientôt !\n👨‍🍳 *Le Chef*`;
+        
+        // --- CONSTRUCTION DU MESSAGE ENRICHI ---
+        let discountInfo = discount > 0 ? `\n🏷️ *Remise appliquée :* -${discount}€` : '';
+        let deliveryInfo = freeDelivery ? `\n🎁 *Livraison offerte !*` : '';
+
+        const message = `🍱 *Asiacuisine.re - Confirmation de Commande*\n\nBonjour ${clientName},\n\nC'est avec plaisir que je valide votre demande pour le *${formattedDate}*.\n\n💰 *Montant total :* ${totalAmount}€${discountInfo}${deliveryInfo}\n\nPour confirmer votre réservation, merci de procéder au règlement via notre lien sécurisé Stripe ci-dessous :\n\n🔗 ${paymentLink}\n\n_Note : Une fois le règlement effectué, vous recevrez automatiquement votre QR code par e-mail._\n\nÀ très bientôt !\n👨‍🍳 *Le Chef*`;
         window.open(`https://wa.me/${cleaned}?text=${encodeURIComponent(message)}`, '_blank');
     };
 
@@ -212,10 +230,9 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
         : (demande.entreprises?.nom_entreprise || 'Inconnu');
 
     const renderExtraDetails = () => {
-        // NE PAS ESSAYER DE RENDRE SI C'EST UNE LISTE (PANIER) OU UN OBJET D'INDEX
         if (Array.isArray(details) || details["0"] !== undefined) return null;
 
-        const excludeKeys = ['ville', 'deliveryCity', 'heure', 'numberOfPeople', 'customerMessage', 'notes', 'items', 'total'];
+        const excludeKeys = ['ville', 'deliveryCity', 'heure', 'numberOfPeople', 'customerMessage', 'notes', 'items', 'total', 'discount', 'freeDelivery'];
         const keyMap = {
             formulaName: 'Formule',
             formulaOption: 'Option Sélectionnée',
@@ -257,15 +274,40 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
                     <div className="lg:col-span-7 space-y-8">
-                        <div className={`p-8 rounded-[2rem] border-2 ${themeColor === 'blue' ? 'border-blue-200 bg-blue-50/20' : 'border-amber-200 bg-amber-50/10'}`}>
-                            <label className={`text-xs font-black uppercase tracking-widest block mb-4 ${themeColor === 'blue' ? 'text-blue-600' : 'text-amber-600'}`}>Montant Total (€)</label>
-                            <div className="relative">
-                                <input type="number" step="0.01" value={totalAmount} onChange={e => setTotalAmount(e.target.value)} className="w-full bg-white p-5 rounded-2xl font-black text-3xl outline-none shadow-sm focus:ring-2 focus:ring-amber-500" placeholder="0.00" />
-                                <Euro className="absolute right-5 top-6 text-gray-200" size={30} />       
+                        
+                        {/* --- ZONE DE PRIX ET REMISES --- */}
+                        <div className={`p-8 rounded-[2rem] border-2 space-y-6 ${themeColor === 'blue' ? 'border-blue-200 bg-blue-50/20' : 'border-amber-200 bg-amber-50/20'}`}>
+                            <div>
+                                <label className={`text-xs font-black uppercase tracking-widest block mb-4 ${themeColor === 'blue' ? 'text-blue-600' : 'text-amber-600'}`}>Montant Total (€)</label>
+                                <div className="relative">
+                                    <input type="number" step="0.01" value={totalAmount} onChange={e => setTotalAmount(e.target.value)} className="w-full bg-white p-5 rounded-2xl font-black text-3xl outline-none shadow-sm focus:ring-2 focus:ring-amber-500" placeholder="0.00" />
+                                    <Euro className="absolute right-5 top-6 text-gray-200" size={30} />       
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase block mb-2 flex items-center gap-2"><Tag size={12}/> Remise Commerciale (€)</label>
+                                    <input 
+                                        type="number" 
+                                        value={discount} 
+                                        onChange={e => handleDiscountChange(e.target.value)} 
+                                        className="w-full p-2 bg-gray-50 border-0 rounded-lg font-bold text-lg focus:ring-2 focus:ring-amber-500"
+                                    />
+                                </div>
+                                <div 
+                                    onClick={() => setFreeDelivery(!freeDelivery)}
+                                    className={`p-4 rounded-2xl shadow-sm border-2 cursor-pointer transition-all flex items-center justify-between ${freeDelivery ? 'bg-green-50 border-green-500' : 'bg-white border-gray-100 opacity-60'}`}
+                                >
+                                    <div>
+                                        <p className={`font-black text-xs ${freeDelivery ? 'text-green-600' : 'text-gray-400'}`}>LIVRAISON OFFERTE</p>
+                                        <p className="text-[9px] font-bold text-gray-400 uppercase">Mention WhatsApp</p>
+                                    </div>
+                                    <Gift className={freeDelivery ? 'text-green-500' : 'text-gray-300'} size={24}/>
+                                </div>
                             </div>
                         </div>
 
-                        {/* SECTION PANIER RECONSTRUITE */}
                         {demande.type === 'COMMANDE_SPECIALE' && Array.isArray(details) && details.length > 0 && (
                             <div className="bg-amber-50 p-8 rounded-[2rem] border border-amber-100 shadow-sm">
                                 <h3 className="text-sm font-black uppercase tracking-widest text-amber-600 mb-6 flex items-center gap-2"><ListChecks size={18}/> Sélection Offre Spéciale</h3>
