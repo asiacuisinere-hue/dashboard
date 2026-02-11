@@ -49,7 +49,7 @@ const Parametres = () => {
     const [announcementStyle, setAnnouncementStyle] = useState('info');
     const [announcementEnabled, setAnnouncementEnabled] = useState(false);
     const [specialOfferEnabled, setSpecialOfferEnabled] = useState(false);
-    const [specialOffer, setSpecialOffer] = useState({ title: '', description: '', dishes: [] });
+    const [specialOffer, setSpecialOffer] = useState({ title: '', description: '', period: '', cutoff: '', eventDate: '', dishes: [] });
     const [specialOfferDisablesFormulas, setSpecialOfferDisablesFormulas] = useState(true);
 
     const announcementStyles = [
@@ -92,7 +92,19 @@ const Parametres = () => {
             setSpecialOfferEnabled(map.special_offer_enabled === 'true');
             setSpecialOfferDisablesFormulas(map.special_offer_disables_formulas === 'true');
             if (map.special_offer_details) {
-                try { setSpecialOffer(JSON.parse(map.special_offer_details)); } catch(e) { setSpecialOffer({title:'', description:'', dishes:[]}); }
+                try { 
+                    const parsed = JSON.parse(map.special_offer_details);
+                    setSpecialOffer({
+                        title: parsed.title || '',
+                        description: parsed.description || '',
+                        period: parsed.period || '',
+                        cutoff: parsed.cutoff || '',
+                        eventDate: parsed.eventDate || '',
+                        dishes: parsed.dishes || []
+                    });
+                } catch(e) { 
+                    setSpecialOffer({title:'', description:'', period: '', cutoff: '', dishes:[]}); 
+                }
             }
         }
     }, []);
@@ -330,6 +342,9 @@ const Parametres = () => {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div><label className="text-[10px] font-black text-gray-400 uppercase block mb-2 ml-2">Titre de l'Offre</label><input type="text" value={specialOffer.title} onChange={e => setSpecialOffer({...specialOffer, title: e.target.value})} className="w-full p-4 bg-white border border-gray-100 rounded-2xl font-black" /></div>
                                         <div><label className="text-[10px] font-black text-gray-400 uppercase block mb-2 ml-2">Description</label><input type="text" value={specialOffer.description} onChange={e => setSpecialOffer({...specialOffer, description: e.target.value})} className="w-full p-4 bg-white border border-gray-100 rounded-2xl" /></div>
+                                        <div><label className="text-[10px] font-black text-gray-400 uppercase block mb-2 ml-2">PÃ©riode de l'offre (ex: 10 au 14 fÃ©v.)</label><input type="text" value={specialOffer.period} onChange={e => setSpecialOffer({...specialOffer, period: e.target.value})} className="w-full p-4 bg-white border border-gray-100 rounded-2xl" /></div>
+                                        <div><label className="text-[10px] font-black text-gray-400 uppercase block mb-2 ml-2">Date de l'Ã©vÃ©nement (Fixe pour la commande)</label><input type="date" value={specialOffer.eventDate} onChange={e => setSpecialOffer({...specialOffer, eventDate: e.target.value})} className="w-full p-4 bg-white border border-gray-100 rounded-2xl font-bold" /></div>
+                                        <div className="md:col-span-2"><label className="text-[10px] font-black text-gray-400 uppercase block mb-2 ml-2">Date limite de commande (pour compte Ã  rebours)</label><input type="datetime-local" value={specialOffer.cutoff} onChange={e => setSpecialOffer({...specialOffer, cutoff: e.target.value})} className="w-full p-4 bg-white border border-gray-100 rounded-2xl font-bold" /></div>
                                     </div>
                                     <div className="space-y-4">
                                         {specialOffer.dishes?.map((dish, idx) => (
