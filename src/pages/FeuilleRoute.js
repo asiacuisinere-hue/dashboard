@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 import { useBusinessUnit } from '../BusinessUnitContext';
-import { 
-    MapPin, Phone, Navigation, Clock, 
-    Truck, Calendar, RefreshCw, ChevronRight,
-    CheckCircle2, AlertCircle, Search
+import {
+    MapPin, Phone, Navigation, Clock,
+    Truck, Calendar, RefreshCw,
+    AlertCircle, Search
 } from 'lucide-react';
 
 const getZoneInfo = (city) => {
@@ -31,7 +31,7 @@ const FeuilleRoute = () => {
     const fetchData = useCallback(async () => {
         setLoading(true);
         const tourStatuses = ['Préparation en cours', 'Prêt pour livraison', 'En attente de préparation'];
-        
+
         let query = supabase.from('demandes')
             .select(`*, clients (*), entreprises (*)`)
             .in('status', tourStatuses)
@@ -78,18 +78,18 @@ const FeuilleRoute = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                     <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
                         <Calendar className="text-amber-500" size={20}/>
-                        <input 
-                            type="date" 
-                            value={dateFilter} 
+                        <input
+                            type="date"
+                            value={dateFilter}
                             onChange={e => setDateFilter(e.target.value)}
                             className="bg-transparent border-0 font-black text-gray-800 outline-none w-full"
                         />
                     </div>
                     <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
                         <Search className="text-gray-300" size={20}/>
-                        <input 
-                            type="text" 
-                            placeholder="Client, Ville..." 
+                        <input
+                            type="text"
+                            placeholder="Client, Ville..."
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                             className="bg-transparent border-0 font-medium text-gray-800 outline-none w-full"
@@ -109,26 +109,26 @@ const FeuilleRoute = () => {
                         {Object.entries(groupedOrders).map(([zone, zoneOrders]) => (
                             <div key={zone} className="space-y-4">
                                 <h2 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-3 ml-2">
-                                    <span className={`w-2 h-2 rounded-full ${getZoneInfo(zoneOrders[0].parsedDetails?.deliveryCity).bg.replace('bg-', 'bg-')}`}></span>
+                                    <span className={`w-2 h-2 rounded-full ${getZoneInfo(zoneOrders[0].parsedDetails?.deliveryCity || zoneOrders[0].parsedDetails?.ville).bg.replace('bg-', 'bg-')}`}></span>
                                     Zone {zone} ({zoneOrders.length})
                                 </h2>
-                                
+
                                 <div className="space-y-4">
                                     {zoneOrders.map(order => {
                                         const client = order.clients || order.entreprises;
                                         const name = order.clients ? `${client.last_name} ${client.first_name}` : client.nom_entreprise;
                                         const city = order.parsedDetails?.deliveryCity || order.parsedDetails?.ville;
                                         const phone = client.phone || client.contact_phone;
-                                        const mode = order.parsedDetails?.deliveryMode || 'retrait';
+                                        const mode = order.parsedDetails?.deliveryMode || 'retrait';      
 
                                         return (
                                             <div key={order.id} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all relative overflow-hidden group">
                                                 {/* Status bar */}
                                                 <div className={`absolute top-0 left-0 bottom-0 w-1.5 ${order.status === 'Prêt pour livraison' ? 'bg-green-500' : 'bg-cyan-500'}`}></div>
-                                                
+
                                                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                                                     <div className="flex-1">
-                                                        <div className="flex items-center gap-2 mb-1">
+                                                        <div className="flex items-center gap-2 mb-1">    
                                                             <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md ${mode === 'livraison' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
                                                                 {mode}
                                                             </span>
@@ -142,14 +142,14 @@ const FeuilleRoute = () => {
                                                     </div>
 
                                                     <div className="flex gap-3">
-                                                        <button 
+                                                        <button
                                                             onClick={() => makeCall(phone)}
                                                             className="flex-1 md:flex-none h-14 w-14 md:w-14 rounded-2xl bg-gray-50 flex items-center justify-center text-gray-600 hover:bg-green-50 hover:text-green-600 transition-all border border-gray-100 active:scale-90"
                                                             title="Appeler le client"
                                                         >
                                                             <Phone size={24}/>
                                                         </button>
-                                                        <button 
+                                                        <button
                                                             onClick={() => openMaps(city, order.parsedDetails?.address)}
                                                             className="flex-[2] md:flex-none h-14 px-6 rounded-2xl bg-gray-800 text-white flex items-center justify-center gap-2 font-black text-xs hover:bg-black transition-all shadow-lg active:scale-95"
                                                         >
