@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 import { Link } from 'react-router-dom';
-import { 
-    Bell, Utensils, QrCode, 
-    BarChart3, ChevronRight, Clock, MapPin, CheckCircle 
+import {
+    Bell, Utensils, QrCode,
+    BarChart3, ChevronRight, Clock, MapPin, CheckCircle, RefreshCw
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { useBusinessUnit } from '../BusinessUnitContext';
+import ProductionCalendar from '../components/ProductionCalendar';
 
 const ActionTile = ({ title, count, icon: Icon, to, themeColor }) => {
     const isCourtage = themeColor === 'courtage';
@@ -35,6 +36,31 @@ const ActionTile = ({ title, count, icon: Icon, to, themeColor }) => {
     );
 };
 
+const MenuReminder = () => {
+    const today = new Date();
+    const day = today.getDay(); // 0 = Dimanche, 4 = Jeudi, 5 = Vendredi
+    const isReminderDay = (day === 4 || day === 5);
+
+    if (!isReminderDay) return null;
+
+    return (
+        <div className="mb-8 p-6 bg-gradient-to-r from-amber-500 to-orange-600 rounded-[2rem] text-white shadow-xl flex items-center justify-between animate-bounce-subtle">
+            <div className="flex items-center gap-4">
+                <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-md">
+                    <Utensils size={32} />
+                </div>
+                <div>
+                    <h2 className="text-xl font-black uppercase tracking-tight">Anticipation Menu</h2>
+                    <p className="text-sm font-medium opacity-90">Chef, c'est le moment de mettre à jour le menu de la semaine prochaine !</p>
+                </div>
+            </div>
+            <Link to="/parametres" className="bg-white text-amber-600 px-6 py-3 rounded-xl font-black text-xs uppercase hover:bg-amber-50 transition-colors shadow-lg">
+                Mettre à jour
+            </Link>
+        </div>
+    );
+};
+
 const Accueil = () => {
     const { businessUnit } = useBusinessUnit();
     const [counts, setCounts] = useState({ newDemandes: 0, toPrepare: 0 });
@@ -47,124 +73,134 @@ const Accueil = () => {
     // Theme Variables
     const mainHexColor = businessUnit === 'courtage' ? '#3b82f6' : '#d4af37';
 
-    useEffect(() => {
-        const fetchDashboardData = async () => {
-            setLoading(true);
-            try {
-                // 1. Fetch Key Counts
-                const { count: newCount } = await supabase.from('demandes')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('status', 'Nouvelle')
-                    .eq('business_unit', businessUnit);
-                
-                const { count: prepCount } = await supabase.from('demandes')
-                    .select('*', { count: 'exact', head: true })
-                    .in('status', ['En attente de préparation', 'Préparation en cours'])
-                    .eq('business_unit', businessUnit);
-                
-                setCounts({ newDemandes: newCount || 0, toPrepare: prepCount || 0 });
+    const fetchDashboardData = useCallback(async () => {
+        setLoading(true);
+        try {
+            // 1. Fetch Key Counts
+            const { count: newCount } = await supabase.from('demandes')
+                .select('*', { count: 'exact', head: true })
+                .in('status', ['Nouvelle', 'Intention WhatsApp', 'En attente de traitement'])
+                .eq('business_unit', businessUnit);
 
-                // 2. Fetch CA and Recent Demandes
-                const { data: kpisData } = await supabase.rpc('get_dashboard_kpis', { 
-                    p_period: 'currentMonth', 
-                    p_business_unit: businessUnit 
-                });
-                
-                // Note: If get_dashboard_kpis doesn't exist yet or doesn't take parameters, 
-                // we might need to update the RPC or use a manual query here.
-                setStats({ revenueCurrentMonth: kpisData?.[0]?.total_revenue || '0.00' });
+            const { count: prepCount } = await supabase.from('demandes')
+                .select('*', { count: 'exact', head: true })
+                .in('status', ['En attente de préparation', 'Préparation en cours'])
+                .eq('business_unit', businessUnit);
 
-                const { data: demandesData } = await supabase
-                    .from('demandes')
-                    .select('id, created_at, type, details_json, clients(first_name, last_name)')
-                    .eq('status', 'Nouvelle')
-                    .eq('business_unit', businessUnit)
-                    .order('created_at', { ascending: false })
-                    .limit(3);
-                setRecentDemandes(demandesData || []);
+            setCounts({ newDemandes: newCount || 0, toPrepare: prepCount || 0 });
 
-                // 3. Weekly Data (Filtered)
-                // For now, using mock data, but passing the businessUnit for future real integration
-                setWeeklyData([
-                    { day: 'Lun', val: businessUnit === 'cuisine' ? 120 : 0 }, 
-                    { day: 'Mar', val: businessUnit === 'cuisine' ? 450 : 0 }, 
-                    { day: 'Mer', val: businessUnit === 'cuisine' ? 300 : 0 },
-                    { day: 'Jeu', val: businessUnit === 'cuisine' ? 200 : 0 }, 
-                    { day: 'Ven', val: businessUnit === 'cuisine' ? 600 : 0 }, 
-                    { day: 'Sam', val: businessUnit === 'cuisine' ? 850 : 0 }, 
-                    { day: 'Dim', val: businessUnit === 'cuisine' ? 150 : 0 }
-                ]);
+            // 2. Fetch CA and Recent Demandes
+            const { data: kpisData } = await supabase.rpc('get_dashboard_kpis', {
+                p_period: 'currentMonth',
+                p_business_unit: businessUnit
+            });
 
-            } catch (err) {
-                console.error("Dashboard error:", err);
-                setError(err.message);
-            } finally {
-                setLoading(false);
-            }
-        };
+            setStats({ revenueCurrentMonth: kpisData?.[0]?.total_revenue || '0.00' });
 
-        fetchDashboardData();
+            const { data: demandesData } = await supabase
+                .from('demandes')
+                .select('id, created_at, type, details_json, clients(first_name, last_name)')
+                .in('status', ['Nouvelle', 'Intention WhatsApp', 'En attente de traitement'])
+                .eq('business_unit', businessUnit)
+                .order('created_at', { ascending: false })
+                .limit(3);
+            setRecentDemandes(demandesData || []);
+
+            // 3. Weekly Data (Mock)
+            setWeeklyData([
+                { day: 'Lun', val: businessUnit === 'cuisine' ? 120 : 0 },
+                { day: 'Mar', val: businessUnit === 'cuisine' ? 450 : 0 },
+                { day: 'Mer', val: businessUnit === 'cuisine' ? 300 : 0 },
+                { day: 'Jeu', val: businessUnit === 'cuisine' ? 200 : 0 },
+                { day: 'Ven', val: businessUnit === 'cuisine' ? 600 : 0 },
+                { day: 'Sam', val: businessUnit === 'cuisine' ? 850 : 0 },
+                { day: 'Dim', val: businessUnit === 'cuisine' ? 150 : 0 }
+            ]);
+
+        } catch (err) {
+            console.error("Dashboard error:", err);
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
     }, [businessUnit]);
+
+    useEffect(() => {
+        fetchDashboardData();
+    }, [fetchDashboardData]);
 
     if (error) return <div className="p-10 text-center text-red-600 bg-red-50 m-6 rounded-xl">Erreur: {error}</div>;
 
     return (
         <div className="p-6 bg-gray-50 min-h-screen">
-            <header className="mb-10">
-                <h1 className="text-3xl font-black text-gray-800">Centre de Pilotage</h1>
-                <p className="text-gray-500 font-medium">Bon retour, voici l'état de votre activité aujourd'hui.</p>
+            <header className="mb-10 flex justify-between items-start">
+                <div>
+                    <h1 className="text-3xl font-black text-gray-800">Centre de Pilotage</h1>
+                    <p className="text-gray-500 font-medium italic">Bon retour, voici l'état de votre activité aujourd'hui.</p>
+                </div>
+                <button 
+                    onClick={fetchDashboardData}
+                    disabled={loading}
+                    className="p-4 bg-white rounded-2xl shadow-sm border border-gray-100 text-gray-400 hover:text-amber-500 transition-all active:scale-90 disabled:opacity-50"
+                    title="Actualiser les données"
+                >
+                    <RefreshCw className={`${loading ? 'animate-spin text-amber-500' : ''}`} size={20} />
+                </button>
             </header>
+
+            {/* --- RAPPEL MISE À JOUR MENU --- */}
+            <MenuReminder />
 
             {/* --- GRILLE D'ACTIONS --- */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-                <ActionTile 
-                    title="Nouvelles Demandes" 
-                    count={counts.newDemandes} 
-                    icon={Bell} 
+                <ActionTile
+                    title="Nouvelles Demandes"
+                    count={counts.newDemandes}
+                    icon={Bell}
                     to="/nouvelles-demandes"
                     themeColor={businessUnit}
                 />
-                <ActionTile 
-                    title="À Préparer" 
-                    count={counts.toPrepare} 
-                    icon={Utensils} 
+                <ActionTile
+                    title="À Préparer"
+                    count={counts.toPrepare}
+                    icon={Utensils}
                     to="/a-preparer"
                     themeColor={businessUnit}
                 />
-                <ActionTile 
-                    title="Scanner QR" 
-                    icon={QrCode} 
+                <ActionTile
+                    title="Scanner QR"
+                    icon={QrCode}
                     to="/scanner"
                     themeColor={businessUnit}
                 />
-                <ActionTile 
-                    title="Statistiques" 
-                    icon={BarChart3} 
+                <ActionTile
+                    title="Statistiques"
+                    icon={BarChart3}
                     to="/statistiques"
                     themeColor={businessUnit}
                 />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                
+
                 {/* --- APERÇU ACTIVITÉ HEBDOMADAIRE --- */}
-                <div className="lg:col-span-2 bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+                <div className="lg:col-span-2 bg-white p-8 rounded-3xl shadow-sm border border-gray-100"> 
                     <div className="flex justify-between items-center mb-8">
                         <div>
-                            <h2 className="text-xl font-bold text-gray-800">Activité de la semaine</h2>
-                            <p className="text-sm text-gray-500">Volume de commandes quotidien</p>
+                            <h2 className="text-xl font-bold text-gray-800">Activité de la semaine</h2>  
+                            <p className="text-sm text-gray-500">Volume de commandes quotidien</p>        
                         </div>
                         <div className="text-right">
                             <p className={`text-2xl font-black ${businessUnit === 'courtage' ? 'text-blue-600' : 'text-green-600'}`}>{parseFloat(stats.revenueCurrentMonth).toFixed(2)}€</p>
                             <p className="text-xs text-gray-400 uppercase font-bold tracking-widest">CA du mois</p>
                         </div>
                     </div>
-                    
+
                     <div className="h-64 w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={weeklyData}>
                                 <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} dy={10} />
-                                <Tooltip 
+                                <Tooltip
                                     cursor={{fill: '#f3f4f6'}}
                                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
                                 />
@@ -172,6 +208,9 @@ const Accueil = () => {
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
+
+                    {/* VUE PLANNING DE PRODUCTION */}
+                    <ProductionCalendar businessUnit={businessUnit} />
                 </div>
 
                 {/* --- DERNIÈRES NOUVELLES DEMANDES --- */}
@@ -182,7 +221,11 @@ const Accueil = () => {
                     </div>
 
                     <div className="space-y-4">
-                        {loading ? <p className="text-center py-4 text-gray-400">Chargement...</p> : recentDemandes.length > 0 ? recentDemandes.map(demande => (
+                        {loading ? (
+                            <div className="flex justify-center py-10">
+                                <RefreshCw className="animate-spin text-amber-500" size={24} />
+                            </div>
+                        ) : recentDemandes.length > 0 ? recentDemandes.map(demande => (
                             <div key={demande.id} className="p-4 rounded-2xl bg-gray-50 border border-gray-100 flex flex-col gap-2">
                                 <div className="flex justify-between items-start">
                                     <p className="font-bold text-gray-800">
@@ -191,7 +234,7 @@ const Accueil = () => {
                                     <span className="text-[10px] bg-white px-2 py-1 rounded-md shadow-xs border border-gray-100 font-bold text-gray-400">NOUVEAU</span>
                                 </div>
                                 <div className="flex items-center text-xs text-gray-500 gap-3">
-                                    <div className="flex items-center"><Clock size={12} className="mr-1"/> {new Date(demande.created_at).toLocaleDateString('fr-FR', {day: 'numeric', month: 'short'})}</div>
+                                    <div className="flex items-center"><Clock size={12} className="mr-1"/> {new Date(demande.created_at).toLocaleDateString('fr-FR', {day: 'numeric', month: 'short'})}</div>       
                                     <div className="flex items-center"><MapPin size={12} className="mr-1"/> {demande.details_json?.deliveryCity || '—'}</div>
                                 </div>
                             </div>

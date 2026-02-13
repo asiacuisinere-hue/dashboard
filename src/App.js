@@ -10,11 +10,16 @@ import Clients from './pages/Clients';
 import Devis from './pages/Devis';
 import Factures from './pages/Factures';
 import Parametres from './pages/Parametres';
+import Planning from './pages/Planning';
+import MenusPlanning from './pages/MenusPlanning';
+import PretesALivrer from './pages/PretesALivrer';
 import Services from './pages/Services';
 import CalendarSettings from './pages/CalendarSettings';
 import Abonnements from './pages/Abonnements';
 import AdminAccountSettings from './pages/AdminAccountSettings';
 import APreparer from './pages/APreparer';
+import Consolidation from './pages/Consolidation';
+import FeuilleRoute from './pages/FeuilleRoute';
 import Validation from './pages/Validation';
 import Statistiques from './pages/Statistiques';
 import Depenses from './pages/Depenses';
@@ -87,6 +92,7 @@ const DashboardLayout = () => {
     const [inProgressCount, setInProgressCount] = useState(0);
     const [pendingQuotesCount, setPendingQuotesCount] = useState(0);
     const [toPrepareCount, setToPrepareCount] = useState(0);
+    const [readyCount, setReadyCount] = useState(0);
     const [pendingInvoicesCount, setPendingInvoicesCount] = useState(0);
     const [depositPaidInvoicesCount, setDepositPaidInvoicesCount] = useState(0);
     const [waitingForPrepCount, setWaitingForPrepCount] = useState(0);
@@ -133,6 +139,9 @@ const DashboardLayout = () => {
 
         const { count: toPrepareDemandsCount } = await supabase.from('demandes').select('*', { count: 'exact', head: true }).in('status', ['En attente de préparation', 'Préparation en cours']).eq('business_unit', businessUnit);
         setToPrepareCount(toPrepareDemandsCount || 0);
+
+        const { count: readyDemandsCount } = await supabase.from('demandes').select('*', { count: 'exact', head: true }).eq('status', 'Prêt pour livraison').eq('business_unit', businessUnit);
+        setReadyCount(readyDemandsCount || 0);
 
         const { count: pendingInvoices } = await supabase.from('invoices').select('*', { count: 'exact', head: true }).eq('status', 'pending').eq('business_unit', businessUnit);
         setPendingInvoicesCount(pendingInvoices || 0);
@@ -220,7 +229,7 @@ const DashboardLayout = () => {
         <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', height: '100vh', overflow: 'hidden' }}>
             <Sidebar
                 newCount={newCount} inProgressCount={inProgressCount} pendingQuotesCount={pendingQuotesCount}
-                toPrepareCount={toPrepareCount} pendingInvoicesCount={pendingInvoicesCount}
+                toPrepareCount={toPrepareCount} readyCount={readyCount} pendingInvoicesCount={pendingInvoicesCount}
                 depositPaidInvoicesCount={depositPaidInvoicesCount} waitingForPrepCount={waitingForPrepCount}
                 activeSubscriptionsCount={activeSubscriptionsCount} subscriptionsNeedAttentionCount={subscriptionsNeedAttentionCount}
                 isMobile={isMobile} notifications={notifications} setNotifications={setNotifications}     
@@ -228,9 +237,13 @@ const DashboardLayout = () => {
             <main style={mainContentStyle}>
                 <Routes>
                     <Route path="/" element={<Accueil />} />
+                    <Route path="/planning" element={<Planning />} />
                     <Route path="/nouvelles-demandes" element={<Demandes />} />
                     <Route path="/demandes-en-cours" element={<DemandesEnCours />} />
                     <Route path="/a-preparer" element={<APreparer />} />
+                    <Route path="/pretes" element={<PretesALivrer />} />
+                    <Route path="/consolidation" element={<Consolidation />} />
+                    <Route path="/feuille-route" element={<FeuilleRoute />} />
                     <Route path="/historique" element={<Historique />} />
                     <Route path="/particuliers" element={<Clients />} />
                     <Route path="/entreprises" element={<Clients />} />
@@ -238,6 +251,7 @@ const DashboardLayout = () => {
                     <Route path="/factures" element={<Factures />} />
                     <Route path="/scanner" element={<Scanner />} />
                     <Route path="/parametres" element={<Parametres />} />
+                    <Route path="/menus-planning" element={<MenusPlanning />} />
                     <Route path="/validation" element={<Validation />} />
                     <Route path="/services" element={<Services />} />
                     <Route path="/calendrier" element={<CalendarSettings />} />

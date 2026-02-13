@@ -6,7 +6,7 @@ import {
     Building2, MessageSquare, UtensilsCrossed,
     Save, Calendar, Users, ShieldCheck, Megaphone,
     MailX, Layout, Info, Euro, Clock, MapPin, Globe, Trash2, PlusCircle, FileText, ToggleLeft, ToggleRight, Star,
-    AlertTriangle
+    AlertTriangle, Languages
 } from 'lucide-react';
 
 const communesReunion = [
@@ -21,6 +21,7 @@ const Parametres = () => {
     const { businessUnit } = useBusinessUnit();
     const [activeTab, setActiveTab] = useState('company');
     const [status, setStatus] = useState({ message: '', type: 'info' });
+    const [inputLang, setInputLang] = useState('fr'); // 'fr', 'en', 'zh'
 
     const themeColor = businessUnit === 'courtage' ? 'blue' : 'amber';
 
@@ -33,10 +34,13 @@ const Parametres = () => {
 
     const [welcomeMessage, setWelcomeMessage] = useState('');
     const [refusalTemplate, setRefusalTemplate] = useState('');
-    const [menuDecouverte, setMenuDecouverte] = useState('');
-    const [menuStandard, setMenuStandard] = useState('');
-    const [menuConfort, setMenuConfort] = useState('');
-    const [menuDuo, setMenuDuo] = useState('');
+    
+    // Multi-language states for Menus
+    const [menuDecouverte, setMenuDecouverte] = useState({ fr: '', en: '', zh: '' });
+    const [menuStandard, setMenuStandard] = useState({ fr: '', en: '', zh: '' });
+    const [menuConfort, setMenuConfort] = useState({ fr: '', en: '', zh: '' });
+    const [menuDuo, setMenuDuo] = useState({ fr: '', en: '', zh: '' });
+
     const [weeklyMenuEnabled, setWeeklyMenuEnabled] = useState(true);
     const [priorityCity, setPriorityCity] = useState('');
     const [menuOverrideMessage, setMenuOverrideMessage] = useState('');
@@ -48,21 +52,43 @@ const Parametres = () => {
     const [announcementMessage, setAnnouncementMessage] = useState('');
     const [announcementStyle, setAnnouncementStyle] = useState('info');
     const [announcementEnabled, setAnnouncementEnabled] = useState(false);
+    
     const [specialOfferEnabled, setSpecialOfferEnabled] = useState(false);
-    const [specialOffer, setSpecialOffer] = useState({ title: '', description: '', period: '', cutoff: '', eventDate: '', dishes: [] });
+    const [specialOffer, setSpecialOffer] = useState({ 
+        title: { fr: '', en: '', zh: '' }, 
+        description: { fr: '', en: '', zh: '' }, 
+        period: '', 
+        cutoff: '', 
+        eventDate: '', 
+        dishes: [] 
+    });
     const [specialOfferDisablesFormulas, setSpecialOfferDisablesFormulas] = useState(true);
 
     const announcementStyles = [
-        { value: 'info', label: '🔵 Info', color: 'rgba(59, 130, 246, 0.1)', border: '#3b82f6' },
+        { value: 'info', label: '🔵 Info', color: 'rgba(59, 130, 246, 0.1)', border: '#3b82f6' },       
         { value: 'attention', label: '⚠️ Attention', color: 'rgba(245, 158, 11, 0.1)', border: '#f59e0b' },
-        { value: 'fete', label: '🎉 Fête', color: 'rgba(236, 72, 153, 0.1)', border: '#ec4899' },
+        { value: 'fete', label: '🎉 Fête', color: 'rgba(236, 72, 153, 0.1)', border: '#ec4899' },      
         { value: 'promotion', label: '⭐ Promotion', color: 'rgba(212, 175, 55, 0.1)', border: '#d4af37' },
-        { value: 'annonce', label: '📢 Annonce', color: 'rgba(139, 92, 246, 0.1)', border: '#8b5cf6' }
+        { value: 'annonce', label: '📢 Annonce', color: 'rgba(139, 92, 246, 0.1)', border: '#8b5cf6' }  
     ];
 
     const saveSetting = async (key, value, silent = false) => {
-        const { error } = await supabase.from('settings').upsert({ key, value }, { onConflict: 'key' });
+        const stringValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
+        const { error } = await supabase.from('settings').upsert({ key, value: stringValue }, { onConflict: 'key' });  
         return !error;
+    };
+
+    const parseLangField = (val) => {
+        if (!val) return { fr: '', en: '', zh: '' };
+        try {
+            const parsed = JSON.parse(val);
+            if (typeof parsed === 'object' && parsed !== null && (parsed.fr || parsed.en || parsed.zh)) {
+                return { fr: parsed.fr || '', en: parsed.en || '', zh: parsed.zh || '' };
+            }
+            return { fr: val, en: '', zh: '' }; // Legacy string
+        } catch (e) {
+            return { fr: val, en: '', zh: '' }; // Plain string
+        }
     };
 
     const fetchAllSettings = useCallback(async () => {
@@ -74,10 +100,13 @@ const Parametres = () => {
             const map = settingsData.reduce((acc, s) => ({ ...acc, [s.key]: s.value }), {});
             setWelcomeMessage(map.welcomePopupMessage || '');
             setRefusalTemplate(map.refusalEmailTemplate || '');
-            setMenuDecouverte(map.menu_decouverte || '');
-            setMenuStandard(map.menu_standard || '');
-            setMenuConfort(map.menu_confort || '');
-            setMenuDuo(map.menu_duo || '');
+            
+            // Parse menu fields with multi-lang support
+            setMenuDecouverte(parseLangField(map.menu_decouverte));
+            setMenuStandard(parseLangField(map.menu_standard));
+            setMenuConfort(parseLangField(map.menu_confort));
+            setMenuDuo(parseLangField(map.menu_duo));
+
             setWeeklyMenuEnabled(map.weekly_menu_enabled !== 'false');
             setPriorityCity(map.priority_city || '');
             setMenuOverrideMessage(map.menu_override_message || '');
@@ -91,19 +120,26 @@ const Parametres = () => {
             setAnnouncementEnabled(map.announcement_enabled === 'true');
             setSpecialOfferEnabled(map.special_offer_enabled === 'true');
             setSpecialOfferDisablesFormulas(map.special_offer_disables_formulas === 'true');
+            
             if (map.special_offer_details) {
                 try {
                     const parsed = JSON.parse(map.special_offer_details);
+                    // Handle multi-lang conversion for legacy titles/descriptions
+                    const ensureLang = (f) => typeof f === 'object' ? { fr: f.fr || '', en: f.en || '', zh: f.zh || '' } : { fr: f || '', en: '', zh: '' };
+                    
                     setSpecialOffer({
-                        title: parsed.title || '',
-                        description: parsed.description || '',
+                        title: ensureLang(parsed.title),
+                        description: ensureLang(parsed.description),
                         period: parsed.period || '',
                         cutoff: parsed.cutoff || '',
                         eventDate: parsed.eventDate || '',
-                        dishes: parsed.dishes || []
+                        dishes: (parsed.dishes || []).map(d => ({
+                            ...d,
+                            name: ensureLang(d.name)
+                        }))
                     });
                 } catch(e) {
-                    setSpecialOffer({title:'', description:'', period: '', cutoff: '', eventDate: '', dishes:[]});
+                    setSpecialOffer({ title: {fr:'', en:'', zh:''}, description: {fr:'', en:'', zh:''}, period: '', cutoff: '', eventDate: '', dishes:[] });
                 }
             }
         }
@@ -154,7 +190,7 @@ const Parametres = () => {
         await Promise.all([
             saveSetting('special_offer_enabled', String(specialOfferEnabled), true),
             saveSetting('special_offer_details', JSON.stringify(specialOffer), true),
-            saveSetting('special_offer_disables_formulas', String(specialOfferDisablesFormulas), true),
+            saveSetting('special_offer_disables_formulas', String(specialOfferDisablesFormulas), true),   
         ]);
         setStatus({ message: 'Offre spéciale enregistrée !', type: 'success' });
         setTimeout(() => setStatus({ message: '', type: 'info' }), 2000);
@@ -183,6 +219,22 @@ const Parametres = () => {
                 </div>
 
                 <div className="animate-in fade-in duration-700">
+                    {/* --- SELECTEUR DE LANGUE FLOTTANT --- */}
+                    {(activeTab === 'menus') && (
+                        <div className="flex items-center gap-2 mb-6 bg-white p-2 rounded-2xl border border-gray-100 shadow-sm w-fit mx-auto lg:mx-0">
+                            <Languages size={16} className="text-gray-400 ml-2"/>
+                            {['fr', 'en', 'zh'].map(lang => (
+                                <button 
+                                    key={lang} 
+                                    onClick={() => setInputLang(lang)}
+                                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${inputLang === lang ? 'bg-amber-500 text-white shadow-md' : 'bg-gray-50 text-gray-400 hover:bg-gray-100'}`}
+                                >
+                                    {lang}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
                     {activeTab === 'company' && (
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                             <div className="lg:col-span-2 space-y-8">
@@ -281,7 +333,7 @@ const Parametres = () => {
                     {activeTab === 'menus' && (
                         <div className="space-y-8">
                             <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border-2 border-amber-400 bg-amber-50/10">
-                                <h2 className="text-xl font-black text-gray-800 mb-8 flex items-center gap-3"><Star className="text-amber-500 fill-amber-500"/> Ville Prioritaire de la Semaine (Star City)</h2>
+                                <h2 className="text-xl font-black text-gray-800 mb-8 flex items-center gap-3"><Star className="text-amber-500 fill-amber-500"/> Ville Prioritaire de la Semaine (Star City)</h2>    
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-end">
                                     <div>
                                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 block mb-2">Sélectionnez la ville mise en avant</label>
@@ -290,7 +342,7 @@ const Parametres = () => {
                                             onChange={e => setPriorityCity(e.target.value)}
                                             className="w-full p-4 bg-white border-0 rounded-2xl font-black text-xl shadow-inner ring-1 ring-gray-200 focus:ring-2 focus:ring-amber-500"
                                         >
-                                            <option value="">-- Aucune ville prioritaire --</option>
+                                            <option value="">-- Aucune ville prioritaire --</option>      
                                             {communesReunion.map(c => <option key={c} value={c}>{c}</option>)}
                                         </select>
                                     </div>
@@ -320,28 +372,28 @@ const Parametres = () => {
                             </div>
 
                             <div className={`bg-white p-10 rounded-[2.5rem] shadow-sm border border-gray-100 transition-opacity ${weeklyMenuEnabled ? 'opacity-100' : 'opacity-40'}`}>
-                                <h2 className="text-xl font-black text-gray-800 mb-8 flex items-center gap-3"><FileText className="text-amber-500"/> Composition du Menu Semaine</h2>
+                                <h2 className="text-xl font-black text-gray-800 mb-8 flex items-center gap-3"><FileText className="text-amber-500"/> Composition du Menu Semaine <span className="text-amber-500 font-black uppercase text-xs ml-auto">En {inputLang}</span></h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <div><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 block mb-2">Contenu Découverte</label><textarea value={menuDecouverte} onChange={e => setMenuDecouverte(e.target.value)} className="w-full p-4 bg-gray-50 border-0 rounded-2xl font-medium h-32" /></div>
-                                    <div><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 block mb-2">Contenu Standard</label><textarea value={menuStandard} onChange={e => setMenuStandard(e.target.value)} className="w-full p-4 bg-gray-50 border-0 rounded-2xl font-medium h-32" /></div>
-                                    <div><label className="text-[10px] font-black text-gray-400 uppercase ml-2 block mb-2">Contenu Confort</label><textarea value={menuConfort} onChange={e => setMenuConfort(e.target.value)} className="w-full p-4 bg-gray-50 border-0 rounded-2xl font-medium h-32" /></div>
-                                    <div><label className="text-[10px] font-black text-gray-400 uppercase ml-2 block mb-2">Contenu Duo</label><textarea value={menuDuo} onChange={e => setMenuDuo(e.target.value)} className="w-full p-4 bg-gray-50 border-0 rounded-2xl font-medium h-32" /></div>
+                                    <div><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 block mb-2">Contenu Découverte ({inputLang})</label><textarea value={menuDecouverte[inputLang]} onChange={e => setMenuDecouverte({...menuDecouverte, [inputLang]: e.target.value})} className="w-full p-4 bg-gray-50 border-0 rounded-2xl font-medium h-32" /></div>
+                                    <div><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 block mb-2">Contenu Standard ({inputLang})</label><textarea value={menuStandard[inputLang]} onChange={e => setMenuStandard({...menuStandard, [inputLang]: e.target.value})} className="w-full p-4 bg-gray-50 border-0 rounded-2xl font-medium h-32" /></div>
+                                    <div><label className="text-[10px] font-black text-gray-400 uppercase ml-2 block mb-2">Contenu Confort ({inputLang})</label><textarea value={menuConfort[inputLang]} onChange={e => setMenuConfort({...menuConfort, [inputLang]: e.target.value})} className="w-full p-4 bg-gray-50 border-0 rounded-2xl font-medium h-32" /></div>
+                                    <div><label className="text-[10px] font-black text-gray-400 uppercase ml-2 block mb-2">Contenu Duo ({inputLang})</label><textarea value={menuDuo[inputLang]} onChange={e => setMenuDuo({...menuDuo, [inputLang]: e.target.value})} className="w-full p-4 bg-gray-50 border-0 rounded-2xl font-medium h-32" /></div>
                                 </div>
                                 <div className="pt-10 mt-10 border-t flex justify-end">
-                                    <button onClick={handleSaveMenus} className="bg-green-600 text-white px-10 py-4 rounded-2xl font-black shadow-lg hover:bg-green-700 transition-all active:scale-95 flex items-center gap-2"><Save size={18}/> SAUVEGARDER LA CARTE</button>
+                                    <button onClick={handleSaveMenus} className="bg-green-600 text-white px-10 py-4 rounded-2xl font-black shadow-lg hover:bg-green-700 transition-all active:scale-95 flex items-center gap-2"><Save size={18}/> SAUVEGARDER TOUTES LES LANGUES</button>
                                 </div>
                             </div>
 
                             <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-red-100 bg-red-50/20">
-                                <h2 className="text-xl font-black text-gray-800 mb-8 flex items-center gap-3"><PlusCircle className="text-red-500"/> Gestion Offre Spéciale</h2>
+                                <h2 className="text-xl font-black text-gray-800 mb-8 flex items-center gap-3"><PlusCircle className="text-red-500"/> Gestion Offre Spéciale <span className="text-red-500 font-black uppercase text-xs ml-auto">En {inputLang}</span></h2>
                                 <div className="flex flex-wrap gap-6 mb-8">
                                     <div className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-red-100 shadow-sm"><input type="checkbox" checked={specialOfferEnabled} onChange={e => setSpecialOfferEnabled(e.target.checked)} className="w-6 h-6 text-red-500 rounded-lg"/><label className="font-bold text-gray-700">Activer l'offre spéciale</label></div>
                                     <div className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm"><input type="checkbox" checked={specialOfferDisablesFormulas} onChange={e => setSpecialOfferDisablesFormulas(e.target.checked)} className="w-6 h-6 text-gray-400 rounded-lg"/><label className="font-bold text-gray-500">Désactiver menus habituels</label></div>
                                 </div>
                                 <div className={`space-y-8 transition-all ${specialOfferEnabled ? 'opacity-100' : 'opacity-40 grayscale pointer-events-none'}`}>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div><label className="text-[10px] font-black text-gray-400 uppercase block mb-2 ml-2">Titre de l'Offre</label><input type="text" value={specialOffer.title} onChange={e => setSpecialOffer({...specialOffer, title: e.target.value})} className="w-full p-4 bg-white border border-gray-100 rounded-2xl font-black" /></div>
-                                        <div><label className="text-[10px] font-black text-gray-400 uppercase block mb-2 ml-2">Description</label><input type="text" value={specialOffer.description} onChange={e => setSpecialOffer({...specialOffer, description: e.target.value})} className="w-full p-4 bg-white border border-gray-100 rounded-2xl" /></div>
+                                        <div><label className="text-[10px] font-black text-gray-400 uppercase block mb-2 ml-2">Titre de l'Offre ({inputLang})</label><input type="text" value={specialOffer.title[inputLang]} onChange={e => setSpecialOffer({...specialOffer, title: {...specialOffer.title, [inputLang]: e.target.value}})} className="w-full p-4 bg-white border border-gray-100 rounded-2xl font-black" /></div>
+                                        <div><label className="text-[10px] font-black text-gray-400 uppercase block mb-2 ml-2">Description ({inputLang})</label><input type="text" value={specialOffer.description[inputLang]} onChange={e => setSpecialOffer({...specialOffer, description: {...specialOffer.description, [inputLang]: e.target.value}})} className="w-full p-4 bg-white border border-gray-100 rounded-2xl" /></div>
                                         <div><label className="text-[10px] font-black text-gray-400 uppercase block mb-2 ml-2">Période de l'offre (ex: 10 au 14 fév.)</label><input type="text" value={specialOffer.period} onChange={e => setSpecialOffer({...specialOffer, period: e.target.value})} className="w-full p-4 bg-white border border-gray-100 rounded-2xl" /></div>
                                         <div><label className="text-[10px] font-black text-gray-400 uppercase block mb-2 ml-2">Date de l'événement (Fixe pour la commande)</label><input type="date" value={specialOffer.eventDate} onChange={e => setSpecialOffer({...specialOffer, eventDate: e.target.value})} className="w-full p-4 bg-white border border-gray-100 rounded-2xl font-bold" /></div>
                                         <div className="md:col-span-2"><label className="text-[10px] font-black text-gray-400 uppercase block mb-2 ml-2">Date limite de commande (pour compte à rebours)</label><input type="datetime-local" value={specialOffer.cutoff} onChange={e => setSpecialOffer({...specialOffer, cutoff: e.target.value})} className="w-full p-4 bg-white border border-gray-100 rounded-2xl font-bold" /></div>
@@ -350,17 +402,17 @@ const Parametres = () => {
                                         {specialOffer.dishes?.map((dish, idx) => (
                                             <div key={idx} className="bg-white p-6 rounded-2xl border border-gray-100 flex flex-wrap gap-4 items-end relative group">
                                                 <button onClick={() => { const d = [...specialOffer.dishes]; d.splice(idx, 1); setSpecialOffer({...specialOffer, dishes: d}) }} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={14}/></button>
-                                                <div className="flex-1 min-w-[200px]"><label className="text-[9px] font-black text-gray-300 uppercase block mb-1">Désignation du Plat</label><input type="text" value={dish.name} onChange={e => { const d = [...specialOffer.dishes]; d[idx].name = e.target.value; setSpecialOffer({...specialOffer, dishes: d}) }} className="w-full p-3 bg-gray-50 border-0 rounded-xl font-bold" /></div>
+                                                <div className="flex-1 min-w-[200px]"><label className="text-[9px] font-black text-gray-300 uppercase block mb-1">Désignation ({inputLang})</label><input type="text" value={dish.name[inputLang]} onChange={e => { const d = [...specialOffer.dishes]; d[idx].name[inputLang] = e.target.value; setSpecialOffer({...specialOffer, dishes: d}) }} className="w-full p-3 bg-gray-50 border-0 rounded-xl font-bold" /></div>
                                                 <div className="w-32"><label className="text-[9px] font-black text-gray-300 uppercase block mb-1">Unité 1</label><input type="text" value={dish.label1} onChange={e => { const d = [...specialOffer.dishes]; d[idx].label1 = e.target.value; setSpecialOffer({...specialOffer, dishes: d}) }} className="w-full p-3 bg-gray-50 border-0 rounded-xl font-medium" /></div>
                                                 <div className="w-24"><label className="text-[9px] font-black text-gray-300 uppercase block mb-1">Prix 1 (€)</label><input type="number" value={dish.price1} onChange={e => { const d = [...specialOffer.dishes]; d[idx].price1 = e.target.value; setSpecialOffer({...specialOffer, dishes: d}) }} className="w-full p-3 bg-gray-50 border-0 rounded-xl font-black text-center" /></div>
                                                 <div className="w-32"><label className="text-[9px] font-black text-gray-300 uppercase block mb-1">Unité 2</label><input type="text" value={dish.label2} onChange={e => { const d = [...specialOffer.dishes]; d[idx].label2 = e.target.value; setSpecialOffer({...specialOffer, dishes: d}) }} className="w-full p-3 bg-gray-50 border-0 rounded-xl font-medium" /></div>
                                                 <div className="w-24"><label className="text-[9px] font-black text-gray-300 uppercase block mb-1">Prix 2 (€)</label><input type="number" value={dish.price2} onChange={e => { const d = [...specialOffer.dishes]; d[idx].price2 = e.target.value; setSpecialOffer({...specialOffer, dishes: d}) }} className="w-full p-3 bg-gray-50 border-0 rounded-xl font-black text-center" /></div>
                                             </div>
                                         ))}
-                                        <button onClick={() => setSpecialOffer({...specialOffer, dishes: [...(specialOffer.dishes || []), {name: '', label1:'Portion A', price1:'', label2:'Portion B', price2:''}]})} className="w-full py-4 border-2 border-dashed border-gray-200 rounded-2xl text-gray-400 font-bold hover:bg-gray-50 transition-all flex items-center justify-center gap-2"><PlusCircle size={18}/> Ajouter un plat</button>
+                                        <button onClick={() => setSpecialOffer({...specialOffer, dishes: [...(specialOffer.dishes || []), {name: {fr:'', en:'', zh:''}, label1:'Portion A', price1:'', label2:'Portion B', price2:''}]})} className="w-full py-4 border-2 border-dashed border-gray-200 rounded-2xl text-gray-400 font-bold hover:bg-gray-50 transition-all flex items-center justify-center gap-2"><PlusCircle size={18}/> Ajouter un plat</button>
                                     </div>
                                 </div>
-                                <div className="pt-10 mt-10 border-t flex justify-end"><button onClick={handleSaveSpecialOffer} className="bg-red-600 text-white px-10 py-4 rounded-2xl font-black shadow-lg hover:bg-red-700 transition-all active:scale-95">SAUVEGARDER L'OFFRE SPÉCIALE</button></div>
+                                <div className="pt-10 mt-10 border-t flex justify-end"><button onClick={handleSaveSpecialOffer} className="bg-red-600 text-white px-10 py-4 rounded-2xl font-black shadow-lg hover:bg-red-700 transition-all active:scale-95">SAUVEGARDER TOUTES LES LANGUES (OFFRE)</button></div>
                             </div>
                         </div>
                     )}
@@ -369,12 +421,12 @@ const Parametres = () => {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
                             <Link to="/calendrier" className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-gray-100 hover:shadow-xl transition-all group text-center">
                                 <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform"><Calendar size={40}/></div>
-                                <h3 className="text-xl font-black text-gray-800 mb-2">Calendrier</h3>
+                                <h3 className="text-xl font-black text-gray-800 mb-2">Calendrier</h3>     
                                 <p className="text-sm text-gray-400 font-medium leading-relaxed">Gérez vos jours de fermeture et les indisponibilités.</p>
                             </Link>
                             <Link to="/abonnements" className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-gray-100 hover:shadow-xl transition-all group text-center">
-                                <div className="w-20 h-20 bg-amber-50 text-amber-600 rounded-3xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform"><Users size={40}/></div>
-                                <h3 className="text-xl font-black text-gray-800 mb-2">Abonnements</h3>
+                                <div className="w-20 h-20 bg-amber-50 text-amber-600 rounded-3xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform"><Users size={40}/></div> 
+                                <h3 className="text-xl font-black text-gray-800 mb-2">Abonnements</h3>    
                                 <p className="text-sm text-gray-400 font-medium leading-relaxed">Pilotez vos contrats récurrents.</p>
                             </Link>
                             <Link to="/admin-account" className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-gray-100 hover:shadow-xl transition-all group text-center">

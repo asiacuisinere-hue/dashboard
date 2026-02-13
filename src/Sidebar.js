@@ -2,30 +2,30 @@ import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 import { useBusinessUnit } from './BusinessUnitContext';
-import { 
-    QrCode, Bell, X, Info, CheckCircle, ChevronDown, ChevronRight, 
-    LayoutDashboard, BarChart3, Wallet, FileText, Receipt, 
+import {
+    QrCode, Bell, X, Info, CheckCircle, ChevronDown, ChevronRight,
+    LayoutDashboard, BarChart3, Wallet, FileText, Receipt,
     History, ClipboardList, Calendar, UserCog, Utensils, ScanLine, Settings,
-    Users, Package, Globe
+    Users, Package, Globe, Truck, PackageCheck
 } from 'lucide-react';
 
-const Sidebar = ({ 
-    newCount, inProgressCount, pendingQuotesCount, toPrepareCount, 
+const Sidebar = ({
+    newCount, inProgressCount, pendingQuotesCount, toPrepareCount, readyCount,
     pendingInvoicesCount, depositPaidInvoicesCount, waitingForPrepCount,
     activeSubscriptionsCount, subscriptionsNeedAttentionCount,
-    isMobile, notifications, setNotifications 
+    isMobile, notifications, setNotifications
 }) => {
   const { businessUnit, updateBusinessUnit } = useBusinessUnit();
   const [isOpen, setIsOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [openGroups, setOpenGroups] = useState(['GESTION']); 
+  const [openGroups, setOpenGroups] = useState(['GESTION']);
   const notificationsRef = useRef(null);
   const navigate = useNavigate();
 
   const toggleGroup = (groupTitle) => {
-    setOpenGroups(prev => 
-        prev.includes(groupTitle) 
-            ? prev.filter(t => t !== groupTitle) 
+    setOpenGroups(prev =>
+        prev.includes(groupTitle)
+            ? prev.filter(t => t !== groupTitle)
             : [...prev, groupTitle]
     );
   };
@@ -45,7 +45,7 @@ const Sidebar = ({
         marginBottom: '25px',
         border: '1px solid rgba(255,255,255,0.1)'
     }}>
-        <button 
+        <button
             onClick={() => updateBusinessUnit('cuisine')}
             style={{
                 flex: 1,
@@ -66,7 +66,7 @@ const Sidebar = ({
         >
             <Utensils size={14} /> Cuisine
         </button>
-        <button 
+        <button
             onClick={() => updateBusinessUnit('courtage')}
             style={{
                 flex: 1,
@@ -134,6 +134,7 @@ const Sidebar = ({
   const inProgressBadgeStyle = { ...badgeStyle, backgroundColor: '#ffc107', color: '#333' };
   const pendingQuotesBadgeStyle = { ...badgeStyle, backgroundColor: '#17a2b8' };
   const toPrepareBadgeStyle = { ...badgeStyle, backgroundColor: '#6f42c1' };
+  const readyBadgeStyle = { ...badgeStyle, backgroundColor: '#28a745' };
   const pendingInvoiceBadgeStyle = { ...badgeStyle, backgroundColor: '#fd7e14' };
   const depositPaidInvoiceBadgeStyle = { ...badgeStyle, backgroundColor: '#20c997' };
   const waitingForPrepStyle = { ...badgeStyle, backgroundColor: '#007bff' };
@@ -214,13 +215,14 @@ const Sidebar = ({
             title: 'PILOTAGE',
             links: [
                 { to: '/', label: 'Accueil', icon: LayoutDashboard },
+                { to: '/planning', label: 'Planning', icon: Calendar },
                 { to: '/statistiques', label: 'Statistiques', icon: BarChart3 },
                 { to: '/depenses', label: 'Dépenses', icon: Wallet },
-                { 
-                    to: '/abonnements', 
-                    label: 'Abonnements', 
-                    icon: ClipboardList, 
-                    count: activeSubscriptionsCount, 
+                {
+                    to: '/abonnements',
+                    label: 'Abonnements',
+                    icon: ClipboardList,
+                    count: activeSubscriptionsCount,
                     style: activeSubscriptionsBadgeStyle,
                     secondCount: subscriptionsNeedAttentionCount,
                     secondStyle: needsAttentionBadgeStyle
@@ -233,10 +235,13 @@ const Sidebar = ({
                 { to: '/nouvelles-demandes', label: 'Nouvelles', icon: Bell, count: newCount, style: newBadgeStyle },
                 { to: '/demandes-en-cours', label: 'En cours', icon: History, count: inProgressCount, style: inProgressBadgeStyle },
                 { to: '/a-preparer', label: 'À Préparer', icon: Utensils, count: toPrepareCount, style: toPrepareBadgeStyle },
+                { to: '/pretes', label: 'Prêtes', icon: PackageCheck, count: readyCount, style: readyBadgeStyle },
+                { to: '/consolidation', label: 'Consolidation', icon: ClipboardList },
+                { to: '/feuille-route', label: 'Feuille de Route', icon: Truck },
                 { to: '/devis', label: 'Devis', icon: FileText, count: pendingQuotesCount, style: pendingQuotesBadgeStyle },
-                { 
-                    to: '/factures', 
-                    label: 'Factures', 
+                {
+                    to: '/factures',
+                    label: 'Factures',
                     icon: Receipt,
                     subLinks: [
                         { to: '/factures?status=pending', label: 'En attente', count: pendingInvoicesCount, style: pendingInvoiceBadgeStyle },
@@ -258,6 +263,7 @@ const Sidebar = ({
             links: [
                 { to: '/events', label: 'Événements', icon: Calendar },
                 { to: '/services', label: 'Services', icon: ClipboardList },
+                { to: '/menus-planning', label: 'Planning Menus', icon: Calendar },
                 { to: '/plats', label: 'Plats', icon: Utensils },
                 { to: '/scanner', label: 'Scanner', icon: ScanLine, mobileOnly: false },
                 { to: '/parametres', label: 'Paramètres', icon: Settings },
@@ -267,11 +273,11 @@ const Sidebar = ({
     ];
 
     const groupTitleStyle = {
-        fontSize: '0.75rem', 
-        color: '#868e96', 
-        textTransform: 'uppercase', 
-        letterSpacing: '0.05em', 
-        padding: '15px 20px', 
+        fontSize: '0.75rem',
+        color: '#868e96',
+        textTransform: 'uppercase',
+        letterSpacing: '0.05em',
+        padding: '15px 20px',
         marginTop: '10px',
         display: 'flex',
         justifyContent: 'space-between',
@@ -295,8 +301,8 @@ const Sidebar = ({
             return (
                 <div key={group.title} style={{ marginBottom: '5px' }}>
                     {!mobile && (
-                        <div 
-                            style={groupTitleStyle} 
+                        <div
+                            style={groupTitleStyle}
                             onClick={() => toggleGroup(group.title)}
                             onMouseEnter={(e) => e.currentTarget.style.color = '#fff'}
                             onMouseLeave={(e) => e.currentTarget.style.color = '#868e96'}
@@ -304,12 +310,15 @@ const Sidebar = ({
                             <div style={{ display: 'flex', alignItems: 'center' }}>
                                 <span>{group.title}</span>
                                 {!isGroupOpen && (
-                                    <div style={{ display: 'flex', gap: '4px', marginLeft: '10px' }}>
+                                    <div style={{ display: 'flex', gap: '4px', marginLeft: '10px' }}>     
                                         {group.title === 'GESTION' && newCount > 0 && (
                                             <span style={{ ...newBadgeStyle, width: '14px', height: '14px', fontSize: '8px', marginLeft: 0 }}>{newCount}</span>
                                         )}
                                         {group.title === 'GESTION' && toPrepareCount > 0 && (
                                             <span style={{ ...toPrepareBadgeStyle, width: '14px', height: '14px', fontSize: '8px', marginLeft: 0 }}>{toPrepareCount}</span>
+                                        )}
+                                        {group.title === 'GESTION' && readyCount > 0 && (
+                                            <span style={{ ...readyBadgeStyle, width: '14px', height: '14px', fontSize: '8px', marginLeft: 0 }}>{readyCount}</span>
                                         )}
                                         {group.title === 'PILOTAGE' && subscriptionsNeedAttentionCount > 0 && (
                                             <span style={{ ...needsAttentionBadgeStyle, width: '14px', height: '14px', fontSize: '8px', marginLeft: 0 }}>{subscriptionsNeedAttentionCount}</span>
@@ -317,14 +326,14 @@ const Sidebar = ({
                                     </div>
                                 )}
                             </div>
-                            {isGroupOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                            {isGroupOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}        
                         </div>
                     )}
 
-                    <div style={{ 
-                        maxHeight: isGroupOpen ? '1000px' : '0', 
-                        overflow: 'hidden', 
-                        transition: 'maxHeight 0.3s ease-in-out' 
+                    <div style={{
+                        maxHeight: isGroupOpen ? '1000px' : '0',
+                        overflow: 'hidden',
+                        transition: 'maxHeight 0.3s ease-in-out'
                     }}>
                         {group.links.filter(link => mobile ? link.mobileOnly !== false : true).map(link => (
                             <React.Fragment key={link.to || link.label}>
@@ -376,28 +385,40 @@ const Sidebar = ({
             <Link to="/scanner" style={scannerIconStyle}>
                 <QrCode size={24} />
             </Link>
-            <div style={{ ...hamburgerStyle, position: 'relative' }} onClick={() => setIsOpen(true)}>
+            <div style={{ ...hamburgerStyle, position: 'relative' }} onClick={() => setIsOpen(true)}>     
                 ☰
                 {newCount > 0 && (
-                    <span style={{ 
-                        position: 'absolute', 
-                        top: '-2px', 
-                        right: '-2px', 
-                        width: '12px', 
-                        height: '12px', 
-                        backgroundColor: '#28a745', 
+                    <span style={{
+                        position: 'absolute',
+                        top: '-2px',
+                        right: '-2px',
+                        width: '12px',
+                        height: '12px',
+                        backgroundColor: '#28a745',
                         borderRadius: '50%',
                         border: '2px solid #343a40'
                     }}></span>
                 )}
                 {toPrepareCount > 0 && (
-                    <span style={{ 
-                        position: 'absolute', 
-                        bottom: '-2px', 
-                        right: '-2px', 
-                        width: '12px', 
-                        height: '12px', 
-                        backgroundColor: '#6f42c1', 
+                    <span style={{
+                        position: 'absolute',
+                        bottom: '-2px',
+                        right: '-2px',
+                        width: '12px',
+                        height: '12px',
+                        backgroundColor: '#6f42c1',
+                        borderRadius: '50%',
+                        border: '2px solid #343a40'
+                    }}></span>
+                )}
+                {readyCount > 0 && (
+                    <span style={{
+                        position: 'absolute',
+                        bottom: '-2px',
+                        left: '-2px',
+                        width: '12px',
+                        height: '12px',
+                        backgroundColor: '#28a745',
                         borderRadius: '50%',
                         border: '2px solid #343a40'
                     }}></span>
@@ -429,9 +450,9 @@ const Sidebar = ({
             <BusinessUnitSelector />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
                 <h2 style={{ textAlign: 'center', margin: 0 }}>Asiacuisine.re</h2>
-                <div style={notificationIconStyle} onClick={() => setIsNotificationsOpen(o => !o)}>
+                <div style={notificationIconStyle} onClick={() => setIsNotificationsOpen(o => !o)}>       
                     <Bell size={20} />
-                    {unreadCount > 0 && <span style={notificationBadgeStyle}>{unreadCount}</span>}
+                    {unreadCount > 0 && <span style={notificationBadgeStyle}>{unreadCount}</span>}        
                 </div>
             </div>
             {isNotificationsOpen && <NotificationPanel />}
@@ -440,7 +461,7 @@ const Sidebar = ({
         <div style={{ marginTop: 'auto', padding: '20px 0' }}>
             <button onClick={handleLogout} style={logoutButtonStyle}><span>👋</span> Déconnexion</button>
         </div>
-    </aside>
+  </aside>
   );
 };
 
