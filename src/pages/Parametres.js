@@ -21,7 +21,7 @@ const Parametres = () => {
     const { businessUnit } = useBusinessUnit();
     const [activeTab, setActiveTab] = useState('company');
     const [status, setStatus] = useState({ message: '', type: 'info' });
-    const [inputLang, setInputLang] = useState('fr'); // 'fr', 'en', 'zh'
+    const [inputLang, setInputLang] = useState('fr');
 
     const themeColor = businessUnit === 'courtage' ? 'blue' : 'amber';
 
@@ -34,8 +34,7 @@ const Parametres = () => {
 
     const [welcomeMessage, setWelcomeMessage] = useState('');
     const [refusalTemplate, setRefusalTemplate] = useState('');
-    
-    // Multi-language states for Menus
+
     const [menuDecouverte, setMenuDecouverte] = useState({ fr: '', en: '', zh: '' });
     const [menuStandard, setMenuStandard] = useState({ fr: '', en: '', zh: '' });
     const [menuConfort, setMenuConfort] = useState({ fr: '', en: '', zh: '' });
@@ -52,15 +51,15 @@ const Parametres = () => {
     const [announcementMessage, setAnnouncementMessage] = useState('');
     const [announcementStyle, setAnnouncementStyle] = useState('info');
     const [announcementEnabled, setAnnouncementEnabled] = useState(false);
-    
+
     const [specialOfferEnabled, setSpecialOfferEnabled] = useState(false);
-    const [specialOffer, setSpecialOffer] = useState({ 
-        title: { fr: '', en: '', zh: '' }, 
-        description: { fr: '', en: '', zh: '' }, 
-        period: '', 
-        cutoff: '', 
-        eventDate: '', 
-        dishes: [] 
+    const [specialOffer, setSpecialOffer] = useState({
+        title: { fr: '', en: '', zh: '' },
+        description: { fr: '', en: '', zh: '' },
+        period: '',
+        cutoff: '',
+        eventDate: '',
+        dishes: []
     });
     const [specialOfferDisablesFormulas, setSpecialOfferDisablesFormulas] = useState(true);
 
@@ -74,20 +73,25 @@ const Parametres = () => {
 
     const saveSetting = async (key, value, silent = false) => {
         const stringValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
-        const { error } = await supabase.from('settings').upsert({ key, value: stringValue }, { onConflict: 'key' });  
+        const { error } = await supabase.from('settings').upsert({ key, value: stringValue }, { onConflict: 'key' });
         return !error;
     };
 
     const parseLangField = (val) => {
         if (!val) return { fr: '', en: '', zh: '' };
+        if (typeof val === 'object') return { fr: val.fr || '', en: val.en || '', zh: val.zh || '' };
+        
         try {
-            const parsed = JSON.parse(val);
-            if (typeof parsed === 'object' && parsed !== null && (parsed.fr || parsed.en || parsed.zh)) {
-                return { fr: parsed.fr || '', en: parsed.en || '', zh: parsed.zh || '' };
+            // Test if it's a valid JSON string
+            if (String(val).trim().startsWith('{')) {
+                const parsed = JSON.parse(val);
+                if (typeof parsed === 'object' && parsed !== null) {
+                    return { fr: parsed.fr || '', en: parsed.en || '', zh: parsed.zh || '' };
+                }
             }
-            return { fr: val, en: '', zh: '' }; // Legacy string
+            return { fr: val, en: '', zh: '' }; 
         } catch (e) {
-            return { fr: val, en: '', zh: '' }; // Plain string
+            return { fr: val, en: '', zh: '' };
         }
     };
 
@@ -100,8 +104,7 @@ const Parametres = () => {
             const map = settingsData.reduce((acc, s) => ({ ...acc, [s.key]: s.value }), {});
             setWelcomeMessage(map.welcomePopupMessage || '');
             setRefusalTemplate(map.refusalEmailTemplate || '');
-            
-            // Parse menu fields with multi-lang support
+
             setMenuDecouverte(parseLangField(map.menu_decouverte));
             setMenuStandard(parseLangField(map.menu_standard));
             setMenuConfort(parseLangField(map.menu_confort));
@@ -120,13 +123,16 @@ const Parametres = () => {
             setAnnouncementEnabled(map.announcement_enabled === 'true');
             setSpecialOfferEnabled(map.special_offer_enabled === 'true');
             setSpecialOfferDisablesFormulas(map.special_offer_disables_formulas === 'true');
-            
+
             if (map.special_offer_details) {
                 try {
                     const parsed = JSON.parse(map.special_offer_details);
-                    // Handle multi-lang conversion for legacy titles/descriptions
-                    const ensureLang = (f) => typeof f === 'object' ? { fr: f.fr || '', en: f.en || '', zh: f.zh || '' } : { fr: f || '', en: '', zh: '' };
-                    
+                    const ensureLang = (f) => {
+                        if (!f) return { fr: '', en: '', zh: '' };
+                        if (typeof f === 'object') return { fr: f.fr || '', en: f.en || '', zh: f.zh || '' };
+                        return { fr: String(f), en: '', zh: '' };
+                    };
+
                     setSpecialOffer({
                         title: ensureLang(parsed.title),
                         description: ensureLang(parsed.description),
@@ -219,13 +225,12 @@ const Parametres = () => {
                 </div>
 
                 <div className="animate-in fade-in duration-700">
-                    {/* --- SELECTEUR DE LANGUE FLOTTANT --- */}
                     {(activeTab === 'menus') && (
                         <div className="flex items-center gap-2 mb-6 bg-white p-2 rounded-2xl border border-gray-100 shadow-sm w-fit mx-auto lg:mx-0">
                             <Languages size={16} className="text-gray-400 ml-2"/>
                             {['fr', 'en', 'zh'].map(lang => (
-                                <button 
-                                    key={lang} 
+                                <button
+                                    key={lang}
                                     onClick={() => setInputLang(lang)}
                                     className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${inputLang === lang ? 'bg-amber-500 text-white shadow-md' : 'bg-gray-50 text-gray-400 hover:bg-gray-100'}`}
                                 >
@@ -278,7 +283,6 @@ const Parametres = () => {
                         </div>
                     )}
 
-                    {/* --- ONGLET MESSAGES --- */}
                     {activeTab === 'messages' && (
                         <div className="space-y-8 max-w-4xl mx-auto">
                             <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-gray-100">
@@ -329,7 +333,6 @@ const Parametres = () => {
                         </div>
                     )}
 
-                    {/* --- ONGLET MENUS --- */}
                     {activeTab === 'menus' && (
                         <div className="space-y-8">
                             <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border-2 border-amber-400 bg-amber-50/10">
@@ -392,8 +395,8 @@ const Parametres = () => {
                                 </div>
                                 <div className={`space-y-8 transition-all ${specialOfferEnabled ? 'opacity-100' : 'opacity-40 grayscale pointer-events-none'}`}>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div><label className="text-[10px] font-black text-gray-400 uppercase block mb-2 ml-2">Titre de l'Offre ({inputLang})</label><input type="text" value={specialOffer.title[inputLang]} onChange={e => setSpecialOffer({...specialOffer, title: {...specialOffer.title, [inputLang]: e.target.value}})} className="w-full p-4 bg-white border border-gray-100 rounded-2xl font-black" /></div>
-                                        <div><label className="text-[10px] font-black text-gray-400 uppercase block mb-2 ml-2">Description ({inputLang})</label><input type="text" value={specialOffer.description[inputLang]} onChange={e => setSpecialOffer({...specialOffer, description: {...specialOffer.description, [inputLang]: e.target.value}})} className="w-full p-4 bg-white border border-gray-100 rounded-2xl" /></div>
+                                        <div><label className="text-[10px] font-black text-gray-400 uppercase block mb-2 ml-2">Titre de l'Offre ({inputLang})</label><input type="text" value={specialOffer.title[inputLang]} onChange={e => setSpecialOffer({...specialOffer, title: {...specialOffer.title, [inputLang]: e.target.value}})} className="w-full p-4 bg-white border border-gray-100 rounded-2xl font-black" /></div>    
+                                        <div><label className="text-[10px] font-black text-gray-400 uppercase block mb-2 ml-2">Description ({inputLang})</label><input type="text" value={specialOffer.description[inputLang]} onChange={e => setSpecialOffer({...specialOffer, description: {...specialOffer.description, [inputLang]: e.target.value}})} className="w-full p-4 bg-white border border-gray-100 rounded-2xl" /></div>  
                                         <div><label className="text-[10px] font-black text-gray-400 uppercase block mb-2 ml-2">Période de l'offre (ex: 10 au 14 fév.)</label><input type="text" value={specialOffer.period} onChange={e => setSpecialOffer({...specialOffer, period: e.target.value})} className="w-full p-4 bg-white border border-gray-100 rounded-2xl" /></div>
                                         <div><label className="text-[10px] font-black text-gray-400 uppercase block mb-2 ml-2">Date de l'événement (Fixe pour la commande)</label><input type="date" value={specialOffer.eventDate} onChange={e => setSpecialOffer({...specialOffer, eventDate: e.target.value})} className="w-full p-4 bg-white border border-gray-100 rounded-2xl font-bold" /></div>
                                         <div className="md:col-span-2"><label className="text-[10px] font-black text-gray-400 uppercase block mb-2 ml-2">Date limite de commande (pour compte à rebours)</label><input type="datetime-local" value={specialOffer.cutoff} onChange={e => setSpecialOffer({...specialOffer, cutoff: e.target.value})} className="w-full p-4 bg-white border border-gray-100 rounded-2xl font-bold" /></div>
