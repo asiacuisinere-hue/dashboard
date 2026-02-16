@@ -113,7 +113,7 @@ const confirmButtonStyle = {
     marginTop: '2rem',
 };
 const statusBadgeStyle = (status) => {
-    const colors = { 'pending': '#ffc107', 'En attente de traitement': '#ffc107', 'confirmed': '#007bff', 'in_progress': '#17a2b8', 'completed': '#28a745', 'cancelled': '#dc3545', 'En attente de paiement': '#fd7e14', 'En attente de préparation': '#6f42c1', 'Préparation en cours': '#17a2b8' };
+    const colors = { 'pending': '#ffc107', 'En cours de traitement': '#ffc107', 'confirmed': '#007bff', 'in_progress': '#17a2b8', 'completed': '#28a745', 'cancelled': '#dc3545', 'En attente de paiement': '#fd7e14', 'En attente de préparation': '#6f42c1', 'Préparation en cours': '#17a2b8' };
     return {
         padding: '4px 8px', borderRadius: '12px', color: 'white',
         fontWeight: 'bold', fontSize: '14px', backgroundColor: colors[status] || '#6c757d'

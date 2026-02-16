@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 
 const Sidebar = ({
-    newCount, inProgressCount, pendingQuotesCount, toPrepareCount, readyCount,
+    newCount, inProgressCount, pendingQuotesCount, draftQuotesCount, toPrepareCount, readyCount,
     pendingInvoicesCount, depositPaidInvoicesCount, waitingForPrepCount,
     activeSubscriptionsCount, subscriptionsNeedAttentionCount,
     isMobile, notifications, setNotifications
@@ -23,11 +23,15 @@ const Sidebar = ({
   const navigate = useNavigate();
 
   const toggleGroup = (groupTitle) => {
-    setOpenGroups(prev =>
-        prev.includes(groupTitle)
-            ? prev.filter(t => t !== groupTitle)
-            : [...prev, groupTitle]
-    );
+    setOpenGroups(prev => {
+        if (prev.includes(groupTitle)) {
+            // If already open, close it
+            return prev.filter(t => t !== groupTitle);
+        } else {
+            // If closed, open it and close all others
+            return [groupTitle];
+        }
+    });
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -133,6 +137,7 @@ const Sidebar = ({
   const newBadgeStyle = { ...badgeStyle, backgroundColor: '#28a745' };
   const inProgressBadgeStyle = { ...badgeStyle, backgroundColor: '#ffc107', color: '#333' };
   const pendingQuotesBadgeStyle = { ...badgeStyle, backgroundColor: '#17a2b8' };
+  const draftQuotesBadgeStyle = { ...badgeStyle, backgroundColor: '#6c757d' };
   const toPrepareBadgeStyle = { ...badgeStyle, backgroundColor: '#6f42c1' };
   const readyBadgeStyle = { ...badgeStyle, backgroundColor: '#28a745' };
   const pendingInvoiceBadgeStyle = { ...badgeStyle, backgroundColor: '#fd7e14' };
@@ -239,7 +244,15 @@ const Sidebar = ({
                 { to: '/pretes', label: 'Prêtes', icon: PackageCheck, count: readyCount, style: readyBadgeStyle },
                 { to: '/consolidation', label: 'Consolidation', icon: ClipboardList },
                 { to: '/feuille-route', label: 'Feuille de Route', icon: Truck },
-                { to: '/devis', label: 'Devis', icon: FileText, count: pendingQuotesCount, style: pendingQuotesBadgeStyle },
+                {
+                    to: '/devis',
+                    label: 'Devis',
+                    icon: FileText,
+                    count: pendingQuotesCount,
+                    style: pendingQuotesBadgeStyle,
+                    secondCount: draftQuotesCount,
+                    secondStyle: draftQuotesBadgeStyle
+                },
                 {
                     to: '/factures',
                     label: 'Factures',

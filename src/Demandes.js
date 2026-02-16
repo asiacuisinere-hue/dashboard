@@ -96,36 +96,114 @@ const Demandes = () => {
     const [filter, setFilter] = useState({ type: 'ALL', sortAsc: false });
     const themeColor = businessUnit === 'courtage' ? 'blue' : 'amber';
 
-    const fetchDemandes = useCallback(async () => {
-        setLoading(true);
+                const fetchDemandes = useCallback(async (currentFilter = filter) => {
 
-        // 1. Fetch Star City from settings
-        const { data: starData } = await supabase.from('settings').select('value').eq('key', 'priority_city').single();
-        if (starData) setStarCity(starData.value);
+                    setLoading(true);
 
-        // 2. Fetch Demands
-        let query = supabase
-            .from('demandes')
-            .select('*, clients (*), entreprises (*)')
-            .eq('business_unit', businessUnit)
-            .in('status', ['Nouvelle', 'Intention WhatsApp', 'En attente de traitement']);
+            
 
-        if (filter.type !== 'ALL') {
-            query = query.eq('type', filter.type);
-        }
+                    // 1. Fetch Star City from settings
 
-        const { data, error } = await query.order('created_at', { ascending: filter.sortAsc });
-        
-        if (!error) setDemandes(data || []);
-        setLoading(false);
-    }, [businessUnit, filter]);
+                    const { data: starData } = await supabase.from('settings').select('value').eq('key', 'priority_city').single();
 
-    useEffect(() => { fetchDemandes(); }, [fetchDemandes]);
+                    if (starData) setStarCity(starData.value);
 
+            
+
+                    // 2. Fetch Demands
+
+                    let query = supabase
+
+                        .from('demandes')
+
+                        .select('*, clients (*), entreprises (*)')
+
+                        .eq('business_unit', businessUnit)
+
+                        .in('status', ['Nouvelle', 'Intention WhatsApp', 'En attente de traitement']);
+
+            
+
+                    if (currentFilter.type !== 'ALL') {
+
+                        query = query.eq('type', currentFilter.type);
+
+                    }
+
+            
+
+                    const { data, error } = await query.order('created_at', { ascending: currentFilter.sortAsc });
+
+            
+
+                    if (!error) setDemandes(data || []);
+
+                    setLoading(false);
+
+                }, [businessUnit, filter]);        useEffect(() => { 
+            fetchDemandes(); 
+    
+            const channel = supabase.channel('demandes_list_demandes')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'demandes' }, payload => {
+                    // Ignore changes from other business units
+                    if (payload.new && payload.new.business_unit !== businessUnit) return;
+                    if (payload.old && payload.old.business_unit !== businessUnit) return;
+                    
+                    // Get the status filters for the current view
+                    const currentStatusFilters = ['Nouvelle', 'Intention WhatsApp', 'En attente de traitement'];
+                    const isMatchingFilter = (demande) => currentStatusFilters.includes(demande.status) && (filter.type === 'ALL' || demande.type === filter.type);
+    
+                    setDemandes(prevDemandes => {
+                        let newDemandes = [...prevDemandes];
+    
+                        if (payload.eventType === 'INSERT') {
+                            // Add if it matches current filters
+                            if (isMatchingFilter(payload.new)) {
+                                newDemandes.push({ ...payload.new, clients: null, entreprises: null }); // Add basic info, full client info fetched on detail view
+                            }
+                        } else if (payload.eventType === 'UPDATE') {
+                            const index = newDemandes.findIndex(d => d.id === payload.new.id);
+                            if (index !== -1) {
+                                // Update if it still matches filters
+                                if (isMatchingFilter(payload.new)) {
+                                    newDemandes[index] = { ...newDemandes[index], ...payload.new };
+                                } else {
+                                    // Remove if it no longer matches filters (e.g., status changed)
+                                    newDemandes.splice(index, 1);
+                                }
+                            } else {
+                                // If it was not in the list, but now matches filters, add it
+                                if (isMatchingFilter(payload.new)) {
+                                    newDemandes.push({ ...payload.new, clients: null, entreprises: null });
+                                }
+                            }
+                        } else if (payload.eventType === 'DELETE') {
+                            newDemandes = newDemandes.filter(d => d.id !== payload.old.id);
+                        }
+                        // Re-sort the array after changes
+                        return newDemandes.sort((a, b) => {
+                            const dateA = new Date(a.created_at || a.request_date).getTime();
+                            const dateB = new Date(b.created_at || b.request_date).getTime();
+                            return filter.sortAsc ? dateA - dateB : dateB - dateA;
+                        });
+                    });
+                })
+                .subscribe();
+    
+            return () => {
+                supabase.removeChannel(channel);
+            };
+        }, [fetchDemandes, businessUnit, filter]);
     const handleUpdateStatus = async (id, s) => {
-        await supabase.from('demandes').update({ status: s }).eq('id', id);
-        fetchDemandes();
-        setSelectedDemande(null);
+        try {
+            const { error } = await supabase.from('demandes').update({ status: s }).eq('id', id);
+            if (error) throw error;
+            fetchDemandes();
+            setSelectedDemande(null);
+        } catch (error) {
+            console.error("Erreur lors de la mise à jour du statut:", error.message);
+            alert("Erreur lors de la mise à jour : " + error.message);
+        }
     };
 
     if (loading && demandes.length === 0) return <div className="p-6 text-center py-20 flex flex-col items-center gap-4"><RefreshCw className="animate-spin text-amber-500" size={40}/><p className="text-gray-400 font-bold">Réception des nouvelles demandes...</p></div>;

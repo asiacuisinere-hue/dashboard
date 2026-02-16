@@ -25,12 +25,12 @@ const getZoneInfo = (city) => {
 
 const getStatusColor = (status) => {
     const colors = {
-        'En attente de traitement': { bg: 'rgba(245, 158, 11, 0.1)', text: '#f59e0b' },
+        'En cours de traitement': { bg: 'rgba(245, 158, 11, 0.1)', text: '#f59e0b' },
         'confirmed': { bg: 'rgba(16, 185, 129, 0.1)', text: '#10b981' },
         'En attente de paiement': { bg: 'rgba(59, 130, 246, 0.1)', text: '#3b82f6' },
         'Payée': { bg: 'rgba(139, 92, 246, 0.1)', text: '#8b5cf6' },
         'En attente de préparation': { bg: 'rgba(109, 40, 217, 0.1)', text: '#6d28d9' },
-        'Prét pour livraison': { bg: 'rgba(6, 182, 212, 0.1)', text: '#06b6d4' }
+        'Prêt pour livraison': { bg: 'rgba(6, 182, 212, 0.1)', text: '#06b6d4' }
     };
     const c = colors[status] || { bg: '#f3f4f6', text: '#6b7280' };
     return { backgroundColor: c.bg, color: c.text, padding: '4px 12px', borderRadius: '20px', fontSize: '10px', fontWeight: '900', textTransform: 'uppercase' };
@@ -107,53 +107,113 @@ const DemandesEnCours = () => {
 
     const themeColor = businessUnit === 'courtage' ? 'blue' : 'amber';
 
-    const fetchDemandes = useCallback(async () => {
-        setLoading(true);
-
-        // 1. Fetch Star City
-        const { data: starData } = await supabase.from('settings').select('value').eq('key', 'priority_city').single();
-        if (starData) setStarCity(starData.value);
-
-        // 2. Fetch Demands
-        let query = supabase.from('demandes').select(`*, clients (*), entreprises (*)`).eq('business_unit', businessUnit);
-
-        const ongoingStatuses = ['confirmed', 'En attente de paiement', 'En attente de validation de devis', 'En cours de traitement'];
-
-        if (activeTab === 'SERVICE') {
-            query = query.eq('type', 'RESERVATION_SERVICE').in('status', ongoingStatuses);
-        } else if (activeTab === 'MENU') {
-            query = query.in('type', ['COMMANDE_MENU', 'COMMANDE_SPECIALE']).in('status', ['En attente de paiement', 'confirmed', 'En cours de traitement']);
-        } else if (activeTab === 'SUBS') {
-            query = query.eq('type', 'SOUSCRIPTION_ABONNEMENT');
-        } else {
-            query = query.in('status', ongoingStatuses);
-        }
-
-        if (filter.date) query = query.eq('request_date', filter.date);
-        if (filter.status) query = query.eq('status', filter.status);
-        if (filter.city) {
-            query = query.or(`details_json->>deliveryCity.ilike.%${filter.city}%,details_json->>ville.ilike.%${filter.city}%`);
-        }
-
-        // --- SORT BY REQUEST DATE ---
-        const { data, error } = await query.order('request_date', { ascending: filter.sortAsc });
-        
-        let filteredData = data || [];
-        // client-side zone filter
-        if (filter.zone !== 'ALL') {
-            filteredData = filteredData.filter(d => getZoneInfo(d.details_json?.deliveryCity || d.details_json?.ville).label === filter.zone);
-        }
-
-        if (!error) setDemandes(filteredData);
-        setLoading(false);
-    }, [businessUnit, activeTab, filter]);
-
-    useEffect(() => { fetchDemandes(); }, [fetchDemandes]);
-
+                const fetchDemandes = useCallback(async (currentFilter = filter, currentActiveTab = activeTab) => {
+                    setLoading(true);
+            
+                    // 1. Fetch Star City
+                    const { data: starData } = await supabase.from('settings').select('value').eq('key', 'priority_city').single();
+                    if (starData) setStarCity(starData.value);
+            
+                    // 2. Fetch Demands
+                    let query = supabase.from('demandes').select(`*, clients (*), entreprises (*)`).eq('business_unit', businessUnit);
+            
+                    const ongoingStatuses = ['confirmed', 'En attente de paiement', 'En cours de traitement'];
+            
+                    if (currentActiveTab === 'SERVICE') {
+                        query = query.eq('type', 'RESERVATION_SERVICE').in('status', ongoingStatuses);
+                    } else if (currentActiveTab === 'MENU') {
+                        query = query.in('type', ['COMMANDE_MENU', 'COMMANDE_SPECIALE']).in('status', ['En attente de paiement', 'confirmed', 'En cours de traitement']);
+                    } else if (currentActiveTab === 'SUBS') {
+                        query = query.eq('type', 'SOUSCRIPTION_ABONNEMENT');
+                    } else { // ALL tab
+                        query = query.in('status', ongoingStatuses);
+                    }
+            
+                    if (currentFilter.date) query = query.eq('request_date', currentFilter.date);
+                    if (currentFilter.status) query = query.eq('status', currentFilter.status);
+                    if (currentFilter.city) {
+                        query = query.or(`details_json->>deliveryCity.ilike.%${currentFilter.city}%,details_json->>ville.ilike.%${currentFilter.city}%`);
+                    }
+            
+                    const { data, error } = await query.order('request_date', { ascending: currentFilter.sortAsc });
+            
+                    let filteredData = data || [];
+                    // client-side zone filter
+                    if (currentFilter.zone !== 'ALL') {
+                        filteredData = filteredData.filter(d => getZoneInfo(d.details_json?.deliveryCity || d.details_json?.ville).label === currentFilter.zone);
+                    }
+            
+                    if (!error) setDemandes(filteredData);
+                    setLoading(false);
+                }, [businessUnit, activeTab, filter]);        useEffect(() => {
+            fetchDemandes();
+    
+            const channel = supabase.channel('demandes_list_encours')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'demandes' }, payload => {
+                    if (payload.new && payload.new.business_unit !== businessUnit) return;
+                    if (payload.old && payload.old.business_unit !== businessUnit) return;
+    
+                    const ongoingStatuses = ['confirmed', 'En attente de paiement', 'En cours de traitement'];
+                    const isMatchingFilter = (demande) => {
+                        const statusMatch = ongoingStatuses.includes(demande.status);
+                        const typeMatch = (activeTab === 'ALL' && ongoingStatuses.includes(demande.status)) ||
+                                          (activeTab === 'SERVICE' && demande.type === 'RESERVATION_SERVICE' && ongoingStatuses.includes(demande.status)) ||
+                                          (activeTab === 'MENU' && ['COMMANDE_MENU', 'COMMANDE_SPECIALE'].includes(demande.type) && ['En attente de paiement', 'confirmed', 'En cours de traitement'].includes(demande.status)) ||
+                                          (activeTab === 'SUBS' && demande.type === 'SOUSCRIPTION_ABONNEMENT'); // Subscriptions might have different ongoing statuses
+                        
+                        // Add more filter checks here if needed, e.g., filter.date, filter.status, filter.city, filter.zone
+                        // For now, these filters are applied on the entire list after initial fetch.
+                        // To truly optimize, push these filters into the Supabase query.
+                        
+                        return statusMatch && typeMatch;
+                    };
+    
+                    setDemandes(prevDemandes => {
+                        let newDemandes = [...prevDemandes];
+    
+                        if (payload.eventType === 'INSERT') {
+                            if (isMatchingFilter(payload.new)) {
+                                newDemandes.push({ ...payload.new, clients: null, entreprises: null });
+                            }
+                        } else if (payload.eventType === 'UPDATE') {
+                            const index = newDemandes.findIndex(d => d.id === payload.new.id);
+                            if (index !== -1) {
+                                if (isMatchingFilter(payload.new)) {
+                                    newDemandes[index] = { ...newDemandes[index], ...payload.new };
+                                } else {
+                                    newDemandes.splice(index, 1);
+                                }
+                            } else {
+                                if (isMatchingFilter(payload.new)) {
+                                    newDemandes.push({ ...payload.new, clients: null, entreprises: null });
+                                }
+                            }
+                        } else if (payload.eventType === 'DELETE') {
+                            newDemandes = newDemandes.filter(d => d.id !== payload.old.id);
+                        }
+                        return newDemandes.sort((a, b) => {
+                            const dateA = new Date(a.created_at || a.request_date).getTime();
+                            const dateB = new Date(b.created_at || b.request_date).getTime();
+                            return filter.sortAsc ? dateA - dateB : dateB - dateA;
+                        });
+                    });
+                })
+                .subscribe();
+    
+            return () => {
+                supabase.removeChannel(channel);
+            };
+        }, [fetchDemandes, businessUnit, activeTab, filter]);
     const handleUpdateStatus = async (id, s) => {
-        await supabase.from('demandes').update({ status: s }).eq('id', id);
-        fetchDemandes();
-        setSelectedDemande(null);
+        try {
+            const { error } = await supabase.from('demandes').update({ status: s }).eq('id', id);
+            if (error) throw error;
+            fetchDemandes();
+            setSelectedDemande(null);
+        } catch (error) {
+            console.error("Erreur lors de la mise à jour du statut:", error.message);
+            alert("Erreur lors de la mise à jour : " + error.message);
+        }
     };
 
     const filteredList = demandes.filter(d => {
@@ -219,6 +279,7 @@ const DemandesEnCours = () => {
 
                     <select value={filter.status} onChange={e => setFilter({...filter, status: e.target.value})} className="p-2.5 bg-gray-50 border-0 rounded-xl font-bold text-xs">
                         <option value="">Tous les statuts</option>
+                        <option value="En cours de traitement">En traitement</option>
                         <option value="confirmed">Confirmée</option>
                         <option value="En attente de paiement">Attente Paiement</option>
                     </select>

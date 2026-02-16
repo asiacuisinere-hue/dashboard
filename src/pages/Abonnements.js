@@ -2,11 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 import { useBusinessUnit } from '../BusinessUnitContext';
 import {
-    Calendar, Clock, CreditCard, RefreshCw, AlertTriangle,
-    PauseCircle, PlayCircle, XCircle, Search,
-    ClipboardList, Save, Trash2, Printer, Beef, Soup, ClipboardCheck, Share2, MessageCircle, User, Info
-} from 'lucide-react';
-
+        Calendar, Clock, CreditCard, RefreshCw, AlertTriangle,
+        PauseCircle, PlayCircle, XCircle, Search,
+        Save, Printer, ClipboardCheck, Share2, User
+    } from 'lucide-react';
 const getFrenchStatus = (status) => {
     switch (status) {
         case 'actif': return 'Actif';
@@ -222,7 +221,6 @@ const SubDetailModal = ({ sub, onClose, onUpdate, themeColor, customerName }) =>
     const [form, setForm] = useState({...sub});
     const [suiviChef, setSuiviChef] = useState([]);
     const [journalClient, setJournalClient] = useState([]);
-    const [loadingData, setLoadingData] = useState(false);
     
     const [newSuivi, setNewSuivi] = useState({
         date_suivi: new Date().toISOString().split('T')[0],
@@ -233,12 +231,10 @@ const SubDetailModal = ({ sub, onClose, onUpdate, themeColor, customerName }) =>
     });
 
     const fetchData = useCallback(async () => {
-        setLoadingData(true);
         const { data: chefData } = await supabase.from('abonnement_suivi').select('*').eq('abonnement_id', sub.id).order('date_suivi', { ascending: false });
         setSuiviChef(chefData || []);
         const { data: clientData } = await supabase.from('abonnement_journal_client').select('*').eq('abonnement_id', sub.id).order('date_saisie', { ascending: false });
         setJournalClient(clientData || []);
-        setLoadingData(false);
     }, [sub.id]);
 
     useEffect(() => {
