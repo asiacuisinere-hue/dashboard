@@ -227,6 +227,7 @@ const Sidebar = ({
                     secondCount: subscriptionsNeedAttentionCount,
                     secondStyle: needsAttentionBadgeStyle
                 },
+                { to: '/journal', label: 'Journal Suivi', icon: History },
             ]
         },
         {

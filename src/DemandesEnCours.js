@@ -117,12 +117,12 @@ const DemandesEnCours = () => {
         // 2. Fetch Demands
         let query = supabase.from('demandes').select(`*, clients (*), entreprises (*)`).eq('business_unit', businessUnit);
 
-        const ongoingStatuses = ['confirmed', 'En attente de paiement', 'En attente de validation de devis'];
+        const ongoingStatuses = ['confirmed', 'En attente de paiement', 'En attente de validation de devis', 'En cours de traitement'];
 
         if (activeTab === 'SERVICE') {
             query = query.eq('type', 'RESERVATION_SERVICE').in('status', ongoingStatuses);
         } else if (activeTab === 'MENU') {
-            query = query.in('type', ['COMMANDE_MENU', 'COMMANDE_SPECIALE']).in('status', ['En attente de paiement', 'confirmed']);
+            query = query.in('type', ['COMMANDE_MENU', 'COMMANDE_SPECIALE']).in('status', ['En attente de paiement', 'confirmed', 'En cours de traitement']);
         } else if (activeTab === 'SUBS') {
             query = query.eq('type', 'SOUSCRIPTION_ABONNEMENT');
         } else {

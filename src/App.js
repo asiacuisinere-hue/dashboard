@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Route, Routes, Navigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 import Sidebar from './Sidebar';
@@ -26,6 +26,7 @@ import Depenses from './pages/Depenses';
 import Plats from './pages/Plats';
 import Events from './pages/Events';
 import Accueil from './pages/Accueil';
+import JournalAlimentaire from './pages/JournalAlimentaire';
 import { useBusinessUnit } from './BusinessUnitContext';
 
 // --- Composants Login ---
@@ -101,6 +102,9 @@ const DashboardLayout = () => {
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
     const [notifications, setNotifications] = useState([]);
     const [audioUnlocked, setAudioUnlocked] = useState(false);
+    
+    // --- ANTI-DOUBLON NOTIFICATIONS ---
+    const lastNotifRef = useRef({ msg: '', time: 0 });
 
     useEffect(() => {
         const unlock = () => {
@@ -131,7 +135,7 @@ const DashboardLayout = () => {
             .from('demandes')
             .select('*', { count: 'exact', head: true })
             .eq('business_unit', businessUnit)
-            .or(`and(type.in.("COMMANDE_MENU","COMMANDE_SPECIALE"),status.in.("confirmed","En attente de paiement")),and(type.eq.RESERVATION_SERVICE,status.in.("confirmed","En attente de paiement","En attente de validation de devis"))`);
+            .or(`and(type.in.("COMMANDE_MENU","COMMANDE_SPECIALE"),status.in.("confirmed","En attente de paiement","En cours de traitement")),and(type.eq.RESERVATION_SERVICE,status.in.("confirmed","En attente de paiement","En attente de validation de devis","En cours de traitement"))`);
         setInProgressCount(inProgressDemandsCount || 0);
 
         const { count: sentQuotesCount } = await supabase.from('quotes').select('*', { count: 'exact', head: true }).eq('status', 'sent').eq('business_unit', businessUnit);
@@ -163,40 +167,55 @@ const DashboardLayout = () => {
     useEffect(() => {
         fetchCounts();
 
-        const handleDbChanges = (payload) => {
-            if (payload.new && payload.new.business_unit && payload.new.business_unit !== businessUnit) return;
-
-            let newNotification = null;
-
-            if (payload.table === 'demandes') {
-                if (payload.eventType === 'INSERT') {
-                    newNotification = { id: Date.now(), type: 'info', message: `Nouvelle demande reçue (${payload.new.type}).`, timestamp: new Date(), link: '/nouvelles-demandes' };
-                } 
-                else if (payload.eventType === 'UPDATE' && payload.new.status === 'En attente de préparation' && payload.old.status !== 'En attente de préparation') {
-                    newNotification = { id: Date.now(), type: 'success', message: `💰 Commande Menu payée ! À préparer.`, timestamp: new Date(), link: '/a-preparer' };
-                }
-                else if (payload.eventType === 'UPDATE' && payload.new.status === 'Confirmée par client' && payload.old.status !== 'Confirmée par client') {
-                    newNotification = { id: Date.now(), type: 'success', message: `Un client a confirmé son intérêt pour une prestation !`, timestamp: new Date(), link: '/demandes-en-cours' };
-                }
-            }
-            else if (payload.table === 'quotes' && payload.eventType === 'UPDATE') {
-                if (payload.new.status === 'accepted' && payload.old.status !== 'accepted') {
-                    newNotification = { id: Date.now(), type: 'success', message: `✅ Devis #${payload.new.document_number} accepté !`, timestamp: new Date(), link: '/devis' };
-                } else if (payload.new.status === 'rejected' && payload.old.status !== 'rejected') {      
-                    newNotification = { id: Date.now(), type: 'error', message: `❌ Devis #${payload.new.document_number} refusé.`, timestamp: new Date(), link: '/devis' };
-                }
-            }
-            else if (payload.table === 'invoices' && payload.eventType === 'UPDATE') {
-                 if (payload.new.status === 'paid' && payload.old.status !== 'paid') {
-                    newNotification = { id: Date.now(), type: 'success', message: `💰 Facture #${payload.new.document_number} entièrement payée !`, timestamp: new Date(), link: '/factures' };
-                } else if (payload.new.status === 'deposit_paid' && payload.old.status !== 'deposit_paid') {
-                    newNotification = { id: Date.now(), type: 'info', message: `💳 Acompte reçu pour la facture #${payload.new.document_number}.`, timestamp: new Date(), link: '/factures' };
-                }
-            }
-
-            if (newNotification) {
-                setNotifications(prev => [newNotification, ...prev]);
-                if ('Notification' in window && Notification.permission === 'granted') {
+                const handleDbChanges = (payload) => {
+                    if (payload.new && payload.new.business_unit && payload.new.business_unit !== businessUnit) return;
+        
+                    let newNotification = null;
+                    const now = Date.now();
+        
+                    // Vérifier si c'est un doublon (même message en moins de 2s)
+                    const isDuplicate = (msg) => {
+                        if (lastNotifRef.current.msg === msg && now - lastNotifRef.current.time < 2000) return true;
+                        return false;
+                    };
+        
+                    if (payload.table === 'demandes') {
+                        if (payload.eventType === 'INSERT') {
+                            const msg = `Nouvelle demande reçue (${payload.new.type}).`;
+                            if (!isDuplicate(msg)) newNotification = { id: now, type: 'info', message: msg, timestamp: new Date(), link: '/nouvelles-demandes' };
+                        }
+                        else if (payload.eventType === 'UPDATE' && payload.new.status === 'En attente de préparation' && payload.old.status !== 'En attente de préparation') {
+                            const msg = `💰 Commande Menu payée ! À préparer.`;
+                            if (!isDuplicate(msg)) newNotification = { id: now, type: 'success', message: msg, timestamp: new Date(), link: '/a-preparer' };
+                        }
+                        else if (payload.eventType === 'UPDATE' && payload.new.status === 'Confirmée par client' && payload.old.status !== 'Confirmée par client') {
+                            const msg = `Un client a confirmé son intérêt pour une prestation !`;
+                            if (!isDuplicate(msg)) newNotification = { id: now, type: 'success', message: msg, timestamp: new Date(), link: '/demandes-en-cours' };
+                        }
+                    }
+                    else if (payload.table === 'quotes' && payload.eventType === 'UPDATE') {
+                        if (payload.new.status === 'accepted' && payload.old.status !== 'accepted') {
+                            const statusText = payload.new.signed_at ? "SIGNÉ" : "accepté";
+                            const msg = `✅ Devis #${payload.new.document_number} ${statusText} !`;
+                            if (!isDuplicate(msg)) newNotification = { id: now, type: 'success', message: msg, timestamp: new Date(), link: '/devis' };
+                        } else if (payload.new.status === 'rejected' && payload.old.status !== 'rejected') {
+                            const msg = `❌ Devis #${payload.new.document_number} refusé.`;
+                            if (!isDuplicate(msg)) newNotification = { id: now, type: 'error', message: msg, timestamp: new Date(), link: '/devis' };
+                        }
+                    }
+                    else if (payload.table === 'invoices' && payload.eventType === 'UPDATE') {
+                         if (payload.new.status === 'paid' && payload.old.status !== 'paid') {
+                            const msg = `💰 Facture #${payload.new.document_number} entièrement payée !`;
+                            if (!isDuplicate(msg)) newNotification = { id: now, type: 'success', message: msg, timestamp: new Date(), link: '/factures' };
+                        } else if (payload.new.status === 'deposit_paid' && payload.old.status !== 'deposit_paid') {
+                            const msg = `💳 Acompte reçu pour la facture #${payload.new.document_number}.`;
+                            if (!isDuplicate(msg)) newNotification = { id: now, type: 'info', message: msg, timestamp: new Date(), link: '/factures' };
+                        }
+                    }
+        
+                    if (newNotification) {
+                        lastNotifRef.current = { msg: newNotification.message, time: now };
+                        setNotifications(prev => [newNotification, ...prev]);                if ('Notification' in window && Notification.permission === 'granted') {
                     new Notification('Asiacuisine.re', { body: newNotification.message });
                 }
                 try {
@@ -261,6 +280,7 @@ const DashboardLayout = () => {
                     <Route path="/statistiques" element={<Statistiques />} />
                     <Route path="/depenses" element={<Depenses />} />
                     <Route path="/events" element={<Events />} />
+                    <Route path="/journal" element={<JournalAlimentaire />} />
                 </Routes>
             </main>
         </div>

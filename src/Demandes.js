@@ -107,8 +107,8 @@ const Demandes = () => {
         let query = supabase
             .from('demandes')
             .select('*, clients (*), entreprises (*)')
-            .in('status', ['Nouvelle', 'Intention WhatsApp', 'En attente de traitement'])
-            .eq('business_unit', businessUnit);
+            .eq('business_unit', businessUnit)
+            .in('status', ['Nouvelle', 'Intention WhatsApp', 'En attente de traitement']);
 
         if (filter.type !== 'ALL') {
             query = query.eq('type', filter.type);
