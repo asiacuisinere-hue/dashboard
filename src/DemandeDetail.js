@@ -7,7 +7,7 @@ import {
     RefreshCw, FilePlus, QrCode, Mail,
     Phone, Save, ShoppingCart, ChefHat, XCircle,
     MessageCircle, PackageCheck, Truck, ListChecks,
-    Gift, Tag, History, Heart
+    Gift, Tag, History, Heart, Copy, Check, Ban, PartyPopper
 } from 'lucide-react';
 
 const communesReunion = [
@@ -28,9 +28,12 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
     const [totalAmount, setTotalAmount] = useState(demande.total_amount || '');
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSendingConfirmation, setIsSendingConfirmation] = useState(false);
+    const [isSendingRefusal, setIsSendingRefusal] = useState(false);
     const [isSendingQrCode, setIsSendingQrCode] = useState(false);
     const [isGeneratingStripeLink, setIsGeneratingStripeLink] = useState(false);
+    const [isFinishing, setIsFinishing] = useState(false);
     const [paymentLink, setPaymentLink] = useState('');
+    const [isCopied, setIsCopied] = useState(false);
 
     const [customerHistory, setCustomerHistory] = useState([]);
     const [customerNotes, setCustomerNotes] = useState('');
@@ -114,8 +117,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
         try {
             const { data: { session } } = await supabase.auth.getSession();
             const payload = { demandeId: demande.id, type: 'acknowledgement' };
-            console.log("📡 Envoi Payload:", payload);
-
+            
             const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/send-confirmation-email`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
@@ -125,6 +127,50 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
             else { const err = await response.json(); throw new Error(err.error || "Erreur lors de l'envoi"); }
         } catch (error) { alert(error.message); }
         finally { setIsSendingConfirmation(false); }
+    };
+
+    const handleRefuseRequest = async () => {
+        if (!window.confirm("Refuser cette demande et envoyer un e-mail au client ? (Le texte utilisé sera celui configuré dans vos Paramètres)")) return;
+        setIsSendingRefusal(true);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/send-refusal-email`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+                body: JSON.stringify({ demandeId: demande.id })
+            });
+            if (response.ok) { 
+                alert('E-mail de refus envoyé et dossier annulé.'); 
+                if (onRefresh) onRefresh();
+                onClose(); 
+            } else { 
+                const err = await response.json(); 
+                throw new Error(err.error || "Erreur lors de l'envoi du refus"); 
+            }
+        } catch (error) { alert(error.message); }
+        finally { setIsSendingRefusal(false); }
+    };
+
+    const handleFinishMission = async () => {
+        if (!window.confirm("Terminer la mission ? Cela enverra un e-mail de remerciement au client et clôturera le dossier.")) return;
+        setIsFinishing(true);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/send-followup-email`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+                body: JSON.stringify({ demandeId: demande.id })
+            });
+            if (response.ok) { 
+                alert('Mission terminée ! E-mail de remerciement envoyé.'); 
+                if (onRefresh) onRefresh();
+                onClose(); 
+            } else { 
+                const err = await response.json(); 
+                throw new Error(err.error || "Erreur lors de la clôture de mission"); 
+            }
+        } catch (error) { alert(error.message); }
+        finally { setIsFinishing(false); }
     };
 
     const handleGenerateStripeLink = async (amountType = 'total') => {
@@ -161,6 +207,15 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
         }
     };
 
+    const handleCopyLink = () => {
+        const link = paymentLink || details.stripe_payment_url;
+        if (link) {
+            navigator.clipboard.writeText(link);
+            setIsCopied(true);
+            setTimeout(() => setIsCopied(false), 2000);
+        }
+    };
+
     const handleSendWhatsApp = async () => {
         const target = demande.clients || demande.entreprises;
         const phone = target.phone || target.contact_phone;
@@ -168,16 +223,16 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
         if (cleaned?.startsWith('0')) cleaned = '262' + cleaned.substring(1);
         const clientName = demande.clients ? target.first_name : (target.contact_name || target.nom_entreprise);
         const formattedDate = new Date(requestDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-        
+
         const finalLink = paymentLink || details.stripe_payment_url;
-        
+
         const message = `🍜 *Asiacuisine.re - Confirmation*\n\nBonjour ${clientName},\n\nJe valide votre commande pour le *${formattedDate}*.\n\n💰 *Total :* ${totalAmount}€\n\n⚠️ *Lien valable 3 HEURES :*\n🔗 Règlement sécurisé : ${finalLink}\n\n_Note : Passé ce délai, la réservation sera automatiquement annulée pour libérer le créneau._\n\nÀ très bientôt !`;
-        
+
         // Si le statut n'est pas encore en attente de paiement, on le met à jour
         if (demande.status !== 'En attente de paiement') {
             await onUpdateStatus(demande.id, 'En attente de paiement');
         }
-        
+
         window.open(`https://wa.me/${cleaned}?text=${encodeURIComponent(message)}`, '_blank');
     };
 
@@ -219,7 +274,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
 
     const renderExtraDetails = () => {
         if (Array.isArray(details) || (details && details["0"] !== undefined)) return null;
-        const excludeKeys = ['ville', 'deliveryCity', 'heure', 'numberOfPeople', 'customerMessage', 'notes', 'cart', 'items', 'total', 'discount', 'freeDelivery', 'address', 'serviceType', 'budget', 'allergies'];
+        const excludeKeys = ['ville', 'deliveryCity', 'heure', 'numberOfPeople', 'customerMessage', 'notes', 'cart', 'items', 'total', 'discount', 'freeDelivery', 'address', 'serviceType', 'budget', 'allergies', 'stripe_payment_url'];
         const keyMap = { formulaName: 'Formule', formulaOption: 'Option', serviceType: 'Prestation', budget: 'Budget', allergies: 'Allergies / Régime' };
         const extraDetailsToRender = Object.entries(details).filter(([key, value]) => !excludeKeys.includes(key) && value && typeof value === 'string');
         return extraDetailsToRender.map(([key, value]) => (
@@ -233,6 +288,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
     const client = demande.clients || demande.entreprises;
     const clientName = demande.clients ? `${client.last_name || ''} ${client.first_name || ''}`.trim() : (client.nom_entreprise || 'Inconnu');
     const specialItems = Array.isArray(details) ? details : (details?.cart || []);
+    const activeStripeLink = paymentLink || details.stripe_payment_url;
 
     return (
         <div className="fixed inset-0 bg-black/70 z-[1000] flex items-center justify-center p-4 backdrop-blur-sm">
@@ -286,8 +342,36 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                         <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm text-center"><h3 className="text-[10px] font-black uppercase text-gray-400 mb-4">Contact Direct</h3><div className="flex flex-col gap-2"><div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl"><Mail size={16} className="text-gray-400"/><span className="text-sm font-bold text-gray-700 truncate">{client.email || client.contact_email}</span></div><div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl"><Phone size={16} className="text-gray-400"/><span className="text-sm font-bold text-gray-700">{client.phone || client.contact_phone || '—'}</span></div></div></div>
                         <div className="space-y-3 pt-4 border-t">
                             <button onClick={() => handleSave(false)} className="w-full py-4 bg-gray-800 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-black transition-all flex items-center justify-center gap-2 uppercase tracking-widest"><Save size={16}/> Mettre à jour le dossier</button>
-                            {(paymentLink || details.stripe_payment_url) && <button onClick={handleSendWhatsApp} className="w-full py-4 bg-green-500 text-white rounded-2xl font-black text-xs flex items-center justify-center gap-3 hover:bg-green-600 transition-all shadow-lg active:scale-95 uppercase tracking-widest"><MessageCircle size={20}/> Envoyer WhatsApp</button>}
-                            {(demande.status === 'Nouvelle' || demande.status === 'Intention WhatsApp') && <button onClick={handleConfirmReceipt} disabled={isSendingConfirmation} className="w-full py-5 bg-blue-500 text-white rounded-2xl font-black text-sm shadow-xl hover:bg-blue-600 transition-all flex items-center justify-center gap-3 uppercase active:scale-95"><Mail size={20}/> Confirmer Réception (E-mail)</button>}   
+                            
+                            {/* BOUTON TERMINER MISSION (Si payé et pas encore clôturé) */}
+                            {demande.payment_status === 'paid' && demande.status !== 'completed' && (
+                                <button onClick={handleFinishMission} disabled={isFinishing} className="w-full py-5 bg-green-600 text-white rounded-2xl font-black text-sm shadow-xl hover:bg-green-700 transition-all flex items-center justify-center gap-3 uppercase active:scale-95 animate-pulse">
+                                    {isFinishing ? <RefreshCw className="animate-spin" size={24}/> : <PartyPopper size={24}/>} Terminer la mission
+                                </button>
+                            )}
+
+                            {activeStripeLink && demande.status !== 'completed' && (
+                                <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 space-y-3 animate-in fade-in slide-in-from-top-2">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Lien Stripe Actif</span>
+                                        <button onClick={handleCopyLink} className="flex items-center gap-1.5 text-[10px] font-black text-indigo-600 hover:text-indigo-800 transition-colors uppercase">
+                                            {isCopied ? <><Check size={12}/> Copié !</> : <><Copy size={12}/> Copier le lien</>}
+                                        </button>
+                                    </div>
+                                    <div className="bg-white p-3 rounded-xl border border-indigo-50 text-[10px] font-mono text-indigo-600 truncate shadow-inner">
+                                        {activeStripeLink}
+                                    </div>
+                                    <button onClick={handleSendWhatsApp} className="w-full py-3 bg-green-500 text-white rounded-xl font-black text-xs flex items-center justify-center gap-3 hover:bg-green-600 transition-all shadow-md active:scale-95 uppercase tracking-widest"><MessageCircle size={18}/> Envoyer WhatsApp</button>
+                                </div>
+                            )}
+                            {(demande.status === 'Nouvelle' || demande.status === 'Intention WhatsApp') && (
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button onClick={handleConfirmReceipt} disabled={isSendingConfirmation} className="py-5 bg-blue-500 text-white rounded-2xl font-black text-sm shadow-xl hover:bg-blue-600 transition-all flex items-center justify-center gap-3 uppercase active:scale-95"><Mail size={20}/> Confirmer Réception</button>
+                                    <button onClick={handleRefuseRequest} disabled={isSendingRefusal} className="py-5 bg-red-500 text-white rounded-2xl font-black text-sm shadow-xl hover:bg-red-600 transition-all flex items-center justify-center gap-3 uppercase active:scale-95">
+                                        {isSendingRefusal ? <RefreshCw className="animate-spin" size={20}/> : <Ban size={20}/>} Refuser (E-mail)
+                                    </button>
+                                </div>
+                            )}   
                             {demande.status === 'En attente de préparation' && <button onClick={() => onUpdateStatus(demande.id, 'Préparation en cours')} className="w-full py-4 bg-cyan-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-cyan-700 transition-all flex items-center justify-center gap-2 uppercase"><ChefHat size={16}/> Lancer la cuisine</button>}
                             {demande.status === 'Préparation en cours' && <button onClick={() => onUpdateStatus(demande.id, 'Prêt pour livraison')} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 uppercase"><PackageCheck size={16}/> Marquer comme prêt</button>}
                             {demande.status === 'Prêt pour livraison' && <button onClick={() => onUpdateStatus(demande.id, 'completed')} className="w-full py-4 bg-green-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-green-700 transition-all flex items-center justify-center gap-2 uppercase"><Truck size={16}/> Livraison effectuée</button>}

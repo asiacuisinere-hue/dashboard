@@ -307,11 +307,36 @@ const InvoiceDetailModal = ({ invoice, onClose, onUpdate, themeColor }) => {
     };
 
     const handleUpdateStatus = async (s) => {
-        if (!window.confirm("Passer cette facture en 'Payée' manuellement ?")) return;
+        const confirmMsg = s === 'paid' ? "Marquer cette facture comme 'Payée' et envoyer la facture finale au client ?" : `Passer cette facture en '${getFrenchStatus(s)}' ?`;
+        if (!window.confirm(confirmMsg)) return;
+        
         setActionLoading(true);
-        await supabase.from('invoices').update({ status: s }).eq('id', invoice.id);
-        onUpdate();
-        onClose();
+        try {
+            const { error } = await supabase.from('invoices').update({ status: s }).eq('id', invoice.id);
+            if (error) throw error;
+
+            if (invoice.demand_id) {
+                await supabase.from('demandes').update({ payment_status: s }).eq('id', invoice.demand_id);
+            }
+
+            if (s === 'paid') {
+                const { data: { session } } = await supabase.auth.getSession();
+                await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/send-invoice-by-email`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+                    body: JSON.stringify({ invoiceId: invoice.id }),
+                });
+                alert("Facture marquée comme payée et envoyée au client !");
+            } else {
+                alert("Statut mis à jour.");
+            }
+            onUpdate();
+            onClose();
+        } catch (err) {
+            alert("Erreur: " + err.message);
+        } finally {
+            setActionLoading(false);
+        }
     };
 
     const handleSendInvoice = async () => {
