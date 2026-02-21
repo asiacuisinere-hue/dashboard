@@ -7,7 +7,7 @@ import {
     RefreshCw, FilePlus, QrCode, Mail,
     Phone, Save, ShoppingCart, ChefHat, XCircle,
     MessageCircle, PackageCheck, Truck, ListChecks,
-    Gift, Tag, History, Heart, Copy, Check, Ban, PartyPopper
+    Gift, Tag, History, Heart, Copy, Check, Ban, PartyPopper, Lock
 } from 'lucide-react';
 
 const communesReunion = [
@@ -106,9 +106,30 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
     };
 
     const handleSave = async (silent = false) => {
+        // VÉRIFICATION DE SÉCURITÉ : Le dossier a-t-il été payé entre temps ?
+        const { data: latest } = await supabase.from('demandes').select('status, payment_status').eq('id', demande.id).single();
+        if (latest && (latest.payment_status === 'paid' || latest.status === 'completed')) {
+            alert("Action impossible : ce dossier vient d'être payé ou clôturé.");
+            if (onRefresh) onRefresh();
+            onClose();
+            return;
+        }
+
         const finalDetails = { ...details, discount, freeDelivery };
         const { error } = await supabase.from('demandes').update({ details_json: finalDetails, request_date: requestDate, total_amount: totalAmount === '' ? null : parseFloat(totalAmount) }).eq('id', demande.id);
         if (!error) { if (!silent) alert('Enregistré !'); if (onRefresh) onRefresh(); }
+    };
+
+    const handleUpdateStatusWrapper = async (id, newStatus) => {
+        // VÉRIFICATION DE SÉCURITÉ
+        const { data: latest } = await supabase.from('demandes').select('status, payment_status').eq('id', id).single();
+        if (latest && latest.payment_status === 'paid' && newStatus === 'cancelled') {
+            alert("Erreur : Impossible d'annuler un dossier qui vient d'être payé !");
+            if (onRefresh) onRefresh();
+            onClose();
+            return;
+        }
+        onUpdateStatus(id, newStatus);
     };
 
     const handleConfirmReceipt = async () => {
@@ -130,7 +151,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
     };
 
     const handleRefuseRequest = async () => {
-        if (!window.confirm("Refuser cette demande et envoyer un e-mail au client ? (Le texte utilisé sera celui configuré dans vos Paramètres)")) return;
+        if (!window.confirm("Refuser cette demande et envoyer un e-mail au client ?")) return;
         setIsSendingRefusal(true);
         try {
             const { data: { session } } = await supabase.auth.getSession();
@@ -140,19 +161,16 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                 body: JSON.stringify({ demandeId: demande.id })
             });
             if (response.ok) { 
-                alert('E-mail de refus envoyé et dossier annulé.'); 
+                alert('E-mail de refus envoyé.'); 
                 if (onRefresh) onRefresh();
                 onClose(); 
-            } else { 
-                const err = await response.json(); 
-                throw new Error(err.error || "Erreur lors de l'envoi du refus"); 
-            }
+            } else { const err = await response.json(); throw new Error(err.error || "Erreur lors du refus"); }
         } catch (error) { alert(error.message); }
         finally { setIsSendingRefusal(false); }
     };
 
     const handleFinishMission = async () => {
-        if (!window.confirm("Terminer la mission ? Cela enverra un e-mail de remerciement au client et clôturera le dossier.")) return;
+        if (!window.confirm("Terminer la mission et envoyer les remerciements ?")) return;
         setIsFinishing(true);
         try {
             const { data: { session } } = await supabase.auth.getSession();
@@ -162,13 +180,10 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                 body: JSON.stringify({ demandeId: demande.id })
             });
             if (response.ok) { 
-                alert('Mission terminée ! E-mail de remerciement envoyé.'); 
+                alert('Mission terminée !'); 
                 if (onRefresh) onRefresh();
                 onClose(); 
-            } else { 
-                const err = await response.json(); 
-                throw new Error(err.error || "Erreur lors de la clôture de mission"); 
-            }
+            } else { const err = await response.json(); throw new Error(err.error || "Erreur lors de la clôture"); }
         } catch (error) { alert(error.message); }
         finally { setIsFinishing(false); }
     };
@@ -186,25 +201,12 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
             if (response.ok) {
                 setPaymentLink(result.url);
                 const newDetails = { ...details, stripe_payment_url: result.url };
-                const { error: upError } = await supabase.from('demandes')
-                    .update({
-                        status: 'En attente de paiement',
-                        details_json: newDetails
-                    })
-                    .eq('id', demande.id);
-
-                if (upError) throw upError;
-
-                alert('Lien Stripe généré et dossier mis en attente de paiement !');
+                await supabase.from('demandes').update({ status: 'En attente de paiement', details_json: newDetails }).eq('id', demande.id);
+                alert('Lien Stripe généré !');
                 if (onRefresh) onRefresh();
-            } else {
-                throw new Error(result.error || "Erreur lors de la génération");
-            }
-        } catch (error) {
-            alert(error.message);
-        } finally {
-            setIsGeneratingStripeLink(false);
-        }
+            } else { throw new Error(result.error); }
+        } catch (error) { alert(error.message); }
+        finally { setIsGeneratingStripeLink(false); }
     };
 
     const handleCopyLink = () => {
@@ -223,16 +225,15 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
         if (cleaned?.startsWith('0')) cleaned = '262' + cleaned.substring(1);
         const clientName = demande.clients ? target.first_name : (target.contact_name || target.nom_entreprise);
         const formattedDate = new Date(requestDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-
         const finalLink = paymentLink || details.stripe_payment_url;
-
         const message = `🍜 *Asiacuisine.re - Confirmation*\n\nBonjour ${clientName},\n\nJe valide votre commande pour le *${formattedDate}*.\n\n💰 *Total :* ${totalAmount}€\n\n⚠️ *Lien valable 3 HEURES :*\n🔗 Règlement sécurisé : ${finalLink}\n\n_Note : Passé ce délai, la réservation sera automatiquement annulée pour libérer le créneau._\n\nÀ très bientôt !`;
-
-        // Si le statut n'est pas encore en attente de paiement, on le met à jour
-        if (demande.status !== 'En attente de paiement') {
+        
+        // SÉCURITÉ : Ne changer le statut que si on est en phase initiale
+        const canUpdateToAwaitingPayment = ['Nouvelle', 'Intention WhatsApp', 'En cours de traitement', 'confirmed'].includes(demande.status);
+        if (canUpdateToAwaitingPayment && demande.payment_status !== 'paid') {
             await onUpdateStatus(demande.id, 'En attente de paiement');
         }
-
+        
         window.open(`https://wa.me/${cleaned}?text=${encodeURIComponent(message)}`, '_blank');
     };
 
@@ -290,9 +291,23 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
     const specialItems = Array.isArray(details) ? details : (details?.cart || []);
     const activeStripeLink = paymentLink || details.stripe_payment_url;
 
+    // VERROUILLAGE ADMINISTRATIF (Si payé ou terminé)
+    const isAdminLocked = demande.status === 'completed' || demande.payment_status === 'paid';
+    
+    // ÉTAPE DE PAIEMENT DÉPASSÉE ?
+    const isPastPayment = ['En attente de préparation', 'Préparation en cours', 'Prêt pour livraison', 'completed'].includes(demande.status);
+
     return (
         <div className="fixed inset-0 bg-black/70 z-[1000] flex items-center justify-center p-4 backdrop-blur-sm">
             <div className="bg-white rounded-[2.5rem] w-full max-w-6xl max-h-[90vh] overflow-y-auto relative p-10 shadow-2xl animate-in zoom-in duration-300">
+                
+                {demande.status === 'completed' && (
+                    <div className="absolute top-0 left-0 right-0 bg-gray-900 text-white py-2 px-10 flex items-center justify-center gap-3 rounded-t-[2.5rem]">
+                        <Lock size={14} className="text-amber-500" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">Dossier Archivé : Mission terminée</span>
+                    </div>
+                )}
+
                 <button onClick={onClose} className="absolute top-8 right-8 text-gray-400 hover:text-gray-600 transition-colors text-3xl font-light">&times;</button>
                 <div className="mb-10 flex items-start justify-between">
                     <div className="flex items-center gap-5">
@@ -313,10 +328,10 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
                     <div className="lg:col-span-7 space-y-8">
                         <div className={`p-8 rounded-[2rem] border-2 space-y-6 ${themeColor === 'blue' ? 'border-blue-200 bg-blue-50/20' : 'border-amber-200 bg-amber-50/20'}`}>
-                            <div><label className="text-xs font-black uppercase text-gray-400 block mb-4">Montant Total (€)</label><div className="relative"><input type="number" step="0.01" value={totalAmount} onChange={e => setTotalAmount(e.target.value)} className="w-full bg-white p-5 rounded-2xl font-black text-3xl outline-none shadow-sm focus:ring-2 focus:ring-amber-500" /><Euro className="absolute right-5 top-6 text-gray-200" size={30} /></div></div>
+                            <div><label className="text-xs font-black uppercase text-gray-400 block mb-4">Montant Total (€)</label><div className="relative"><input type="number" step="0.01" value={totalAmount} onChange={e => setTotalAmount(e.target.value)} disabled={isAdminLocked} className={`w-full p-5 rounded-2xl font-black text-3xl outline-none shadow-sm ${isAdminLocked ? 'bg-gray-50 text-gray-400' : 'bg-white focus:ring-2 focus:ring-amber-500'}`} /><Euro className="absolute right-5 top-6 text-gray-200" size={30} /></div></div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100"><label className="text-[10px] font-black text-gray-400 uppercase block mb-2 flex items-center gap-2"><Tag size={12}/> Remise (€)</label><input type="number" value={discount} onChange={e => handleDiscountChange(e.target.value)} className="w-full p-2 bg-gray-50 border-0 rounded-lg font-bold text-lg" /></div>
-                                <div onClick={() => setFreeDelivery(!freeDelivery)} className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between ${freeDelivery ? 'bg-green-50 border-green-500' : 'bg-white border-gray-100 opacity-60'}`}><p className={`font-black text-xs ${freeDelivery ? 'text-green-600' : 'text-gray-400'}`}>LIVRAISON OFFERTE</p><Gift className={freeDelivery ? 'text-green-500' : 'text-gray-300'} size={24}/></div>
+                                <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100"><label className="text-[10px] font-black text-gray-400 uppercase block mb-2 flex items-center gap-2"><Tag size={12}/> Remise (€)</label><input type="number" value={discount} onChange={e => handleDiscountChange(e.target.value)} disabled={isAdminLocked} className="w-full p-2 bg-gray-50 border-0 rounded-lg font-bold text-lg" /></div>
+                                <div onClick={() => !isAdminLocked && setFreeDelivery(!freeDelivery)} className={`p-4 rounded-2xl border-2 transition-all flex items-center justify-between ${freeDelivery ? 'bg-green-50 border-green-500' : 'bg-white border-gray-100 opacity-60'} ${isAdminLocked ? 'cursor-not-allowed' : 'cursor-pointer'}`}><p className={`font-black text-xs ${freeDelivery ? 'text-green-600' : 'text-gray-400'}`}>LIVRAISON OFFERTE</p><Gift className={freeDelivery ? 'text-green-500' : 'text-gray-300'} size={24}/></div>
                             </div>
                         </div>
                         {demande.type === 'COMMANDE_SPECIALE' && specialItems.length > 0 && (
@@ -328,12 +343,12 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                         <div className="bg-gray-50 p-8 rounded-[2rem] border border-gray-100">
                             <h3 className="text-sm font-black uppercase text-gray-400 mb-6 flex items-center gap-2"><ClipboardList size={16}/> Détails Logistiques</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                                <div><label className="text-[10px] font-black text-gray-400 uppercase block">Date</label><input type="date" value={requestDate} onChange={e => setRequestDate(e.target.value)} className="w-full p-3 bg-white border-0 rounded-xl font-bold shadow-sm" /></div>
-                                <div><label className="text-[10px] font-black text-gray-400 uppercase block">Ville</label><select name="ville" value={details.ville || details.deliveryCity || ''} onChange={handleDetailChange} className="w-full p-3 bg-white border-0 rounded-xl font-bold shadow-sm"><option value="">Choisir...</option>{communesReunion.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
-                                {demande.type === 'RESERVATION_SERVICE' && (<><div><label className="text-[10px] font-black text-gray-400 uppercase block">Heure</label><input type="text" name="heure" value={details.heure || ''} onChange={handleDetailChange} className="w-full p-3 bg-white border-0 rounded-xl font-bold shadow-sm" placeholder="Ex: 19h30" /></div><div><label className="text-[10px] font-black text-gray-400 uppercase block">Convives</label><input type="text" name="numberOfPeople" value={details.numberOfPeople || ''} onChange={handleDetailChange} className="w-full p-3 bg-white border-0 rounded-xl font-bold shadow-sm" /></div><div className="md:col-span-2"><label className="text-[10px] font-black text-gray-400 uppercase block">Adresse complète</label><input type="text" name="address" value={details.address || ''} onChange={handleDetailChange} className="w-full p-3 bg-white border-0 rounded-xl font-bold shadow-sm" /></div></>)}     
+                                <div><label className="text-[10px] font-black text-gray-400 uppercase block">Date</label><input type="date" value={requestDate} onChange={e => setRequestDate(e.target.value)} disabled={isAdminLocked} className="w-full p-3 bg-white border-0 rounded-xl font-bold shadow-sm" /></div>
+                                <div><label className="text-[10px] font-black text-gray-400 uppercase block">Ville</label><select name="ville" value={details.ville || details.deliveryCity || ''} onChange={handleDetailChange} disabled={isAdminLocked} className="w-full p-3 bg-white border-0 rounded-xl font-bold shadow-sm"><option value="">Choisir...</option>{communesReunion.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
+                                {demande.type === 'RESERVATION_SERVICE' && (<><div><label className="text-[10px] font-black text-gray-400 uppercase block">Heure</label><input type="text" name="heure" value={details.heure || ''} onChange={handleDetailChange} disabled={isAdminLocked} className="w-full p-3 bg-white border-0 rounded-xl font-bold shadow-sm" placeholder="Ex: 19h30" /></div><div><label className="text-[10px] font-black text-gray-400 uppercase block">Convives</label><input type="text" name="numberOfPeople" value={details.numberOfPeople || ''} onChange={handleDetailChange} disabled={isAdminLocked} className="w-full p-3 bg-white border-0 rounded-xl font-bold shadow-sm" /></div><div className="md:col-span-2"><label className="text-[10px] font-black text-gray-400 uppercase block">Adresse complète</label><input type="text" name="address" value={details.address || ''} onChange={handleDetailChange} disabled={isAdminLocked} className="w-full p-3 bg-white border-0 rounded-xl font-bold shadow-sm" /></div></>)}     
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">{renderExtraDetails()}</div>
-                            <div className="mt-6"><label className="text-[10px] font-black text-gray-400 uppercase block">Notes / Besoins spécifiques</label><textarea name="customerMessage" value={details.customerMessage || details.notes || ''} onChange={handleDetailChange} className="w-full p-4 bg-white border-0 rounded-xl font-medium shadow-sm h-24" /></div>
+                            <div className="mt-6"><label className="text-[10px] font-black text-gray-400 uppercase block">Notes / Besoins spécifiques</label><textarea name="customerMessage" value={details.customerMessage || details.notes || ''} onChange={handleDetailChange} disabled={isAdminLocked} className="w-full p-4 bg-white border-0 rounded-xl font-medium shadow-sm h-24" /></div>
                         </div>
                     </div>
                     <div className="lg:col-span-5 space-y-6">
@@ -341,7 +356,7 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                         {customerHistory.length > 0 && (<div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm"><h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4 flex items-center gap-2"><History size={14}/> Historique ({customerHistory.length})</h3><div className="space-y-2 max-h-40 overflow-y-auto pr-2 scrollbar-thin">{customerHistory.map(h => (<div key={h.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-100"><div><p className="text-[10px] font-black text-gray-700">{new Date(h.request_date).toLocaleDateString()}</p><p className="text-[9px] font-bold text-gray-400 uppercase">{h.type.replace('_',' ')}</p></div><p className="text-xs font-black text-gray-800">{h.total_amount}€</p></div>))}</div></div>)}
                         <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm text-center"><h3 className="text-[10px] font-black uppercase text-gray-400 mb-4">Contact Direct</h3><div className="flex flex-col gap-2"><div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl"><Mail size={16} className="text-gray-400"/><span className="text-sm font-bold text-gray-700 truncate">{client.email || client.contact_email}</span></div><div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl"><Phone size={16} className="text-gray-400"/><span className="text-sm font-bold text-gray-700">{client.phone || client.contact_phone || '—'}</span></div></div></div>
                         <div className="space-y-3 pt-4 border-t">
-                            <button onClick={() => handleSave(false)} className="w-full py-4 bg-gray-800 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-black transition-all flex items-center justify-center gap-2 uppercase tracking-widest"><Save size={16}/> Mettre à jour le dossier</button>
+                            <button onClick={() => handleSave(false)} disabled={isAdminLocked} className={`w-full py-4 rounded-2xl font-black text-xs shadow-lg transition-all flex items-center justify-center gap-2 uppercase tracking-widest ${isAdminLocked ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-800 text-white hover:bg-black'}`}><Save size={16}/> Mettre à jour le dossier</button>
                             
                             {/* BOUTON TERMINER MISSION (Si payé et pas encore clôturé) */}
                             {demande.payment_status === 'paid' && demande.status !== 'completed' && (
@@ -350,7 +365,8 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                                 </button>
                             )}
 
-                            {activeStripeLink && demande.status !== 'completed' && (
+                            {/* BLOC LIEN STRIPE : Masqué si payé OU si déjà en préparation/livraison */}
+                            {activeStripeLink && !isPastPayment && demande.payment_status !== 'paid' && (
                                 <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 space-y-3 animate-in fade-in slide-in-from-top-2">
                                     <div className="flex items-center justify-between">
                                         <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Lien Stripe Actif</span>
@@ -366,23 +382,23 @@ const DemandeDetail = ({ demande, onClose, onUpdateStatus, onRefresh }) => {
                             )}
                             {(demande.status === 'Nouvelle' || demande.status === 'Intention WhatsApp') && (
                                 <div className="grid grid-cols-2 gap-3">
-                                    <button onClick={handleConfirmReceipt} disabled={isSendingConfirmation} className="py-5 bg-blue-500 text-white rounded-2xl font-black text-sm shadow-xl hover:bg-blue-600 transition-all flex items-center justify-center gap-3 uppercase active:scale-95"><Mail size={20}/> Confirmer Réception</button>
-                                    <button onClick={handleRefuseRequest} disabled={isSendingRefusal} className="py-5 bg-red-500 text-white rounded-2xl font-black text-sm shadow-xl hover:bg-red-600 transition-all flex items-center justify-center gap-3 uppercase active:scale-95">
+                                    <button onClick={handleConfirmReceipt} disabled={isSendingConfirmation || isAdminLocked} className="py-5 bg-blue-500 text-white rounded-2xl font-black text-sm shadow-xl hover:bg-blue-600 transition-all flex items-center justify-center gap-3 uppercase active:scale-95"><Mail size={20}/> Confirmer Réception</button>
+                                    <button onClick={handleRefuseRequest} disabled={isSendingRefusal || isAdminLocked} className="py-5 bg-red-500 text-white rounded-2xl font-black text-sm shadow-xl hover:bg-red-600 transition-all flex items-center justify-center gap-3 uppercase active:scale-95">
                                         {isSendingRefusal ? <RefreshCw className="animate-spin" size={20}/> : <Ban size={20}/>} Refuser (E-mail)
                                     </button>
                                 </div>
                             )}   
-                            {demande.status === 'En attente de préparation' && <button onClick={() => onUpdateStatus(demande.id, 'Préparation en cours')} className="w-full py-4 bg-cyan-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-cyan-700 transition-all flex items-center justify-center gap-2 uppercase"><ChefHat size={16}/> Lancer la cuisine</button>}
-                            {demande.status === 'Préparation en cours' && <button onClick={() => onUpdateStatus(demande.id, 'Prêt pour livraison')} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 uppercase"><PackageCheck size={16}/> Marquer comme prêt</button>}
-                            {demande.status === 'Prêt pour livraison' && <button onClick={() => onUpdateStatus(demande.id, 'completed')} className="w-full py-4 bg-green-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-green-700 transition-all flex items-center justify-center gap-2 uppercase"><Truck size={16}/> Livraison effectuée</button>}
+                            {demande.status === 'En attente de préparation' && <button onClick={() => handleUpdateStatusWrapper(demande.id, 'Préparation en cours')} className="w-full py-4 bg-cyan-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-cyan-700 transition-all flex items-center justify-center gap-2 uppercase"><ChefHat size={16}/> Lancer la cuisine</button>}
+                            {demande.status === 'Préparation en cours' && <button onClick={() => handleUpdateStatusWrapper(demande.id, 'Prêt pour livraison')} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 uppercase"><PackageCheck size={16}/> Marquer comme prêt</button>}
+                            {demande.status === 'Prêt pour livraison' && <button onClick={() => handleUpdateStatusWrapper(demande.id, 'completed')} className="w-full py-4 bg-green-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-green-700 transition-all flex items-center justify-center gap-2 uppercase"><Truck size={16}/> Livraison effectuée</button>}
                             {(demande.status === 'En cours de traitement' || demande.status === 'confirmed' || demande.status === 'En attente de validation de devis' || (demande.status === 'En attente de paiement' && demande.type !== 'RESERVATION_SERVICE')) && (
                                 <>
-                                    {demande.type !== 'RESERVATION_SERVICE' && (<button onClick={() => handleGenerateStripeLink('total')} disabled={isGeneratingStripeLink} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest">{isGeneratingStripeLink ? <RefreshCw className="animate-spin" size={16}/> : <RefreshCw size={16}/>} {details.stripe_payment_url ? 'Régénérer lien Stripe' : 'Générer lien Stripe'}</button>)}
-                                    <button onClick={handleAction} disabled={isGenerating} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest">{isGenerating ? <RefreshCw className="animate-spin" size={16}/> : (demande.type === 'RESERVATION_SERVICE' ? <FilePlus size={16}/> : <Mail size={16}/>)} {demande.type === 'RESERVATION_SERVICE' ? 'Créer Devis' : 'Envoyer Facture'}</button>
-                                    <button onClick={handleSendQr} disabled={isSendingQrCode} className="w-full py-4 bg-green-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-green-700 transition-all flex items-center justify-center gap-2 uppercase"><QrCode size={16}/> Paiement reçu & Env. QR</button>
+                                    {demande.type !== 'RESERVATION_SERVICE' && (<button onClick={() => handleGenerateStripeLink('total')} disabled={isGeneratingStripeLink || isAdminLocked} className={`w-full py-4 rounded-2xl font-black text-xs shadow-lg transition-all flex items-center justify-center gap-2 uppercase tracking-widest ${isAdminLocked ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}>{isGeneratingStripeLink ? <RefreshCw className="animate-spin" size={16}/> : <RefreshCw size={16}/>} {details.stripe_payment_url ? 'Régénérer lien Stripe' : 'Générer lien Stripe'}</button>)}
+                                    <button onClick={handleAction} disabled={isGenerating || isAdminLocked} className={`w-full py-4 rounded-2xl font-black text-xs shadow-lg transition-all flex items-center justify-center gap-2 uppercase tracking-widest ${isAdminLocked ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>{isGenerating ? <RefreshCw className="animate-spin" size={16}/> : (demande.type === 'RESERVATION_SERVICE' ? <FilePlus size={16}/> : <Mail size={16}/>)} {demande.type === 'RESERVATION_SERVICE' ? 'Créer Devis' : 'Envoyer Facture'}</button>
+                                    <button onClick={handleSendQr} disabled={isSendingQrCode || isAdminLocked} className={`w-full py-4 rounded-2xl font-black text-xs shadow-lg transition-all flex items-center justify-center gap-2 uppercase ${isAdminLocked ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}><QrCode size={16}/> Paiement reçu & Env. QR</button>
                                 </>
                             )}
-                            <button onClick={() => window.confirm('Annuler ?') && onUpdateStatus(demande.id, 'cancelled')} className="w-full py-4 bg-red-50 text-red-600 rounded-2xl font-black text-xs hover:bg-red-100 transition-all flex items-center justify-center gap-2 uppercase"><XCircle size={16}/> Annuler le dossier</button>
+                            <button onClick={() => window.confirm('Annuler ?') && handleUpdateStatusWrapper(demande.id, 'cancelled')} disabled={isAdminLocked} className={`w-full py-4 rounded-2xl font-black text-xs transition-all flex items-center justify-center gap-2 uppercase ${isAdminLocked ? 'bg-gray-50 text-gray-300 cursor-not-allowed' : 'bg-red-50 text-red-600 hover:bg-red-100'}`}><XCircle size={16}/> Annuler le dossier</button>
                         </div>
                     </div>
                 </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from './supabaseClient';
 import { useBusinessUnit } from './BusinessUnitContext';
-import DemandeDetail from './DemandeDetail'; 
+import DemandeDetail from './DemandeDetail';
 import {
     MapPin, Calendar,
     ChefHat, Truck, Star, RefreshCw,
@@ -13,13 +13,13 @@ import {
 const getZoneInfo = (city) => {
     if (!city) return { label: 'Inconnue', color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.1)' };
     const c = city.toLowerCase();
-    if (c.includes('denis') || c.includes('marie') || c.includes('suzanne')) 
+    if (c.includes('denis') || c.includes('marie') || c.includes('suzanne'))
         return { label: 'NORD', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.1)' };
-    if (c.includes('pierre') || c.includes('tampon') || c.includes('louis') || c.includes('joseph') || c.includes('philippe') || c.includes('île') || c.includes('deux') || c.includes('cilaos')) 
+    if (c.includes('pierre') || c.includes('tampon') || c.includes('louis') || c.includes('joseph') || c.includes('philippe') || c.includes('île') || c.includes('deux') || c.includes('cilaos'))
         return { label: 'SUD', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.1)' };
-    if (c.includes('paul') || c.includes('possession') || c.includes('port') || c.includes('leu') || c.includes('bassins') || c.includes('avirons') || c.includes('salé')) 
+    if (c.includes('paul') || c.includes('possession') || c.includes('port') || c.includes('leu') || c.includes('bassins') || c.includes('avirons') || c.includes('salé'))
         return { label: 'OUEST', color: '#10b981', bg: 'rgba(16, 185, 129, 0.1)' };
-    if (c.includes('andré') || c.includes('benoît') || c.includes('panon') || c.includes('rose') || c.includes('salazie') || c.includes('palmistes')) 
+    if (c.includes('andré') || c.includes('benoît') || c.includes('panon') || c.includes('rose') || c.includes('salazie') || c.includes('palmistes'))
         return { label: 'EST', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.1)' };
     return { label: 'AUTRE', color: '#64748b', bg: 'rgba(100, 116, 139, 0.1)' };
 };
@@ -41,8 +41,8 @@ const DemandeCard = ({ demande, onSelect, themeColor, isPriority }) => {
     const zone = getZoneInfo(location);
 
     return (
-        <div className={`bg-white rounded-[2.5rem] shadow-sm border-t-4 p-8 mb-4 hover:shadow-lg transition-all relative overflow-hidden group ${isPriority ? 'ring-4 ring-amber-400 border-amber-500 bg-amber-50/10' : (themeColor === 'blue' ? 'border-blue-500' : 'border-amber-500')} ${isDraft && !isPriority ? 'opacity-75 grayscale-[0.5]' : ''}`}> 
-            
+        <div className={`bg-white rounded-[2.5rem] shadow-sm border-t-4 p-8 mb-4 hover:shadow-lg transition-all relative overflow-hidden group ${isPriority ? 'ring-4 ring-amber-400 border-amber-500 bg-amber-50/10' : (themeColor === 'blue' ? 'border-blue-500' : 'border-amber-500')} ${isDraft && !isPriority ? 'opacity-75 grayscale-[0.5]' : ''}`}>
+
             <div className="absolute top-6 right-8 flex flex-col items-end gap-2">
                 <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${isDraft ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
                     {isDraft ? 'Intention WhatsApp' : 'Nouvelle'}
@@ -63,7 +63,7 @@ const DemandeCard = ({ demande, onSelect, themeColor, isPriority }) => {
                         {typeIcons[demande.type] || <Mail />}
                     </div>
                     <div>
-                        <h3 className="font-black text-gray-800 text-xl leading-tight pr-24">{clientName}</h3>  
+                        <h3 className="font-black text-gray-800 text-xl leading-tight pr-24">{clientName}</h3>
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Reçue le {new Date(demande.created_at).toLocaleDateString('fr-FR')}</p>
                     </div>
                 </div>
@@ -80,7 +80,7 @@ const DemandeCard = ({ demande, onSelect, themeColor, isPriority }) => {
                 </div>
             </div>
 
-            <button onClick={() => onSelect(demande)} className={`w-full py-4 rounded-2xl text-white font-black text-xs shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 uppercase tracking-widest ${isPriority ? 'bg-amber-500 hover:bg-amber-600' : (isDraft ? 'bg-gray-400' : (themeColor === 'blue' ? 'bg-blue-600' : 'bg-amber-500'))}`}>    
+            <button onClick={() => onSelect(demande)} className={`w-full py-4 rounded-2xl text-white font-black text-xs shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 uppercase tracking-widest ${isPriority ? 'bg-amber-500 hover:bg-amber-600' : (isDraft ? 'bg-gray-400' : (themeColor === 'blue' ? 'bg-blue-600' : 'bg-amber-500'))}`}>
                 Gérer la demande <ArrowRight size={16} />
             </button>
         </div>
@@ -96,104 +96,49 @@ const Demandes = () => {
     const [filter, setFilter] = useState({ type: 'ALL', sortAsc: false });
     const themeColor = businessUnit === 'courtage' ? 'blue' : 'amber';
 
-                const fetchDemandes = useCallback(async (currentFilter = filter) => {
+    const fetchDemandes = useCallback(async (currentFilter = filter) => {
+        setLoading(true);
 
-                    setLoading(true);
+        const { data: starData } = await supabase.from('settings').select('value').eq('key', 'priority_city').single();
+        if (starData) setStarCity(starData.value);
 
-            
+        let query = supabase
+            .from('demandes')
+            .select('*, clients (*), entreprises (*)')
+            .eq('business_unit', businessUnit)
+            .in('status', ['Nouvelle', 'Intention WhatsApp', 'En attente de traitement']);
 
-                    // 1. Fetch Star City from settings
+        if (currentFilter.type !== 'ALL') {
+            query = query.eq('type', currentFilter.type);
+        }
 
-                    const { data: starData } = await supabase.from('settings').select('value').eq('key', 'priority_city').single();
+        const { data, error } = await query.order('created_at', { ascending: currentFilter.sortAsc });
 
-                    if (starData) setStarCity(starData.value);
+        if (!error) setDemandes(data || []);
+        setLoading(false);
+    }, [businessUnit, filter]);
 
-            
+    useEffect(() => {
+        fetchDemandes();
 
-                    // 2. Fetch Demands
-
-                    let query = supabase
-
-                        .from('demandes')
-
-                        .select('*, clients (*), entreprises (*)')
-
-                        .eq('business_unit', businessUnit)
-
-                        .in('status', ['Nouvelle', 'Intention WhatsApp', 'En attente de traitement']);
-
-            
-
-                    if (currentFilter.type !== 'ALL') {
-
-                        query = query.eq('type', currentFilter.type);
-
+        const channel = supabase.channel('demandes_list_demandes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'demandes' }, payload => {
+                // SÉCURITÉ : Si la fiche ouverte est confirmée par ailleurs
+                if (selectedDemande && (payload.new?.id === selectedDemande.id)) {
+                    const inboxStatuses = ['Nouvelle', 'Intention WhatsApp', 'En attente de traitement'];
+                    if (!inboxStatuses.includes(payload.new.status)) {
+                        setSelectedDemande(null);
                     }
+                }
+                fetchDemandes();
+            })
+            .subscribe();
 
-            
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [fetchDemandes, businessUnit, selectedDemande]);
 
-                    const { data, error } = await query.order('created_at', { ascending: currentFilter.sortAsc });
-
-            
-
-                    if (!error) setDemandes(data || []);
-
-                    setLoading(false);
-
-                }, [businessUnit, filter]);        useEffect(() => { 
-            fetchDemandes(); 
-    
-            const channel = supabase.channel('demandes_list_demandes')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'demandes' }, payload => {
-                    // Ignore changes from other business units
-                    if (payload.new && payload.new.business_unit !== businessUnit) return;
-                    if (payload.old && payload.old.business_unit !== businessUnit) return;
-                    
-                    // Get the status filters for the current view
-                    const currentStatusFilters = ['Nouvelle', 'Intention WhatsApp', 'En attente de traitement'];
-                    const isMatchingFilter = (demande) => currentStatusFilters.includes(demande.status) && (filter.type === 'ALL' || demande.type === filter.type);
-    
-                    setDemandes(prevDemandes => {
-                        let newDemandes = [...prevDemandes];
-    
-                        if (payload.eventType === 'INSERT') {
-                            // Add if it matches current filters
-                            if (isMatchingFilter(payload.new)) {
-                                newDemandes.push({ ...payload.new, clients: null, entreprises: null }); // Add basic info, full client info fetched on detail view
-                            }
-                        } else if (payload.eventType === 'UPDATE') {
-                            const index = newDemandes.findIndex(d => d.id === payload.new.id);
-                            if (index !== -1) {
-                                // Update if it still matches filters
-                                if (isMatchingFilter(payload.new)) {
-                                    newDemandes[index] = { ...newDemandes[index], ...payload.new };
-                                } else {
-                                    // Remove if it no longer matches filters (e.g., status changed)
-                                    newDemandes.splice(index, 1);
-                                }
-                            } else {
-                                // If it was not in the list, but now matches filters, add it
-                                if (isMatchingFilter(payload.new)) {
-                                    newDemandes.push({ ...payload.new, clients: null, entreprises: null });
-                                }
-                            }
-                        } else if (payload.eventType === 'DELETE') {
-                            newDemandes = newDemandes.filter(d => d.id !== payload.old.id);
-                        }
-                        // Re-sort the array after changes
-                        return newDemandes.sort((a, b) => {
-                            const dateA = new Date(a.created_at || a.request_date).getTime();
-                            const dateB = new Date(b.created_at || b.request_date).getTime();
-                            return filter.sortAsc ? dateA - dateB : dateB - dateA;
-                        });
-                    });
-                })
-                .subscribe();
-    
-            return () => {
-                supabase.removeChannel(channel);
-            };
-        }, [fetchDemandes, businessUnit, filter]);
     const handleUpdateStatus = async (id, s) => {
         try {
             const { error } = await supabase.from('demandes').update({ status: s }).eq('id', id);
@@ -208,7 +153,6 @@ const Demandes = () => {
 
     if (loading && demandes.length === 0) return <div className="p-6 text-center py-20 flex flex-col items-center gap-4"><RefreshCw className="animate-spin text-amber-500" size={40}/><p className="text-gray-400 font-bold">Réception des nouvelles demandes...</p></div>;
 
-    // Stats for header
     const priorityInInbox = demandes.filter(d => (d.details_json?.deliveryCity || d.details_json?.ville) === starCity).length;
 
     const typeOptions = [
@@ -224,7 +168,7 @@ const Demandes = () => {
             <div className="max-w-7xl mx-auto">
                 <div className="flex justify-between items-start mb-10">
                     <div>
-                        <h1 className="text-3xl font-black text-gray-800 mb-2">Boîte de Réception</h1>      
+                        <h1 className="text-3xl font-black text-gray-800 mb-2">Boîte de Réception</h1>    
                         <p className="text-gray-500 font-medium italic">Traitement des intentions et nouvelles demandes ({businessUnit}).</p>
                     </div>
                     {starCity && (
@@ -240,8 +184,8 @@ const Demandes = () => {
 
                 <div className="bg-white p-4 rounded-[2rem] shadow-sm border border-gray-100 mb-8 flex flex-wrap gap-4 items-center">
                     <div className="flex-1 min-w-[250px]">
-                        <select 
-                            value={filter.type} 
+                        <select
+                            value={filter.type}
                             onChange={e => setFilter({...filter, type: e.target.value})}
                             className="w-full p-3 bg-gray-50 border-0 rounded-xl font-bold text-xs outline-none focus:ring-2 focus:ring-amber-500"
                         >
@@ -252,8 +196,8 @@ const Demandes = () => {
                     <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-xl border border-gray-100">
                         <Mail size={16} className="text-gray-400 ml-2" />
                         <span className="text-[10px] font-black uppercase text-gray-400 px-2">Réception</span>
-                        <button 
-                            onClick={() => setFilter({...filter, sortAsc: !filter.sortAsc})} 
+                        <button
+                            onClick={() => setFilter({...filter, sortAsc: !filter.sortAsc})}
                             className="p-2 bg-white rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 shadow-sm"
                         >
                             {filter.sortAsc ? <SortAsc size={16} className="text-blue-600" /> : <SortDesc size={16} className="text-red-600" />}
@@ -261,8 +205,8 @@ const Demandes = () => {
                         </button>
                     </div>
 
-                    <button 
-                        onClick={() => setFilter({type: 'ALL', sortAsc: false})} 
+                    <button
+                        onClick={() => setFilter({type: 'ALL', sortAsc: false})}
                         className="p-2.5 text-gray-400 hover:text-red-500 transition-colors"
                         title="Réinitialiser les filtres"
                     >
@@ -274,7 +218,7 @@ const Demandes = () => {
                     <div className="text-center py-32 bg-white rounded-[3rem] border-2 border-dashed border-gray-200 animate-in fade-in duration-700">
                         <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6"><CheckCircle2 size={40} className="text-gray-200"/></div>
                         <h2 className="text-2xl font-black text-gray-300 uppercase tracking-widest">Tout est à jour !</h2>
-                        <p className="text-gray-400 font-medium mt-2">Aucune demande correspondante.</p>
+                        <p className="text-gray-400 font-medium mt-2">Aucune demande correspondante.</p>  
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -287,11 +231,11 @@ const Demandes = () => {
             </div>
 
             {selectedDemande && (
-                <DemandeDetail 
-                    demande={selectedDemande} 
-                    onClose={() => setSelectedDemande(null)} 
-                    onUpdateStatus={handleUpdateStatus} 
-                    onRefresh={fetchDemandes} 
+                <DemandeDetail
+                    demande={selectedDemande}
+                    onClose={() => setSelectedDemande(null)}
+                    onUpdateStatus={handleUpdateStatus}
+                    onRefresh={fetchDemandes}
                 />
             )}
         </div>

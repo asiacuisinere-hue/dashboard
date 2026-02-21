@@ -12,13 +12,13 @@ import {
 const getZoneInfo = (city) => {
     if (!city) return { label: 'Inconnue', color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.1)' };
     const c = city.toLowerCase();
-    if (c.includes('denis') || c.includes('marie') || c.includes('suzanne')) 
+    if (c.includes('denis') || c.includes('marie') || c.includes('suzanne'))
         return { label: 'NORD', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.1)' };
-    if (c.includes('pierre') || c.includes('tampon') || c.includes('louis') || c.includes('joseph') || c.includes('philippe') || c.includes('île') || c.includes('deux') || c.includes('cilaos')) 
+    if (c.includes('pierre') || c.includes('tampon') || c.includes('louis') || c.includes('joseph') || c.includes('philippe') || c.includes('île') || c.includes('deux') || c.includes('cilaos'))
         return { label: 'SUD', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.1)' };
-    if (c.includes('paul') || c.includes('possession') || c.includes('port') || c.includes('leu') || c.includes('bassins') || c.includes('avirons') || c.includes('salé')) 
+    if (c.includes('paul') || c.includes('possession') || c.includes('port') || c.includes('leu') || c.includes('bassins') || c.includes('avirons') || c.includes('salé'))
         return { label: 'OUEST', color: '#10b981', bg: 'rgba(16, 185, 129, 0.1)' };
-    if (c.includes('andré') || c.includes('benoît') || c.includes('panon') || c.includes('rose') || c.includes('salazie') || c.includes('palmistes')) 
+    if (c.includes('andré') || c.includes('benoît') || c.includes('panon') || c.includes('rose') || c.includes('salazie') || c.includes('palmistes'))
         return { label: 'EST', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.1)' };
     return { label: 'AUTRE', color: '#64748b', bg: 'rgba(100, 116, 139, 0.1)' };
 };
@@ -53,7 +53,7 @@ const DemandeEnCoursCard = ({ demande, onSelect, themeColor, isPriority }) => {
 
     return (
         <div className={`bg-white rounded-[2.5rem] shadow-sm border-t-4 p-8 mb-4 hover:shadow-lg transition-all relative group ${isPriority ? 'ring-4 ring-amber-400 border-amber-500 bg-amber-50/10' : (themeColor === 'blue' ? 'border-blue-500' : 'border-amber-500')}`}>
-            
+
             <div className="absolute top-6 right-8 flex flex-col items-end gap-2">
                 <span style={getStatusColor(demande.status)}>{demande.status === 'confirmed' ? 'Confirmée' : demande.status}</span>
                 {isPriority && (
@@ -72,7 +72,7 @@ const DemandeEnCoursCard = ({ demande, onSelect, themeColor, isPriority }) => {
                         {typeIcons[demande.type] || <List />}
                     </div>
                     <div>
-                        <h3 className="font-black text-gray-800 text-lg leading-tight pr-24">{clientName}</h3>  
+                        <h3 className="font-black text-gray-800 text-lg leading-tight pr-24">{clientName}</h3>
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">ID: {demande.id.substring(0, 8)}</p>
                     </div>
                 </div>
@@ -81,7 +81,7 @@ const DemandeEnCoursCard = ({ demande, onSelect, themeColor, isPriority }) => {
             <div className="grid grid-cols-2 gap-4 mb-8">
                 <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 group-hover:bg-white transition-colors">
                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Échéance</p>
-                    <p className="text-xs font-black text-gray-700 flex items-center gap-2"><Calendar size={12}/> {demande.request_date ? new Date(demande.request_date).toLocaleDateString('fr-FR') : '—'}</p>   
+                    <p className="text-xs font-black text-gray-700 flex items-center gap-2"><Calendar size={12}/> {demande.request_date ? new Date(demande.request_date).toLocaleDateString('fr-FR') : '—'}</p>     
                 </div>
                 <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 group-hover:bg-white transition-colors">
                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Localisation</p>
@@ -107,103 +107,67 @@ const DemandesEnCours = () => {
 
     const themeColor = businessUnit === 'courtage' ? 'blue' : 'amber';
 
-                const fetchDemandes = useCallback(async (currentFilter = filter, currentActiveTab = activeTab) => {
-                    setLoading(true);
-            
-                    // 1. Fetch Star City
-                    const { data: starData } = await supabase.from('settings').select('value').eq('key', 'priority_city').single();
-                    if (starData) setStarCity(starData.value);
-            
-                    // 2. Fetch Demands
-                    let query = supabase.from('demandes').select(`*, clients (*), entreprises (*)`).eq('business_unit', businessUnit);
-            
+    const fetchDemandes = useCallback(async (currentFilter = filter, currentActiveTab = activeTab) => {
+        setLoading(true);
+
+        const { data: starData } = await supabase.from('settings').select('value').eq('key', 'priority_city').single();
+        if (starData) setStarCity(starData.value);
+
+        let query = supabase.from('demandes').select(`*, clients (*), entreprises (*)`).eq('business_unit', businessUnit);
+
+        const ongoingStatuses = ['confirmed', 'En attente de paiement', 'En cours de traitement'];
+
+        if (currentActiveTab === 'SERVICE') {
+            query = query.eq('type', 'RESERVATION_SERVICE').in('status', ongoingStatuses);
+        } else if (currentActiveTab === 'MENU') {
+            query = query.in('type', ['COMMANDE_MENU', 'COMMANDE_SPECIALE']).in('status', ['En attente de paiement', 'confirmed', 'En cours de traitement']);
+        } else if (currentActiveTab === 'SUBS') {
+            query = query.eq('type', 'SOUSCRIPTION_ABONNEMENT');
+        } else {
+            query = query.in('status', ongoingStatuses);
+        }
+
+        if (currentFilter.date) query = query.eq('request_date', currentFilter.date);
+        if (currentFilter.status) query = query.eq('status', currentFilter.status);
+        if (currentFilter.city) {
+            query = query.or(`details_json->>deliveryCity.ilike.%${currentFilter.city}%,details_json->>ville.ilike.%${currentFilter.city}%`);
+        }
+
+        const { data, error } = await query.order('request_date', { ascending: currentFilter.sortAsc });
+
+        let filteredData = data || [];
+        if (currentFilter.zone !== 'ALL') {
+            filteredData = filteredData.filter(d => getZoneInfo(d.details_json?.deliveryCity || d.details_json?.ville).label === currentFilter.zone);
+        }
+
+        if (!error) setDemandes(filteredData);
+        setLoading(false);
+    }, [businessUnit, activeTab, filter]);
+
+    useEffect(() => {
+        fetchDemandes();
+
+        const channel = supabase.channel('demandes_list_encours')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'demandes' }, payload => {
+                // SÉCURITÉ : Si la fiche ouverte a été payée ou modifiée
+                if (selectedDemande && (payload.new?.id === selectedDemande.id)) {
                     const ongoingStatuses = ['confirmed', 'En attente de paiement', 'En cours de traitement'];
-            
-                    if (currentActiveTab === 'SERVICE') {
-                        query = query.eq('type', 'RESERVATION_SERVICE').in('status', ongoingStatuses);
-                    } else if (currentActiveTab === 'MENU') {
-                        query = query.in('type', ['COMMANDE_MENU', 'COMMANDE_SPECIALE']).in('status', ['En attente de paiement', 'confirmed', 'En cours de traitement']);
-                    } else if (currentActiveTab === 'SUBS') {
-                        query = query.eq('type', 'SOUSCRIPTION_ABONNEMENT');
-                    } else { // ALL tab
-                        query = query.in('status', ongoingStatuses);
+                    if (!ongoingStatuses.includes(payload.new.status)) {
+                        setSelectedDemande(null); // Fermeture immédiate
+                        alert("Ce dossier vient d'être payé ou déplacé.");
                     }
-            
-                    if (currentFilter.date) query = query.eq('request_date', currentFilter.date);
-                    if (currentFilter.status) query = query.eq('status', currentFilter.status);
-                    if (currentFilter.city) {
-                        query = query.or(`details_json->>deliveryCity.ilike.%${currentFilter.city}%,details_json->>ville.ilike.%${currentFilter.city}%`);
-                    }
-            
-                    const { data, error } = await query.order('request_date', { ascending: currentFilter.sortAsc });
-            
-                    let filteredData = data || [];
-                    // client-side zone filter
-                    if (currentFilter.zone !== 'ALL') {
-                        filteredData = filteredData.filter(d => getZoneInfo(d.details_json?.deliveryCity || d.details_json?.ville).label === currentFilter.zone);
-                    }
-            
-                    if (!error) setDemandes(filteredData);
-                    setLoading(false);
-                }, [businessUnit, activeTab, filter]);        useEffect(() => {
-            fetchDemandes();
-    
-            const channel = supabase.channel('demandes_list_encours')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'demandes' }, payload => {
-                    if (payload.new && payload.new.business_unit !== businessUnit) return;
-                    if (payload.old && payload.old.business_unit !== businessUnit) return;
-    
-                    const ongoingStatuses = ['confirmed', 'En attente de paiement', 'En cours de traitement'];
-                    const isMatchingFilter = (demande) => {
-                        const statusMatch = ongoingStatuses.includes(demande.status);
-                        const typeMatch = (activeTab === 'ALL' && ongoingStatuses.includes(demande.status)) ||
-                                          (activeTab === 'SERVICE' && demande.type === 'RESERVATION_SERVICE' && ongoingStatuses.includes(demande.status)) ||
-                                          (activeTab === 'MENU' && ['COMMANDE_MENU', 'COMMANDE_SPECIALE'].includes(demande.type) && ['En attente de paiement', 'confirmed', 'En cours de traitement'].includes(demande.status)) ||
-                                          (activeTab === 'SUBS' && demande.type === 'SOUSCRIPTION_ABONNEMENT'); // Subscriptions might have different ongoing statuses
-                        
-                        // Add more filter checks here if needed, e.g., filter.date, filter.status, filter.city, filter.zone
-                        // For now, these filters are applied on the entire list after initial fetch.
-                        // To truly optimize, push these filters into the Supabase query.
-                        
-                        return statusMatch && typeMatch;
-                    };
-    
-                    setDemandes(prevDemandes => {
-                        let newDemandes = [...prevDemandes];
-    
-                        if (payload.eventType === 'INSERT') {
-                            if (isMatchingFilter(payload.new)) {
-                                newDemandes.push({ ...payload.new, clients: null, entreprises: null });
-                            }
-                        } else if (payload.eventType === 'UPDATE') {
-                            const index = newDemandes.findIndex(d => d.id === payload.new.id);
-                            if (index !== -1) {
-                                if (isMatchingFilter(payload.new)) {
-                                    newDemandes[index] = { ...newDemandes[index], ...payload.new };
-                                } else {
-                                    newDemandes.splice(index, 1);
-                                }
-                            } else {
-                                if (isMatchingFilter(payload.new)) {
-                                    newDemandes.push({ ...payload.new, clients: null, entreprises: null });
-                                }
-                            }
-                        } else if (payload.eventType === 'DELETE') {
-                            newDemandes = newDemandes.filter(d => d.id !== payload.old.id);
-                        }
-                        return newDemandes.sort((a, b) => {
-                            const dateA = new Date(a.created_at || a.request_date).getTime();
-                            const dateB = new Date(b.created_at || b.request_date).getTime();
-                            return filter.sortAsc ? dateA - dateB : dateB - dateA;
-                        });
-                    });
-                })
-                .subscribe();
-    
-            return () => {
-                supabase.removeChannel(channel);
-            };
-        }, [fetchDemandes, businessUnit, activeTab, filter]);
+                }
+                
+                // Rafraîchissement total de la liste
+                fetchDemandes();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [fetchDemandes, businessUnit, selectedDemande]);
+
     const handleUpdateStatus = async (id, s) => {
         try {
             const { error } = await supabase.from('demandes').update({ status: s }).eq('id', id);
@@ -230,7 +194,7 @@ const DemandesEnCours = () => {
             <div className="max-w-7xl mx-auto">
                 <div className="flex justify-between items-start mb-10">
                     <div>
-                        <h1 className="text-3xl font-black text-gray-800 mb-2">Suivi des Dossiers</h1>        
+                        <h1 className="text-3xl font-black text-gray-800 mb-2">Suivi des Dossiers</h1>    
                         <p className="text-gray-500 font-medium italic">Pilotage des demandes actives ({businessUnit}).</p>
                     </div>
                     {starCity && (
@@ -260,8 +224,8 @@ const DemandesEnCours = () => {
                     <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-xl border border-gray-100">
                         <Calendar size={16} className="text-gray-400 ml-2" />
                         <input type="date" value={filter.date} onChange={e => setFilter({...filter, date: e.target.value})} className="bg-transparent border-0 outline-none font-bold text-xs p-1" />
-                        <button 
-                            onClick={() => setFilter({...filter, sortAsc: !filter.sortAsc})} 
+                        <button
+                            onClick={() => setFilter({...filter, sortAsc: !filter.sortAsc})}
                             className="p-2 bg-white rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 shadow-sm"
                         >
                             {filter.sortAsc ? <SortAsc size={16} className="text-blue-600" /> : <SortDesc size={16} className="text-red-600" />}
@@ -284,7 +248,7 @@ const DemandesEnCours = () => {
                         <option value="En attente de paiement">Attente Paiement</option>
                     </select>
 
-                    <button onClick={() => setFilter({date:'', status:'', city:'', searchTerm:'', zone:'ALL', sortAsc: true})} className="p-2.5 text-gray-400 hover:text-gray-600 transition-colors"><XCircle size={20}/></button> 
+                    <button onClick={() => setFilter({date:'', status:'', city:'', searchTerm:'', zone:'ALL', sortAsc: true})} className="p-2.5 text-gray-400 hover:text-gray-600 transition-colors"><XCircle size={20}/></button>
                 </div>
 
                 {loading ? (
@@ -305,11 +269,11 @@ const DemandesEnCours = () => {
             </div>
 
             {selectedDemande && (
-                <DemandeDetail 
-                    demande={selectedDemande} 
-                    onClose={() => setSelectedDemande(null)} 
-                    onUpdateStatus={handleUpdateStatus} 
-                    onRefresh={fetchDemandes} 
+                <DemandeDetail
+                    demande={selectedDemande}
+                    onClose={() => setSelectedDemande(null)}
+                    onUpdateStatus={handleUpdateStatus}
+                    onRefresh={fetchDemandes}
                 />
             )}
         </div>
