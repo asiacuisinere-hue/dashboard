@@ -28,6 +28,7 @@ import Events from './pages/Events';
 import Accueil from './pages/Accueil';
 import JournalAlimentaire from './pages/JournalAlimentaire';
 import { useBusinessUnit } from './BusinessUnitContext';
+import DeliveryTracker from './components/DeliveryTracker';
 
 // --- Composants Login ---
 const Login = () => {
@@ -288,6 +289,7 @@ const DashboardLayout = () => {
                     <Route path="/journal" element={<JournalAlimentaire />} />
                 </Routes>
             </main>
+            <DeliveryTracker />
         </div>
     );
 };

@@ -5,7 +5,7 @@ import DemandeDetail from '../DemandeDetail';
 import ReactPaginate from 'react-paginate';
 import {
     Search, RefreshCw, ChefHat, Truck, Star,
-    Calendar, MapPin, ArrowRight, PackageCheck, CookingPot, SortAsc, SortDesc, XCircle, Clock 
+    Calendar, MapPin, ArrowRight, PackageCheck, CookingPot, SortAsc, SortDesc, XCircle, Clock, Navigation
 } from 'lucide-react';
 
 const getZoneInfo = (city) => {
@@ -95,6 +95,7 @@ const PretesALivrer = () => {
     const { businessUnit } = useBusinessUnit();
     const [demandes, setDemandes] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [isStartingRound, setIsStartingRound] = useState(false);
     const [selectedDemande, setSelectedDemande] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [zoneFilter, setZoneFilter] = useState('ALL');
@@ -102,6 +103,35 @@ const PretesALivrer = () => {
     const [sortAsc, setSortAsc] = useState(true);
     const [currentPage, setCurrentPage] = useState(0);
     const itemsPerPage = 9;
+
+    const handleStartRound = async () => {
+        if (demandes.length === 0) return;
+        if (!window.confirm(`Démarrer la tournée pour les ${demandes.length} commandes prêtes ? Cela enverra un e-mail et une notification à chaque client.`)) return;
+
+        setIsStartingRound(true);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/start-delivery-round`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json', 
+                    'Authorization': `Bearer ${session?.access_token || process.env.REACT_APP_SUPABASE_ANON_KEY}` 
+                }
+            });
+
+            const result = await response.json();
+            if (response.ok) {
+                alert(`Tournée démarrée ! ${result.processed} clients ont été notifiés.`);
+                fetchDemandes();
+            } else {
+                throw new Error(result.error || "Erreur lors du démarrage de la tournée");
+            }
+        } catch (error) {
+            alert(error.message);
+        } finally {
+            setIsStartingRound(false);
+        }
+    };
 
     const fetchDemandes = useCallback(async () => {
         setLoading(true);
@@ -158,10 +188,21 @@ const PretesALivrer = () => {
                 <div className="flex justify-between items-start mb-10">
                     <div>
                         <h1 className="text-3xl font-black text-gray-800 mb-2 flex items-center gap-3">   
-                            <PackageCheck size={36} className="text-green-600"/> Commandes Prêtes        
+                            <PackageCheck size={36} className="text-green-600"/> Commandes Prêtes
                         </h1>
                         <p className="text-gray-500 font-medium italic">Commandes en attente de livraison ou de retrait.</p>
                     </div>
+
+                    {demandes.length > 0 && (
+                        <button
+                            onClick={handleStartRound}
+                            disabled={isStartingRound}
+                            className="bg-green-600 text-white px-8 py-4 rounded-2xl font-black shadow-xl hover:bg-green-700 transition-all active:scale-95 flex items-center gap-3 animate-in slide-in-from-right-4"
+                        >
+                            {isStartingRound ? <RefreshCw className="animate-spin" size={24}/> : <Navigation size={24}/>}
+                            DÉMARRER LA TOURNÉE
+                        </button>
+                    )}
                 </div>
 
                 <div className="flex flex-wrap gap-4 mb-8 items-center">

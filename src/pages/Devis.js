@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import QuoteDetailModal from './QuoteDetailModal';
 import ReactPaginate from 'react-paginate';
 import { useBusinessUnit } from '../BusinessUnitContext';
-import { PlusCircle, List, Search, User, ClipboardList, Utensils, FileText, Fingerprint, XCircle, Trash2, RefreshCw } from 'lucide-react';
+import { PlusCircle, List, Search, User, ClipboardList, Utensils, FileText, Fingerprint, XCircle, Trash2, RefreshCw, Truck } from 'lucide-react';
 
 const QuoteCard = ({ quote, onSelect, statusBadgeStyle, renderCustomerName, themeColor }) => {
     let dueDate = null;
@@ -68,6 +68,8 @@ const Devis = () => {
     const [quoteItems, setQuoteItems] = useState([]);
     const [menuDetails, setMenuDetails] = useState('');
     const [requiresSignature, setRequiresSignature] = useState(false);
+    const [dishRecovery, setDishRecovery] = useState(false);
+    const [dishRecoveryPrice, setDishRecoveryPrice] = useState(50);
 
     const [existingQuotes, setExistingQuotes] = useState([]);
     const [selectedQuote, setSelectedQuote] = useState(null);
@@ -159,7 +161,10 @@ const Devis = () => {
         setQuoteItems(prev => [...prev, { id: Date.now(), service_id: service.id, name: service.name, description: service.description, price: service.default_price, quantity: 1 }]);
     };
 
-    const calculateTotal = () => quoteItems.reduce((sum, item) => sum + (item.price * item.quantity), 0); 
+    const calculateTotal = () => {
+        const itemsTotal = quoteItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        return dishRecovery ? itemsTotal + parseFloat(dishRecoveryPrice) : itemsTotal;
+    };
 
     const handleGenerateQuote = async () => {
         if (!selectedCustomer || quoteItems.length === 0) {
@@ -176,7 +181,9 @@ const Devis = () => {
                 menu_details: menuDetails,
                 business_unit: businessUnit,
                 demandeId: demandeId || null,
-                requires_signature: requiresSignature
+                requires_signature: requiresSignature,
+                dish_recovery: dishRecovery,
+                dish_recovery_price: dishRecovery ? parseFloat(dishRecoveryPrice) : 0
             };
 
             const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/generate-quote`, {
@@ -306,6 +313,29 @@ const Devis = () => {
                                     </table>
                                 </div>
                             )}
+                        </div>
+
+                        {/* --- OPTION RÉCUPÉRATION VAISSELLE --- */}
+                        <div className={`p-8 rounded-[2.5rem] border-2 transition-all shadow-sm flex flex-col md:flex-row justify-between items-center gap-6 ${dishRecovery ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-100 opacity-80'}`}>
+                            <div className="flex items-center gap-4">
+                                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm border ${dishRecovery ? 'bg-white text-blue-600 border-blue-100' : 'bg-gray-50 text-gray-400 border-gray-100'}`}><Truck size={32}/></div>
+                                <div>
+                                    <h4 className={`font-black uppercase text-xs tracking-widest mb-1 ${dishRecovery ? 'text-blue-900' : 'text-gray-500'}`}>Récupération Vaisselle / Logistique</h4>
+                                    <p className={`text-xs font-medium leading-relaxed ${dishRecovery ? 'text-blue-700/70' : 'text-gray-400'}`}>Mise à disposition de plats de service de prestige et passage du Chef sous 48h<br/>pour récupération du matériel sans nettoyage requis (Forfait Zen).</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                {dishRecovery && (
+                                    <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-blue-100 shadow-inner animate-in zoom-in duration-200">
+                                        <span className="text-[10px] font-black text-blue-400 uppercase">Prix (€)</span>
+                                        <input type="number" value={dishRecoveryPrice} onChange={(e) => setDishRecoveryPrice(e.target.value)} className="w-16 bg-transparent border-0 font-black text-blue-600 focus:ring-0 text-right" />
+                                    </div>
+                                )}
+                                <label className="relative inline-flex items-center cursor-pointer group">    
+                                    <input type="checkbox" checked={dishRecovery} onChange={(e) => setDishRecovery(e.target.checked)} className="sr-only peer" />
+                                    <div className="w-14 h-8 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:start-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
                         </div>
 
                         {/* --- OPTION SIGNATURE ÉLECTRONIQUE --- */}
