@@ -74,7 +74,7 @@ const DeliveryTracker = () => {
     }, []);
 
     return (
-        <div className="fixed bottom-8 left-8 z-[2000] animate-in slide-in-from-bottom-10 duration-500">
+        <div className="fixed bottom-8 right-8 z-[2000] animate-in slide-in-from-bottom-10 duration-500">
             <div className={`p-4 rounded-[2rem] shadow-2xl border-2 flex items-center gap-4 transition-all ${isActive ? 'bg-green-600 border-green-400 text-white min-w-[300px]' : 'bg-white border-gray-100 text-gray-800'}`}>
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${isActive ? 'bg-green-500 animate-pulse' : 'bg-gray-100'}`}>
                     {isActive ? <Navigation size={24} /> : <MapPin size={24} className="text-gray-400" />}
