@@ -20,16 +20,16 @@ const DeliveryTracker = () => {
         watchIdRef.current = navigator.geolocation.watchPosition(
             async (position) => {
                 const { latitude, longitude } = position.coords;
-                
+
                 try {
                     const { error: upsertError } = await supabase
                         .from('delivery_tracks')
-                        .upsert({ 
-                            id: 'chef-main-track', // On utilise un ID fixe pour le chef principal
-                            latitude, 
-                            longitude, 
+                        .upsert({
+                            id: 'chef-main-track', 
+                            latitude,
+                            longitude,
                             updated_at: new Date().toISOString(),
-                            is_active: true 
+                            is_active: true
                         });
 
                     if (upsertError) throw upsertError;
@@ -55,7 +55,7 @@ const DeliveryTracker = () => {
             navigator.geolocation.clearWatch(watchIdRef.current);
             watchIdRef.current = null;
         }
-        
+
         setIsActive(false);
         try {
             await supabase
@@ -74,26 +74,28 @@ const DeliveryTracker = () => {
     }, []);
 
     return (
-        <div className="fixed bottom-8 right-8 z-[2000] animate-in slide-in-from-bottom-10 duration-500">
-            <div className={`p-4 rounded-[2rem] shadow-2xl border-2 flex items-center gap-4 transition-all ${isActive ? 'bg-green-600 border-green-400 text-white min-w-[300px]' : 'bg-white border-gray-100 text-gray-800'}`}>
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${isActive ? 'bg-green-500 animate-pulse' : 'bg-gray-100'}`}>
-                    {isActive ? <Navigation size={24} /> : <MapPin size={24} className="text-gray-400" />}
-                </div>
+        <div className="fixed bottom-4 right-4 md:bottom-8 md:right-8 z-50 animate-in slide-in-from-bottom-10 duration-500">
+            <div className={`p-2 md:p-4 rounded-[1.5rem] md:rounded-[2rem] shadow-2xl border-2 flex items-center gap-2 md:gap-4 transition-all ${isActive ? 'bg-green-600 border-green-400 text-white min-w-[200px] md:min-w-[300px]' : 'bg-white border-gray-100 text-gray-800'}`}>
                 
-                <div className="flex-1">
-                    <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Suivi Livraison</p>
-                    <h4 className="text-sm font-black leading-none">
-                        {isActive ? 'TOURNÉE EN COURS' : 'PRÊT À LIVRER ?'}
-                    </h4>
-                    {isActive && lastUpdate && <p className="text-[9px] font-bold mt-1 opacity-80">Mis à jour à {lastUpdate}</p>}
-                    {error && <p className="text-[9px] font-bold mt-1 text-red-200 flex items-center gap-1"><AlertTriangle size={10}/> {error}</p>}
+                <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center ${isActive ? 'bg-green-500 animate-pulse' : 'bg-gray-100'}`}>
+                    {isActive ? <Navigation size={20} /> : <MapPin size={20} className="text-gray-400" />}
                 </div>
 
-                <button 
+                {/* Desktop and Tablet: Always show text. Mobile: Show only if active */}
+                <div className={`flex-1 ${!isActive ? 'hidden md:block' : 'block'}`}>
+                    <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest opacity-70">Suivi Livraison</p>
+                    <h4 className="text-xs md:text-sm font-black leading-none uppercase">
+                        {isActive ? 'TOURNÉE EN COURS' : 'PRÊT À LIVRER ?'}
+                    </h4>
+                    {isActive && lastUpdate && <p className="text-[8px] md:text-[9px] font-bold mt-1 opacity-80">Mis à jour à {lastUpdate}</p>}
+                    {error && <p className="text-[8px] md:text-[9px] font-bold mt-1 text-red-200 flex items-center gap-1"><AlertTriangle size={10}/> {error}</p>}
+                </div>
+
+                <button
                     onClick={isActive ? stopTracking : startTracking}
-                    className={`p-3 rounded-xl transition-all active:scale-95 ${isActive ? 'bg-white text-green-600 hover:bg-green-50' : 'bg-amber-500 text-white hover:bg-amber-600'}`}
+                    className={`p-2 md:p-3 rounded-lg md:rounded-xl transition-all active:scale-95 ${isActive ? 'bg-white text-green-600 hover:bg-green-50' : 'bg-amber-500 text-white hover:bg-amber-600'}`}
                 >
-                    {isActive ? <Square size={20} fill="currentColor" /> : <Navigation size={20} />}
+                    {isActive ? <Square size={18} md:size={20} fill="currentColor" /> : <Navigation size={18} md:size={20} />}
                 </button>
             </div>
         </div>
