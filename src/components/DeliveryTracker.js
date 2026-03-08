@@ -95,7 +95,7 @@ const DeliveryTracker = () => {
                     onClick={isActive ? stopTracking : startTracking}
                     className={`p-2 md:p-3 rounded-lg md:rounded-xl transition-all active:scale-95 ${isActive ? 'bg-white text-green-600 hover:bg-green-50' : 'bg-amber-500 text-white hover:bg-amber-600'}`}
                 >
-                    {isActive ? <Square size={18} md:size={20} fill="currentColor" /> : <Navigation size={18} md:size={20} />}
+                    {isActive ? <Square size={18}  fill="currentColor" /> : <Navigation size={18}  />}
                 </button>
             </div>
         </div>
