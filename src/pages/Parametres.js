@@ -32,7 +32,7 @@ const Parametres = () => {
         payment_conditions: '', payment_methods: ''
     });
 
-    const [welcomeMessage, setWelcomeMessage] = useState('');
+    const [welcomeMessage, setWelcomeMessage] = useState(''); const [maintenanceMode, setMaintenanceMode] = useState(false);
     const [refusalTemplate, setRefusalTemplate] = useState('');
 
     const [menuDecouverte, setMenuDecouverte] = useState({ fr: '', en: '', zh: '' });
@@ -203,7 +203,7 @@ const Parametres = () => {
         else setStatus({ message: error.message, type: 'error' });
     };
 
-    const handleSaveMessages = async () => {
+    const handleToggleMaintenance = async (val) => { setMaintenanceMode(val); try { await supabase.from('settings').upsert({ key: 'maintenance_mode', value: val.toString(), updated_at: new Date().toISOString() }); setStatus({ message: 'Mode maintenance mis � jour !', type: 'success' }); } catch (e) { setStatus({ message: 'Erreur mise � jour', type: 'error' }); } }; const handleSaveMessages = async () => {
         setStatus({ message: 'Enregistrement...', type: 'info' });
         await Promise.all([ saveSetting('welcomePopupMessage', welcomeMessage, true), saveSetting('refusalEmailTemplate', refusalTemplate, true), saveSetting('announcement_message', announcementMessage, true), saveSetting('announcement_style', announcementStyle, true), saveSetting('announcement_enabled', announcementEnabled, true), saveSetting('menu_override_message', menuOverrideMessage, true), saveSetting('menu_override_enabled', menuOverrideEnabled, true) ]);
         setStatus({ message: 'Messages mis à jour !', type: 'success' });
@@ -293,6 +293,22 @@ const Parametres = () => {
 
                     {activeTab === 'messages' && (
                         <div className="space-y-8 max-w-4xl mx-auto">
+                            <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border-2 border-red-500 flex justify-between items-center mb-8">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center text-red-600">
+                                        <AlertTriangle size={24}/>
+                                    </div>
+                                    <div>
+                                        <h2 className="text-xl font-black text-gray-800">Mode Maintenance</h2>
+                                        <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Bloquer l'accès au site public</p>
+                                    </div>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" checked={maintenanceMode} onChange={e => handleToggleMaintenance(e.target.checked)} className="sr-only peer" />
+                                    <div className="w-14 h-8 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-red-600 after:content-[''] after:absolute after:top-[4px] after:start-[4px] after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all"></div>
+                                </label>
+                            </div>
+
                             <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-gray-100">
                                 <h2 className="text-xl font-black text-gray-800 mb-8 flex items-center gap-3"><Megaphone className="text-purple-500"/> Annonce Temporaire</h2>
                                 <div className="flex items-center gap-4 mb-8 p-4 bg-gray-50 rounded-2xl border border-gray-100">
