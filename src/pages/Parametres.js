@@ -177,6 +177,16 @@ const Parametres = () => {
 
     useEffect(() => { fetchAllSettings(); checkPushSubscription(); }, [fetchAllSettings, checkPushSubscription]);
 
+    // Auto-effacement des messages de statut
+    useEffect(() => {
+        if (status.message) {
+            const timer = setTimeout(() => {
+                setStatus({ message: '', type: 'info' });
+            }, 4000);
+            return () => clearTimeout(timer);
+        }
+    }, [status.message]);
+
     const handleSaveMenus = async () => {
         setStatus({ message: 'Enregistrement...', type: 'info' });
         try {
@@ -203,7 +213,7 @@ const Parametres = () => {
         else setStatus({ message: error.message, type: 'error' });
     };
 
-    const handleToggleMaintenance = async (val) => { setMaintenanceMode(val); try { await supabase.from('settings').upsert({ key: 'maintenance_mode', value: val.toString(), updated_at: new Date().toISOString() }); setStatus({ message: 'Mode maintenance mis � jour !', type: 'success' }); } catch (e) { setStatus({ message: 'Erreur mise � jour', type: 'error' }); } }; const handleSaveMessages = async () => {
+    const handleToggleMaintenance = async (val) => { setMaintenanceMode(val); const { error } = await supabase.from('settings').upsert({ key: 'maintenance_mode', value: val.toString(), updated_at: new Date().toISOString() }, { onConflict: 'key' }); if (error) { console.error('Maintenance update error:', error); setStatus({ message: 'Erreur: ' + error.message, type: 'error' }); setMaintenanceMode(!val); } else { setStatus({ message: 'Mode maintenance mis � jour !', type: 'success' }); } }; const handleSaveMessages = async () => {
         setStatus({ message: 'Enregistrement...', type: 'info' });
         await Promise.all([ saveSetting('welcomePopupMessage', welcomeMessage, true), saveSetting('refusalEmailTemplate', refusalTemplate, true), saveSetting('announcement_message', announcementMessage, true), saveSetting('announcement_style', announcementStyle, true), saveSetting('announcement_enabled', announcementEnabled, true), saveSetting('menu_override_message', menuOverrideMessage, true), saveSetting('menu_override_enabled', menuOverrideEnabled, true) ]);
         setStatus({ message: 'Messages mis à jour !', type: 'success' });
@@ -310,10 +320,12 @@ const Parametres = () => {
                             </div>
 
                             <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-gray-100">
-                                <h2 className="text-xl font-black text-gray-800 mb-8 flex items-center gap-3"><Megaphone className="text-purple-500"/> Annonce Temporaire</h2>
-                                <div className="flex items-center gap-4 mb-8 p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                                    <input type="checkbox" checked={announcementEnabled} onChange={e => setAnnouncementEnabled(e.target.checked)} className="w-6 h-6 rounded-lg text-purple-500" />
-                                    <label className="font-bold text-gray-700">Activer le message d'annonce</label>
+                                <div className="flex justify-between items-center mb-8">
+                                    <h2 className="text-xl font-black text-gray-800 flex items-center gap-3"><Megaphone className="text-purple-500"/> Annonce Temporaire</h2>
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" checked={announcementEnabled} onChange={e => setAnnouncementEnabled(e.target.checked)} className="sr-only peer" />
+                                        <div className="w-14 h-8 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-purple-600 after:content-[''] after:absolute after:top-[4px] after:start-[4px] after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all"></div>
+                                    </label>
                                 </div>
                                 <div className={`space-y-6 ${announcementEnabled ? '' : 'opacity-40 grayscale pointer-events-none'}`}>
                                     <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -324,10 +336,15 @@ const Parametres = () => {
                                     <textarea value={announcementMessage} onChange={e => setAnnouncementMessage(e.target.value)} className="w-full p-4 bg-gray-50 border-0 rounded-2xl font-medium h-32" placeholder="Ex: Fermeture exceptionnelle..." />
                                 </div>
                             </div>
-                            <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-red-100 bg-red-50/10">
-                                <h2 className="text-xl font-black text-gray-800 mb-8 flex items-center gap-3"><AlertTriangle className="text-red-500"/> Suspension des Commandes</h2>
-                                <div className="flex items-center gap-4 mb-8 p-4 bg-white rounded-2xl border border-red-100"><input type="checkbox" checked={menuOverrideEnabled} onChange={e => setMenuOverrideEnabled(e.target.checked)} className="w-6 h-6 text-red-500" /><label className="font-bold text-red-600">DÉSACTIVER LES COMMANDES</label></div>
-                                <textarea value={menuOverrideMessage} onChange={e => setMenuOverrideMessage(e.target.value)} className="w-full p-4 bg-gray-50 border-0 rounded-2xl font-medium h-32" />
+                            <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-red-100 bg-red-50/10 mb-8">
+                                <div className="flex justify-between items-center mb-8">
+                                    <h2 className="text-xl font-black text-gray-800 flex items-center gap-3"><AlertTriangle className="text-red-500"/> Suspension des Commandes</h2>
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" checked={menuOverrideEnabled} onChange={e => setMenuOverrideEnabled(e.target.checked)} className="sr-only peer" />
+                                        <div className="w-14 h-8 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-red-600 after:content-[''] after:absolute after:top-[4px] after:start-[4px] after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all"></div>
+                                    </label>
+                                </div>
+                                <textarea value={menuOverrideMessage} onChange={e => setMenuOverrideMessage(e.target.value)} className="w-full p-4 bg-white border-0 rounded-2xl font-medium h-32" />
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100"><h2 className="text-lg font-black text-gray-800 mb-6 flex items-center gap-2"><Layout className="text-amber-500"/> Popup Bienvenue</h2><textarea value={welcomeMessage} onChange={e => setWelcomeMessage(e.target.value)} className="w-full p-4 bg-gray-50 border-0 rounded-2xl font-medium h-48" /></div>
@@ -381,8 +398,27 @@ const Parametres = () => {
                             <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-red-100 bg-red-50/20">
                                 <h2 className="text-xl font-black text-gray-800 mb-8 flex items-center gap-3"><PlusCircle className="text-red-500"/> Gestion Offre Spéciale ({inputLang.toUpperCase()})</h2>
                                 <div className="flex flex-wrap gap-6 mb-8">
-                                    <div className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-red-100 shadow-sm"><input type="checkbox" checked={specialOfferEnabled} onChange={e => setSpecialOfferEnabled(e.target.checked)} className="w-6 h-6 text-red-500 rounded-lg"/><label className="font-bold text-gray-700">Activer l'offre spéciale</label></div>
-                                    <div className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm"><input type="checkbox" checked={specialOfferDisablesFormulas} onChange={e => setSpecialOfferDisablesFormulas(e.target.checked)} className="w-6 h-6 text-gray-400 rounded-lg"/><label className="font-bold text-gray-500">Désactiver menus habituels</label></div>
+                                    <div className="flex items-center justify-between gap-4 p-6 bg-white rounded-3xl border border-red-100 shadow-sm min-w-[280px]">
+                                        <div>
+                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">État de l'offre</p>
+                                            <label className="font-bold text-gray-700">Activer l'offre spéciale</label>
+                                        </div>
+                                        <label className="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" checked={specialOfferEnabled} onChange={e => setSpecialOfferEnabled(e.target.checked)} className="sr-only peer" />
+                                            <div className="w-14 h-8 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-red-600 after:content-[''] after:absolute after:top-[4px] after:start-[4px] after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all"></div>
+                                        </label>
+                                    </div>
+
+                                    <div className="flex items-center justify-between gap-4 p-6 bg-white rounded-3xl border border-gray-100 shadow-sm min-w-[280px]">
+                                        <div>
+                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Mode exclusif</p>
+                                            <label className="font-bold text-gray-500">Désactiver menus habituels</label>
+                                        </div>
+                                        <label className="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" checked={specialOfferDisablesFormulas} onChange={e => setSpecialOfferDisablesFormulas(e.target.checked)} className="sr-only peer" />
+                                            <div className="w-14 h-8 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-gray-600 after:content-[''] after:absolute after:top-[4px] after:start-[4px] after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all"></div>
+                                        </label>
+                                    </div>
                                 </div>
                                 <div className={`space-y-8 ${specialOfferEnabled ? '' : 'opacity-40 grayscale pointer-events-none'}`}>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
