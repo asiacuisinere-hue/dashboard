@@ -213,7 +213,33 @@ const Parametres = () => {
         else setStatus({ message: error.message, type: 'error' });
     };
 
-    const handleToggleMaintenance = async (val) => { setMaintenanceMode(val); const { error } = await supabase.from('settings').upsert({ key: 'maintenance_mode', value: val.toString(), updated_at: new Date().toISOString() }, { onConflict: 'key' }); if (error) { console.error('Maintenance update error:', error); setStatus({ message: 'Erreur: ' + error.message, type: 'error' }); setMaintenanceMode(!val); } else { setStatus({ message: 'Mode maintenance mis � jour !', type: 'success' }); } }; const handleSaveMessages = async () => {
+    const handleToggleMaintenance = async (val) => { 
+        setMaintenanceMode(val); 
+        const { error } = await supabase.from('settings').upsert({ key: 'maintenance_mode', value: val.toString(), updated_at: new Date().toISOString() }, { onConflict: 'key' }); 
+        if (error) { 
+            console.error('Maintenance update error:', error); 
+            setStatus({ message: 'Erreur: ' + error.message, type: 'error' }); 
+            setMaintenanceMode(!val); 
+        } else { 
+            setStatus({ message: 'Mode maintenance mis à jour !', type: 'success' }); 
+        } 
+    };
+
+    const handleToggleOverride = async (val) => {
+        setMenuOverrideEnabled(val);
+        const success = await saveSetting('menu_override_enabled', val, true);
+        if (success) setStatus({ message: val ? 'Commandes SUSPENDUES !' : 'Commandes RÉOUVERTES !', type: val ? 'error' : 'success' });
+        else setStatus({ message: 'Erreur lors de la mise à jour', type: 'error' });
+    };
+
+    const handleToggleAnnouncement = async (val) => {
+        setAnnouncementEnabled(val);
+        const success = await saveSetting('announcement_enabled', val, true);
+        if (success) setStatus({ message: val ? 'Annonce activée !' : 'Annonce désactivée.', type: 'info' });
+        else setStatus({ message: 'Erreur lors de la mise à jour', type: 'error' });
+    };
+
+    const handleSaveMessages = async () => {
         setStatus({ message: 'Enregistrement...', type: 'info' });
         await Promise.all([ saveSetting('welcomePopupMessage', welcomeMessage, true), saveSetting('refusalEmailTemplate', refusalTemplate, true), saveSetting('announcement_message', announcementMessage, true), saveSetting('announcement_style', announcementStyle, true), saveSetting('announcement_enabled', announcementEnabled, true), saveSetting('menu_override_message', menuOverrideMessage, true), saveSetting('menu_override_enabled', menuOverrideEnabled, true) ]);
         setStatus({ message: 'Messages mis à jour !', type: 'success' });
@@ -221,17 +247,22 @@ const Parametres = () => {
 
     return (
         <div className="p-6 bg-gray-50 min-h-screen">
+            {/* Notification flottante (Toast) visible partout */}
+            {status.message && (
+                <div className={`fixed top-8 right-8 z-[9999] px-8 py-4 rounded-3xl text-sm font-black shadow-[0_20px_50px_rgba(0,0,0,0.2)] animate-in fade-in slide-in-from-top-8 ${status.type === 'success' ? 'bg-green-600 text-white' : (status.type === 'error' ? 'bg-red-600 text-white' : 'bg-blue-600 text-white')}`}>
+                    <div className="flex items-center gap-3">
+                        {status.type === 'success' ? <ShieldCheck size={20}/> : (status.type === 'error' ? <AlertTriangle size={20}/> : <Info size={20}/>)}
+                        {status.message}
+                    </div>
+                </div>
+            )}
+
             <div className="max-w-7xl mx-auto">
                 <div className="flex justify-between items-start mb-8">
                     <div>
                         <h1 className="text-3xl font-black text-gray-800 mb-2">Configuration Système</h1>
                         <p className="text-gray-500 font-medium italic">Personnalisez votre interface et vos offres.</p>
                     </div>
-                    {status.message && (
-                        <div className={`px-6 py-3 rounded-2xl text-xs font-black shadow-md animate-in slide-in-from-top-4 ${status.type === 'success' ? 'bg-green-500 text-white' : (status.type === 'error' ? 'bg-red-500 text-white' : 'bg-blue-500 text-white')}`}>
-                            {status.message}
-                        </div>
-                    )}
                 </div>
 
                 <div className="flex space-x-1 bg-gray-200 p-1.5 rounded-[2rem] mb-10 overflow-x-auto scrollbar-hide">
@@ -323,7 +354,7 @@ const Parametres = () => {
                                 <div className="flex justify-between items-center mb-8">
                                     <h2 className="text-xl font-black text-gray-800 flex items-center gap-3"><Megaphone className="text-purple-500"/> Annonce Temporaire</h2>
                                     <label className="relative inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" checked={announcementEnabled} onChange={e => setAnnouncementEnabled(e.target.checked)} className="sr-only peer" />
+                                        <input type="checkbox" checked={announcementEnabled} onChange={e => handleToggleAnnouncement(e.target.checked)} className="sr-only peer" />
                                         <div className="w-14 h-8 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-purple-600 after:content-[''] after:absolute after:top-[4px] after:start-[4px] after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all"></div>
                                     </label>
                                 </div>
@@ -340,7 +371,7 @@ const Parametres = () => {
                                 <div className="flex justify-between items-center mb-8">
                                     <h2 className="text-xl font-black text-gray-800 flex items-center gap-3"><AlertTriangle className="text-red-500"/> Suspension des Commandes</h2>
                                     <label className="relative inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" checked={menuOverrideEnabled} onChange={e => setMenuOverrideEnabled(e.target.checked)} className="sr-only peer" />
+                                        <input type="checkbox" checked={menuOverrideEnabled} onChange={e => handleToggleOverride(e.target.checked)} className="sr-only peer" />
                                         <div className="w-14 h-8 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-red-600 after:content-[''] after:absolute after:top-[4px] after:start-[4px] after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all"></div>
                                     </label>
                                 </div>
